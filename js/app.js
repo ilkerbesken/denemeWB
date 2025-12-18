@@ -377,14 +377,7 @@ class WhiteboardApp {
                         result = selectTool.deleteSelected(this.state);
                         break;
                     case 'duplicate':
-                        result = selectTool.duplicateSelected(this.state);
-                        if (result) {
-                            if (Array.isArray(result)) {
-                                this.state.objects.push(...result);
-                            } else {
-                                this.state.objects.push(result);
-                            }
-                        }
+                        selectTool.duplicateSelected(this.state);
                         break;
                     case 'flipHorizontal':
                         selectTool.flipHorizontal(this.state);
@@ -405,10 +398,7 @@ class WhiteboardApp {
                         selectTool.sendToBack(this.state);
                         break;
                     case 'group':
-                        result = selectTool.groupSelected(this.state);
-                        if (result) {
-                            this.state.objects.push(result);
-                        }
+                        selectTool.groupSelected(this.state);
                         break;
                     case 'ungroup':
                         selectTool.ungroupSelected(this.state);
