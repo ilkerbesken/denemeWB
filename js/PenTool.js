@@ -20,6 +20,9 @@ class PenTool {
         this.isStraightLocked = false;
         this.points = [];
         this.rawPoints = [];
+        this.streamlinePoints = [];
+        this.lastStreamlined = null;
+        this.lastPoint = null;
 
         clearTimeout(this.straightenTimer);
 

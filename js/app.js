@@ -183,10 +183,26 @@ class WhiteboardApp {
 
     setupEventListeners() {
         // Pointer events (fare ve dokunmatik için)
-        this.canvas.addEventListener('pointerdown', (e) => this.handlePointerDown(e));
-        this.canvas.addEventListener('pointermove', (e) => this.handlePointerMove(e));
-        this.canvas.addEventListener('pointerup', (e) => this.handlePointerUp(e));
-        this.canvas.addEventListener('pointerleave', (e) => this.handlePointerUp(e));
+        this.canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            this.handlePointerDown(e);
+        });
+        this.canvas.addEventListener('pointermove', (e) => {
+            e.preventDefault();
+            this.handlePointerMove(e);
+        });
+        this.canvas.addEventListener('pointerup', (e) => {
+            e.preventDefault();
+            this.handlePointerUp(e);
+        });
+        this.canvas.addEventListener('pointerleave', (e) => {
+            e.preventDefault();
+            this.handlePointerUp(e);
+        });
+        this.canvas.addEventListener('pointercancel', (e) => {
+            e.preventDefault();
+            this.handlePointerUp(e);
+        });
 
         // Klavye kısayolları
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
