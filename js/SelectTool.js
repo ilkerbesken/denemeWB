@@ -1379,11 +1379,49 @@ class SelectTool {
     }
 
     applyBoundsToObject(obj, newBounds) {
-        const { minX, minY, maxX, maxY } = newBounds;
+        let { minX, minY, maxX, maxY } = newBounds;
+
+        // "newBounds" parametresi, kullanıcının gördüğü/tuttuğu "Visual Bounds"dur (Resize handle'ları buna göre çizilir).
+        // Ancak primitive nesneler (Line, Rect, Ellipse) "Center/Start/End" koordinatları ile tanımlanır (Stroke dahil değildir).
+        // Bu yüzden Visual Bounds'dan Stroke Padding'i ÇIKARMALIYIZ.
+
+        let padding = 0;
+        if (obj.width) {
+            padding = obj.width / 2;
+        }
+
+        // Apply Padding Inverse (To get Content Bounds)
+        // Eğer Rectangle ise: VisualMinX = ContentMinX - padding. -> ContentMinX = VisualMinX + padding.
+
+        const contentMinX = minX + padding;
+        const contentMinY = minY + padding;
+        const contentMaxX = maxX - padding;
+        const contentMaxY = maxY - padding;
 
         switch (obj.type) {
             case 'line':
             case 'arrow':
+                // Arrow head extra padding check?
+                // getBoundingBox obj.type === 'arrow' padding = Math.max(padding, 20 + obj.width)
+                // We should match that logic exactly or drag might feel "drifting".
+                // But for generic resize, using standard padding is safer unless we want complexities.
+                // NOTE: getBoundingBox for Arrow uses EXTRA padding.
+                // If we don't account for it here, the arrow will shrink on every interaction.
+
+                let arrowPadding = padding;
+                if (obj.type === 'arrow') {
+                    // Re-calculate the exact padding used in getBoundingBox to be symmetric
+                    // padding = Math.max(obj.width/2, 20 + obj.width)
+                    // Wait, getBoundingBox Logic: padding = Math.max(padding, 20 + obj.width);
+                    arrowPadding = Math.max(padding, 20 + obj.width);
+                }
+
+                // Use Specific Arrow Padding for Arrow
+                const aMinX = minX + arrowPadding;
+                const aMinY = minY + arrowPadding;
+                const aMaxX = maxX - arrowPadding;
+                const aMaxY = maxY - arrowPadding;
+
                 // Mevcut yönü koru
                 const startX = obj.start.x;
                 const endX = obj.end.x;
@@ -1408,72 +1446,62 @@ class SelectTool {
                 }
 
                 if (isLeftToRight) {
-                    obj.start.x = minX;
-                    obj.end.x = maxX;
+                    obj.start.x = aMinX;
+                    obj.end.x = aMaxX;
                 } else {
-                    obj.start.x = maxX;
-                    obj.end.x = minX;
+                    obj.start.x = aMaxX;
+                    obj.end.x = aMinX;
                 }
 
                 if (isTopToBottom) {
-                    obj.start.y = minY;
-                    obj.end.y = maxY;
+                    obj.start.y = aMinY;
+                    obj.end.y = aMaxY;
                 } else {
-                    obj.start.y = maxY;
-                    obj.end.y = minY;
+                    obj.start.y = aMaxY;
+                    obj.end.y = aMinY;
                 }
 
                 // Kontrol noktasını güncelle
                 if (obj.curveControlPoint) {
                     const newDx = obj.end.x - obj.start.x;
                     const newDy = obj.end.y - obj.start.y;
-
-                    // Eğer boyut çok küçükse veya 0 ise, orta noktaya sıfırla
-                    if (Math.abs(newDx) < 0.001 && Math.abs(newDy) < 0.001) {
-                        // Fallback to midpoint logic or keep relative
-                    }
-
-                    // Sadece sıfır olmayan eksenlerde güncelle, yoksa eski değeri koru veya orta nokta yap
-                    // Ancak relCpX hesaplanırken oldDx 0 ise relCpX varsayılan (0.5) kaldıysa sorun olmaz.
-
-                    // Eğer oldDx 0 idi ise (dikey çizgi), ve şimdi de dikey ise (newDx ~ 0), X değişmez.
-                    // Ama oldDx 0 iken şimdi newDx != 0 olduysa (genişletildi), relCpX 0.5 mantıklı bir varsayılan.
-
                     obj.curveControlPoint.x = obj.start.x + relCpX * newDx;
                     obj.curveControlPoint.y = obj.start.y + relCpY * newDy;
                 }
                 break;
 
             case 'rectangle':
-                // Rectangle always defined by start/end corners, 
-                // normalized draw method handles min/max, but keeping relative order doesn't hurt.
-                // Resetting to TL/BR is standard for rect resize unless we track flips specifically.
-                // For simplicity, rects are usually normalized.
-                obj.start = { x: minX, y: minY };
-                obj.end = { x: maxX, y: maxY };
+                // Use standard content bounds
+                obj.start = { x: contentMinX, y: contentMinY };
+                obj.end = { x: contentMaxX, y: contentMaxY };
                 break;
 
             case 'ellipse':
-                // Ellipse resize needs to respect center/radius logic
-                const centerX = (minX + maxX) / 2;
-                const centerY = (minY + maxY) / 2;
+                // Use standard content bounds
+                const centerX = (contentMinX + contentMaxX) / 2;
+                const centerY = (contentMinY + contentMaxY) / 2;
                 obj.center = { x: centerX, y: centerY };
-                obj.radiusX = (maxX - minX) / 2;
-                obj.radiusY = (maxY - minY) / 2;
-                obj.start = { x: minX, y: minY };
-                obj.end = { x: maxX, y: maxY };
+                obj.radiusX = Math.abs(contentMaxX - contentMinX) / 2;
+                obj.radiusY = Math.abs(contentMaxY - contentMinY) / 2;
+                obj.start = { x: contentMinX, y: contentMinY };
+                obj.end = { x: contentMaxX, y: contentMaxY };
                 break;
 
             case 'highlighter':
             case 'pen':
-                // Pen için orantılı ölçeklendirme
-                // Use getBoundingBox WITHOUT padding for the scale calculation base, 
-                // otherwise we scale based on the padded box which shrinks the content.
-                // Warning: getBoundingBox now returns PADDED bounds if we update it.
-                // We need the ACTUAL content bounds for scaling.
+                // Pen ve Highlighter için zaten paddingli geliyor ama biz "Content" bounding box'a göre scale etmek istiyoruz.
+                // Burada logic biraz daha karışık (Points scaling).
+                // Mevcut kodda rMinX/Y hesaplanıp yapılıyordu, orası doğru.
+                // Sadece "newBounds"un PADDED olduğunu bilelim.
+                // Pen logic (aşağıda) kendi rMinX'ini hesaplıyor (raw points).
+                // Scale factor hesaplarken: NewWidth / OldWidth.
+                // OldWidth (raw points width).
+                // NewWidth? Bizim "newBounds" Visual Bounds.
+                // NewContentWidth = newBounds.width - Padding*2.
+                // Scale = NewContentWidth / OldWidth.
 
-                // Let's implement a 'raw' bounding box checker or subtract padding here?
-                // Or just loop points here locally to get raw content bounds.
+                // Aşağıdaki Pen logic'i bu padding'i hesaba katmalı.
+
                 let rMinX = Infinity, rMinY = Infinity, rMaxX = -Infinity, rMaxY = -Infinity;
                 obj.points.forEach(p => {
                     rMinX = Math.min(rMinX, p.x);
