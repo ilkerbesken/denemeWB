@@ -11,11 +11,22 @@ class SelectTool {
         this.resizeStartBounds = null;
         this.rotateStartAngle = 0;
         this.rotateCenter = null;
+        this.rotateCenter = null;
         this.handleSize = 8; // Tutamaç boyutu (px)
+
+        // Long Press Logic for Touch Devices
+        this.longPressTimer = null;
+        this.longPressStartPos = null;
+        this.LONG_PRESS_DURATION = 500; // ms
+        this.LONG_PRESS_THRESHOLD = 5; // px movement tolerance
     }
 
     handlePointerDown(e, pos, canvas, ctx, state) {
         const clickPoint = { x: pos.x, y: pos.y };
+
+        // Start Long Press Timer
+        this.startLongPressTimer(e, canvas, state);
+
         const isCtrlPressed = e.ctrlKey || e.metaKey;
 
         // Önce seçili nesne varsa handle kontrolü yap
@@ -136,6 +147,18 @@ class SelectTool {
     handlePointerMove(e, pos, canvas, ctx, state) {
         const currentPoint = { x: pos.x, y: pos.y };
 
+        // Check long press movement threshold
+        if (this.longPressTimer && this.longPressStartPos) {
+            const dist = Math.sqrt(
+                Math.pow(e.clientX - this.longPressStartPos.x, 2) +
+                Math.pow(e.clientY - this.longPressStartPos.y, 2)
+            );
+            if (dist > this.LONG_PRESS_THRESHOLD) {
+                clearTimeout(this.longPressTimer);
+                this.longPressTimer = null;
+            }
+        }
+
         // Handle aktifse (resize veya rotate veya curveControl)
         if (this.activeHandle && this.selectedObjects.length > 0) {
             const selectedIndex = this.selectedObjects[0];
@@ -230,6 +253,11 @@ class SelectTool {
     }
 
     handlePointerUp(e, pos, canvas, ctx, state) {
+        // Cancel Timer
+        if (this.longPressTimer) {
+            clearTimeout(this.longPressTimer);
+            this.longPressTimer = null;
+        }
         // Handle işlemi bitir
         if (this.activeHandle) {
             this.activeHandle = null;
@@ -1702,5 +1730,25 @@ class SelectTool {
         if (style.opacity !== undefined) {
             obj.opacity = style.opacity;
         }
+    }
+
+    startLongPressTimer(e, canvas, state) {
+        if (this.longPressTimer) clearTimeout(this.longPressTimer);
+
+        this.longPressStartPos = { x: e.clientX, y: e.clientY };
+
+        this.longPressTimer = setTimeout(() => {
+            const fakeEvent = {
+                preventDefault: () => { },
+                clientX: this.longPressStartPos.x,
+                clientY: this.longPressStartPos.y,
+                target: e.target
+            };
+
+            this.handleContextMenu(fakeEvent, canvas, state);
+            this.longPressTimer = null;
+            if (navigator.vibrate) navigator.vibrate(50);
+
+        }, this.LONG_PRESS_DURATION);
     }
 }
