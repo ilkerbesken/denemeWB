@@ -9,6 +9,10 @@ class PenTool {
         this.onRepaint = onRepaint;
         this.straightenTimer = null;
         this.isStraightLocked = false;
+
+        // Streamline state
+        this.streamlinePoints = [];
+        this.lastStreamlined = null;
     }
 
     handlePointerDown(e, pos, canvas, ctx, state) {
@@ -28,6 +32,8 @@ class PenTool {
         this.rawPoints.push(point);
         this.points.push(point);
         this.lastPoint = point;
+        this.lastStreamlined = point;
+        this.streamlinePoints = [point];
 
         this.currentPath = {
             type: state.currentTool === 'highlighter' ? 'highlighter' : 'pen',
@@ -44,10 +50,27 @@ class PenTool {
     handlePointerMove(e, pos, canvas, ctx, state) {
         if (!this.isDrawing) return;
 
+        // Pressure simulation for mouse / smoothing for pen
+        let currentPressure = (state.pressureEnabled !== false && state.currentTool !== 'highlighter')
+            ? Utils.normalizePressure(pos.pressure)
+            : 0.5;
+
+        // If mouse (pressure is always 0.5 or 0), simulate based on velocity
+        if (e.pointerType === 'mouse' && state.pressureEnabled !== false) {
+            const dist = Utils.distance(this.lastPoint || pos, pos);
+            const time = 16; // Approx 60fps
+            const velocity = dist / time;
+
+            // Damping for stability (moving average with previous)
+            const prevPressure = this.lastPoint ? this.lastPoint.pressure : 0.5;
+            const targetPressure = Math.max(0.35, 1.0 - velocity * 0.4); // Less extreme thinning
+            currentPressure = prevPressure + (targetPressure - prevPressure) * 0.2; // Damping
+        }
+
         const point = {
             x: pos.x,
             y: pos.y,
-            pressure: (state.pressureEnabled !== false && state.currentTool !== 'highlighter') ? Utils.normalizePressure(pos.pressure) : (state.currentTool === 'highlighter' ? 0.5 : 0.5)
+            pressure: currentPressure
         };
 
         // Eğer kilitlendiyse, sadece son noktayı güncelle (Line tool gibi davran)
@@ -65,8 +88,26 @@ class PenTool {
         this.points.push(point);
         this.lastPoint = point;
 
-        // Anlık yumuşatma uygula
-        this.currentPath.points = this.getSmoothedPoints(this.points);
+        // Streamline (tldraw-style): Pull the point towards the actual cursor
+        const streamlineFactor = 0.92; // High responsiveness as requested
+        const prev = this.lastStreamlined;
+        const streamlined = {
+            x: prev.x + (point.x - prev.x) * streamlineFactor,
+            y: prev.y + (point.y - prev.y) * streamlineFactor,
+            pressure: prev.pressure + (point.pressure - prev.pressure) * streamlineFactor
+        };
+        this.lastStreamlined = streamlined;
+        this.streamlinePoints.push(streamlined);
+
+        // Update current path
+        // Optimization: during active drawing, only smooth if we have enough points
+        // and use a lower iteration count.
+        let drawPoints = this.streamlinePoints;
+        if (drawPoints.length > 8) {
+            drawPoints = Utils.chaikin(drawPoints, 1);
+        }
+
+        this.currentPath.points = drawPoints;
 
         // Auto-straighten timer
         clearTimeout(this.straightenTimer);
@@ -85,33 +126,25 @@ class PenTool {
         this.isDrawing = false;
         clearTimeout(this.straightenTimer);
 
-        // Final yumuşatma (eğer düzleştirilmediyse)
+        // Final smoothing and tapering
         if (!this.currentPath.isStraightened) {
-            const finalPoints = this.getSmoothedPoints(this.points);
-            const pressureSmoothed = Utils.smoothPressure(finalPoints);
+            let finalPoints = [...this.streamlinePoints];
 
-            // Fix last point pressure for consistent endpoints
-            // When lifting stylus quickly, last point often has very low pressure
-            // causing rounded endpoints. Use average of previous points instead.
-            if (pressureSmoothed.length >= 3) {
-                const lastIdx = pressureSmoothed.length - 1;
-                const prevIdx1 = lastIdx - 1;
-                const prevIdx2 = lastIdx - 2;
-
-                // Use average of previous 2 points, then reduce for natural taper
-                const avgPressure = (pressureSmoothed[prevIdx1].pressure + pressureSmoothed[prevIdx2].pressure) / 2;
-
-                // Apply taper: reduce to quarter for natural pen-like ending
-                pressureSmoothed[lastIdx].pressure = avgPressure * 0.25;
-            } else if (pressureSmoothed.length === 2) {
-                // For very short strokes, use quarter of first point's pressure
-                pressureSmoothed[1].pressure = pressureSmoothed[0].pressure * 0.25;
+            // Apply Tapering (natural end)
+            // Gradually reduce pressure of the last ~8 points
+            const taperCount = Math.min(8, finalPoints.length);
+            for (let i = 0; i < taperCount; i++) {
+                const idx = finalPoints.length - 1 - i;
+                const taperFactor = i / taperCount; // 0 at the very end, approaches 1 backwards
+                // Ensure pressure goes towards zero or a very small value
+                const minTaper = 0.1;
+                finalPoints[idx].pressure = Math.max(minTaper, finalPoints[idx].pressure * taperFactor);
             }
 
-            this.currentPath.points = pressureSmoothed;
-        } else {
-            // Düzleştirilmişse, son noktayı güncellemeye gerek yok, zaten düz.
-            // Belki son noktayı eklemek gerekebilir ama straightenPath zaten yapıyor.
+            if (finalPoints.length > 5) {
+                finalPoints = Utils.chaikin(finalPoints, 2);
+            }
+            this.currentPath.points = Utils.smoothPressure(finalPoints);
         }
 
         const completedPath = this.currentPath;
@@ -144,29 +177,6 @@ class PenTool {
 
         // Repaint triggers
         if (this.onRepaint) this.onRepaint();
-    }
-
-    getSmoothedPoints(points) {
-        if (points.length < 3) return points;
-
-        const smoothed = [points[0]];
-
-        // Weighted moving average
-        for (let i = 1; i < points.length - 1; i++) {
-            const prev = points[i - 1];
-            const curr = points[i];
-            const next = points[i + 1];
-
-            // Ağırlıklı ortalama (4:2:1 oranı)
-            smoothed.push({
-                x: (prev.x + curr.x * 4 + next.x) / 6,
-                y: (prev.y + curr.y * 4 + next.y) / 6,
-                pressure: (prev.pressure + curr.pressure * 4 + next.pressure) / 6
-            });
-        }
-
-        smoothed.push(points[points.length - 1]);
-        return smoothed;
     }
 
     draw(ctx, object) {
@@ -302,137 +312,88 @@ class PenTool {
     }
 
     drawSolid(ctx, object) {
-        // Highlighter Optimization: Draw as a single continuous path
-        // This prevents opacity accumulation at segment overlaps (dots) and 
-        // ensures a smooth, continuous line for transparent strokes.
-        if (object.isHighlighter) {
-            if (object.points.length < 2) return;
+        if (object.points.length < 1) return;
 
-            ctx.lineWidth = object.width; // Highlighter has constant width
+        // Highlighter: Single continuous path with constant width
+        if (object.isHighlighter) {
+            ctx.lineWidth = object.width;
             ctx.lineCap = object.cap || 'round';
             ctx.lineJoin = 'round';
-
             ctx.beginPath();
             ctx.moveTo(object.points[0].x, object.points[0].y);
 
-            if (object.points.length === 2) {
+            if (object.points.length === 1) {
+                ctx.lineTo(object.points[0].x, object.points[0].y);
+            } else if (object.points.length === 2) {
                 ctx.lineTo(object.points[1].x, object.points[1].y);
             } else {
-                for (let i = 0; i < object.points.length - 2; i++) {
-                    const p0 = object.points[i];
-                    const p1 = object.points[i + 1];
-                    const p2 = object.points[i + 2];
-
-                    const cp1x = p0.x + (p1.x - p0.x) * 0.66;
-                    const cp1y = p0.y + (p1.y - p0.y) * 0.66;
-                    const cp2x = p1.x + (p2.x - p1.x) * 0.33;
-                    const cp2y = p1.y + (p2.y - p1.y) * 0.33;
-
-                    const midX = (cp1x + cp2x) / 2;
-                    const midY = (cp1y + cp2y) / 2;
-
-                    ctx.quadraticCurveTo(cp1x, cp1y, midX, midY);
+                for (let i = 1; i < object.points.length - 1; i++) {
+                    const xc = (object.points[i].x + object.points[i + 1].x) / 2;
+                    const yc = (object.points[i].y + object.points[i + 1].y) / 2;
+                    ctx.quadraticCurveTo(object.points[i].x, object.points[i].y, xc, yc);
                 }
-
-                // Connect the last few points
-                const lastIdx = object.points.length - 1;
-                const pLast = object.points[lastIdx];
-                ctx.lineTo(pLast.x, pLast.y);
+                const last = object.points[object.points.length - 1];
+                ctx.lineTo(last.x, last.y);
             }
-
             ctx.stroke();
             return;
         }
 
-        // Pen Optimization: Draw as a Single Filled Polygon (Variable Width)
-        // This solves the overlapping segment artifacts when opacity < 1.0 while preserving pressure sensitivity.
-
-        // Single point (Dot) support
+        // Pen: Polygon-based drawing (Variable Width)
         if (object.points.length === 1) {
             const p = object.points[0];
-            const width = Utils.getPressureWidth(object.width, p.pressure) / 2;
+            const radius = Utils.getPressureWidth(object.width, p.pressure) / 2;
             ctx.beginPath();
-            ctx.arc(p.x, p.y, width, 0, Math.PI * 2);
+            ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
             ctx.fillStyle = object.color;
             ctx.fill();
             return;
         }
 
-        if (object.points.length < 2) return;
+        // Draw in segments to avoid massive self-intersecting polygons
+        ctx.fillStyle = object.color;
 
-        // Pen with Pressure: Use overlapping circles for perfect round caps
+        const pts = object.points;
+        const len = pts.length;
+        const baseWidth = object.width;
 
-        // Critical Performance Optimization:
-        // Only use a temporary canvas if we have transparency (opacity < 1).
-        // If opacity is 1, overlapping circles merge perfectly on the main canvas.
-        // Creating a temporary canvas for every stroke is extremely expensive (VRAM/GC) 
-        // and causes lag during rapid drawing or full redraws.
-        const opacity = object.opacity !== undefined ? object.opacity : 1.0;
-        const useTempCanvas = opacity < 1.0;
+        for (let i = 0; i < len; i++) {
+            const p = pts[i];
+            const pressure = p.pressure !== undefined ? p.pressure : 0.5;
+            const r = Utils.getPressureWidth(baseWidth, pressure) / 2;
 
-        let targetCtx = ctx;
-        let tempCanvas = null;
+            // Draw joint circle
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+            ctx.fill();
 
-        if (useTempCanvas) {
-            // Use a temporary canvas to prevent opacity accumulation
-            tempCanvas = document.createElement('canvas');
-            tempCanvas.width = ctx.canvas.width;
-            tempCanvas.height = ctx.canvas.height;
-            targetCtx = tempCanvas.getContext('2d');
+            // Draw connecting ribbon segment
+            if (i < len - 1) {
+                const pNext = pts[i + 1];
+                const d = Utils.distance(p, pNext);
 
-            // Transfer properties
-            targetCtx.lineCap = 'round';
-            targetCtx.lineJoin = 'round';
-        }
+                if (d > 0.1) {
+                    const pNextPressure = pNext.pressure !== undefined ? pNext.pressure : 0.5;
+                    const rNext = Utils.getPressureWidth(baseWidth, pNextPressure) / 2;
 
-        targetCtx.fillStyle = object.color;
+                    const angle = Math.atan2(pNext.y - p.y, pNext.x - p.x);
+                    const sin = Math.sin(angle);
+                    const cos = Math.cos(angle);
 
-        // Draw circles at each point
-        for (let i = 0; i < object.points.length; i++) {
-            const p = object.points[i];
-            const radius = Utils.getPressureWidth(object.width, p.pressure) / 2;
+                    const nx = -sin;
+                    const ny = cos;
 
-            // Only draw the first point explicitly
-            // All other points will be drawn through interpolation
-            if (i === 0) {
-                targetCtx.beginPath();
-                targetCtx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-                targetCtx.fill();
-            }
-
-            // Draw connecting segments between points
-            if (i > 0) {
-                const prevP = object.points[i - 1];
-
-                // Calculate angle between points
-                const dx = p.x - prevP.x;
-                const dy = p.y - prevP.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-
-                if (dist > 0) {
-                    // Draw interpolated circles along the segment for smooth connection
-                    // Use dist / 1 for maximum density to handle fast strokes
-                    const steps = Math.ceil(dist / 1); // One circle per pixel for perfect coverage
-                    for (let j = 1; j <= steps; j++) {
-                        const t = j / steps;
-                        const interpX = prevP.x + dx * t;
-                        const interpY = prevP.y + dy * t;
-                        const interpPressure = prevP.pressure + (p.pressure - prevP.pressure) * t;
-                        const interpRadius = Utils.getPressureWidth(object.width, interpPressure) / 2;
-
-                        targetCtx.beginPath();
-                        targetCtx.arc(interpX, interpY, interpRadius, 0, Math.PI * 2);
-                        targetCtx.fill();
-                    }
+                    ctx.beginPath();
+                    ctx.moveTo(p.x + nx * r, p.y + ny * r);
+                    ctx.lineTo(pNext.x + nx * rNext, pNext.y + ny * rNext);
+                    ctx.lineTo(pNext.x - nx * rNext, pNext.y - ny * rNext);
+                    ctx.lineTo(p.x - nx * r, p.y - ny * r);
+                    ctx.fill();
                 }
             }
         }
-
-        // Draw the temporary canvas onto the main canvas (if used)
-        if (useTempCanvas) {
-            ctx.drawImage(tempCanvas, 0, 0);
-        }
     }
+
 
     flattenPath(object) {
         // Convert bezier path to high-resolution polyline for accurate dashing

@@ -693,13 +693,26 @@ class WhiteboardApp {
     }
 
     redrawOffscreen() {
+        // Clear offscreen
+        this.offscreenCanvas.width = this.canvas.width;
+        this.offscreenCanvas.height = this.canvas.height;
+
         // Render all permanent objects to the offscreen canvas
         // This is expensive but only happens on state changes (not every mouse move)
+        this.offscreenCtx.save();
+
+        // Background
         this.canvasSettings.drawBackground(this.offscreenCanvas, this.offscreenCtx);
+
+        // Transformation
+        this.offscreenCtx.translate(this.zoomManager.pan.x, this.zoomManager.pan.y);
+        this.offscreenCtx.scale(this.zoomManager.zoom, this.zoomManager.zoom);
 
         this.state.objects.forEach(obj => {
             this.drawObject(this.offscreenCtx, obj);
         });
+
+        this.offscreenCtx.restore();
     }
 
     render() {
@@ -707,26 +720,15 @@ class WhiteboardApp {
         // 1. Clear Screen
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+        // 2. Draw Static Cache (Offscreen)
+        // This is the primary speed boost: drawing one image instead of thousands of vectors
+        this.ctx.drawImage(this.offscreenCanvas, 0, 0);
+
         this.ctx.save();
 
-        // Apply Zoom & Pan
+        // Apply Zoom & Pan for dynamic elements
         this.ctx.translate(this.zoomManager.pan.x, this.zoomManager.pan.y);
         this.ctx.scale(this.zoomManager.zoom, this.zoomManager.zoom);
-
-        // 2. Draw Background (Infinite Pattern)
-        const visibleBounds = {
-            x: -this.zoomManager.pan.x / this.zoomManager.zoom,
-            y: -this.zoomManager.pan.y / this.zoomManager.zoom,
-            width: this.canvas.width / this.zoomManager.zoom,
-            height: this.canvas.height / this.zoomManager.zoom
-        };
-        this.canvasSettings.drawBackground(this.canvas, this.ctx, visibleBounds);
-
-        // 3. Draw All Objects (Vector Mode)
-        // We bypass offscreenCanvas to support crisp zoom
-        this.state.objects.forEach(obj => {
-            this.drawObject(this.ctx, obj);
-        });
 
         // 4. Draw Active/Preview Tools (Dynamic content)
         const currentTool = this.tools[this.state.currentTool];

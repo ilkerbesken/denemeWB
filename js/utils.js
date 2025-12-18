@@ -13,49 +13,47 @@ const Utils = {
         return pressure || 0.5;
     },
 
-    // Basınca göre çizgi kalınlığı hesapla (2 kat hassas)
+    // Basınca göre çizgi kalınlığı hesapla
     getPressureWidth(baseWidth, pressure) {
-        // Çok daha geniş aralık: 0.2x ile 2.2x arası
-        return baseWidth * (0.2 + pressure * 2.0);
+        const p = (pressure !== undefined && !isNaN(pressure)) ? pressure : 0.5;
+        // 0.4x ile 1.6x arası dengeli bir aralık
+        return baseWidth * (0.4 + p * 1.2);
     },
 
     // Noktaları yumuşat (Douglas-Peucker benzeri)
     simplifyPoints(points, tolerance = 2) {
         if (points.length < 3) return points;
-        
+
         const simplified = [points[0]];
-        
+
         for (let i = 1; i < points.length - 1; i++) {
             const prev = simplified[simplified.length - 1];
             const curr = points[i];
-            
+
             if (this.distance(prev, curr) > tolerance) {
                 simplified.push(curr);
             }
         }
-        
+
         simplified.push(points[points.length - 1]);
         return simplified;
     },
 
-    // Basınç değerlerini yumuşat (geliştirilmiş)
+    // Basınç değerlerini yumuşat
     smoothPressure(points) {
         if (points.length < 3) return points;
-        
-        const smoothed = [...points];
-        
-        // İki geçişli yumuşatma
-        for (let pass = 0; pass < 2; pass++) {
+
+        const smoothed = points.map(p => ({ ...p }));
+
+        for (let pass = 0; pass < 1; pass++) {
             for (let i = 1; i < smoothed.length - 1; i++) {
-                const prev = smoothed[i - 1].pressure;
-                const curr = smoothed[i].pressure;
-                const next = smoothed[i + 1].pressure;
-                
-                // Gaussian-benzeri ağırlıklı ortalama
-                smoothed[i].pressure = (prev + curr * 4 + next) / 6;
+                const prev = smoothed[i - 1].pressure !== undefined ? smoothed[i - 1].pressure : 0.5;
+                const curr = smoothed[i].pressure !== undefined ? smoothed[i].pressure : 0.5;
+                const next = smoothed[i + 1].pressure !== undefined ? smoothed[i + 1].pressure : 0.5;
+                smoothed[i].pressure = (prev + curr * 2 + next) / 4;
             }
         }
-        
+
         return smoothed;
     },
 
@@ -63,7 +61,7 @@ const Utils = {
     getCatmullRomPoint(p0, p1, p2, p3, t) {
         const t2 = t * t;
         const t3 = t2 * t;
-        
+
         return {
             x: 0.5 * ((2 * p1.x) +
                 (-p0.x + p2.x) * t +
@@ -74,5 +72,55 @@ const Utils = {
                 (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
                 (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3)
         };
+    },
+
+    // Vektör İşlemleri
+    vecSub(a, b) {
+        return { x: a.x - b.x, y: a.y - b.y };
+    },
+    vecAdd(a, b) {
+        return { x: a.x + b.x, y: a.y + b.y };
+    },
+    vecMul(a, n) {
+        return { x: a.x * n, y: a.y * n };
+    },
+    vecDiv(a, n) {
+        return { x: a.x / n, y: a.y / n };
+    },
+    vecLen(a) {
+        return Math.sqrt(a.x * a.x + a.y * a.y);
+    },
+    vecNormalize(a) {
+        const len = this.vecLen(a);
+        return len === 0 ? { x: 0, y: 0 } : this.vecDiv(a, len);
+    },
+    vecPerp(a) {
+        return { x: -a.y, y: a.x };
+    },
+    vecLrp(a, b, t) {
+        return {
+            x: a.x + (b.x - a.x) * t,
+            y: a.y + (b.y - a.y) * t,
+            pressure: (a.pressure !== undefined && b.pressure !== undefined)
+                ? a.pressure + (b.pressure - a.pressure) * t
+                : (a.pressure || b.pressure || 0.5)
+        };
+    },
+    // Chaikin Smoothing Pass
+    chaikin(points, iterations = 1) {
+        if (points.length < 3) return points;
+        let smoothed = points;
+        for (let i = 0; i < iterations; i++) {
+            const next = [smoothed[0]];
+            for (let j = 0; j < smoothed.length - 1; j++) {
+                const p0 = smoothed[j];
+                const p1 = smoothed[j + 1];
+                next.push(this.vecLrp(p0, p1, 0.25));
+                next.push(this.vecLrp(p0, p1, 0.75));
+            }
+            next.push(smoothed[smoothed.length - 1]);
+            smoothed = next;
+        }
+        return smoothed;
     }
 };
