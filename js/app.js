@@ -183,26 +183,33 @@ class WhiteboardApp {
 
     setupEventListeners() {
         // Pointer events (fare ve dokunmatik için)
+        const opts = { passive: false };
+
+        // Aggressive touchstart suppression to prevent iPad gesture engine from starting
+        this.canvas.addEventListener('touchstart', (e) => {
+            if (e.cancelable) e.preventDefault();
+        }, opts);
+
         this.canvas.addEventListener('pointerdown', (e) => {
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             this.handlePointerDown(e);
-        });
+        }, opts);
         this.canvas.addEventListener('pointermove', (e) => {
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             this.handlePointerMove(e);
-        });
+        }, opts);
         this.canvas.addEventListener('pointerup', (e) => {
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             this.handlePointerUp(e);
-        });
+        }, opts);
         this.canvas.addEventListener('pointerleave', (e) => {
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             this.handlePointerUp(e);
-        });
+        }, opts);
         this.canvas.addEventListener('pointercancel', (e) => {
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             this.handlePointerUp(e);
-        });
+        }, opts);
 
         // Klavye kısayolları
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
@@ -529,18 +536,22 @@ class WhiteboardApp {
         const completedObject = tool.handlePointerUp(e, worldPos, this.canvas, this.ctx, this.state);
 
         if (completedObject) {
-            this.history.saveState(this.state.objects); // Save State 1 (Before Stroke)
-
-            if (completedObject.isStraightened && completedObject.originalPoints) {
-                // Auto-straightened object: Inject Freehand state
-                const freehandObj = JSON.parse(JSON.stringify(completedObject));
-                freehandObj.points = completedObject.originalPoints;
-                freehandObj.isStraightened = false;
-                delete freehandObj.originalPoints;
-                this.state.objects.push(freehandObj);
+            // DEFER history save to unblock the next pointerdown immediately.
+            // This is critical for fast handwriting on iPad.
+            setTimeout(() => {
                 this.history.saveState(this.state.objects);
-                this.state.objects.pop();
-            }
+
+                if (completedObject.isStraightened && completedObject.originalPoints) {
+                    // Auto-straightened object: Inject Freehand state
+                    const freehandObj = JSON.parse(JSON.stringify(completedObject));
+                    freehandObj.points = completedObject.originalPoints;
+                    freehandObj.isStraightened = false;
+                    delete freehandObj.originalPoints;
+                    this.state.objects.push(freehandObj);
+                    this.history.saveState(this.state.objects);
+                    this.state.objects.pop();
+                }
+            }, 0);
 
             if (completedObject.isHighlighter) {
                 this.state.objects.unshift(completedObject);
