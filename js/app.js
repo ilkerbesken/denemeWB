@@ -67,21 +67,17 @@ class WhiteboardApp {
         // İlk tuval ayarlarını uygula
         this.canvasSettings.applySettings(this.canvas, this.ctx);
 
-        // Offscreen canvas boyutlarını eşle
-        this.offscreenCanvas.width = this.canvas.width;
-        this.offscreenCanvas.height = this.canvas.height;
-
-        // Offscreen settings
-        this.canvasSettings.applySettings(this.offscreenCanvas, this.offscreenCtx);
+        // Offscreen canvas should perfectly match the main canvas dimensions and scale
+        this.canvasSettings.applySettings(this.offscreenCanvas, this.offscreenCtx, this.canvas);
 
         window.addEventListener('resize', () => {
             const oldObjects = [...this.state.objects];
+
+            // Re-apply settings to main
             this.canvasSettings.applySettings(this.canvas, this.ctx);
 
-            // Resize handler for offscreen
-            this.offscreenCanvas.width = this.canvas.width;
-            this.offscreenCanvas.height = this.canvas.height;
-            this.canvasSettings.applySettings(this.offscreenCanvas, this.offscreenCtx);
+            // Re-sync offscreen
+            this.canvasSettings.applySettings(this.offscreenCanvas, this.offscreenCtx, this.canvas);
 
             this.state.objects = oldObjects;
             this.redrawOffscreen();
@@ -147,11 +143,8 @@ class WhiteboardApp {
             // Yeni ayarları uygula
             this.canvasSettings.applySettings(this.canvas, this.ctx);
 
-            // Sync offscreen size BEFORE applying settings
-            this.offscreenCanvas.width = this.canvas.width;
-            this.offscreenCanvas.height = this.canvas.height;
-
-            this.canvasSettings.applySettings(this.offscreenCanvas, this.offscreenCtx);
+            // Sync offscreen and its background
+            this.canvasSettings.applySettings(this.offscreenCanvas, this.offscreenCtx, this.canvas);
 
             // Nesneleri yeniden çiz
             this.redrawOffscreen();
@@ -555,11 +548,10 @@ class WhiteboardApp {
 
             if (completedObject.isHighlighter) {
                 this.state.objects.unshift(completedObject);
-                this.redrawOffscreen();
             } else {
                 this.state.objects.push(completedObject);
-                this.drawObject(this.offscreenCtx, completedObject);
             }
+            this.redrawOffscreen();
         }
 
         // Update properties sidebar if selection might have changed (e.g. drag selection finished)
@@ -720,18 +712,13 @@ class WhiteboardApp {
     }
 
     redrawOffscreen() {
-        // Clear offscreen
-        this.offscreenCanvas.width = this.canvas.width;
-        this.offscreenCanvas.height = this.canvas.height;
+        // Redraw offscreen cache with High-DPI support, synced to main canvas
+        this.canvasSettings.applySettings(this.offscreenCanvas, this.offscreenCtx, this.canvas);
 
         // Render all permanent objects to the offscreen canvas
-        // This is expensive but only happens on state changes (not every mouse move)
         this.offscreenCtx.save();
 
-        // Background
-        this.canvasSettings.drawBackground(this.offscreenCanvas, this.offscreenCtx);
-
-        // Transformation
+        // Transformation (Relative to logical coordinate system)
         this.offscreenCtx.translate(this.zoomManager.pan.x, this.zoomManager.pan.y);
         this.offscreenCtx.scale(this.zoomManager.zoom, this.zoomManager.zoom);
 
@@ -744,16 +731,22 @@ class WhiteboardApp {
 
     render() {
         // Fast Render Loop
-        // 1. Clear Screen
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        const dpr = window.devicePixelRatio || 1;
+        const logicalW = this.canvas.clientWidth;
+        const logicalH = this.canvas.clientHeight;
+
+        // 1. Clear Screen (using logical bounds)
+        this.ctx.clearRect(0, 0, logicalW, logicalH);
 
         // 2. Draw Static Cache (Offscreen)
-        // This is the primary speed boost: drawing one image instead of thousands of vectors
-        this.ctx.drawImage(this.offscreenCanvas, 0, 0);
+        // Draw the full high-res offscreen buffer into the logical bounds
+        this.ctx.imageSmoothingEnabled = false; // Keep vector edges crisp
+        this.ctx.drawImage(this.offscreenCanvas, 0, 0, logicalW, logicalH);
+        this.ctx.imageSmoothingEnabled = true;
 
         this.ctx.save();
 
-        // Apply Zoom & Pan for dynamic elements
+        // Apply Zoom & Pan for dynamic elements (In logical coordinates)
         this.ctx.translate(this.zoomManager.pan.x, this.zoomManager.pan.y);
         this.ctx.scale(this.zoomManager.zoom, this.zoomManager.zoom);
 

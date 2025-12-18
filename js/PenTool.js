@@ -67,7 +67,9 @@ class PenTool {
             // Damping for stability (moving average with previous)
             const prevPressure = this.lastPoint ? this.lastPoint.pressure : 0.5;
             const targetPressure = Math.max(0.35, 1.0 - velocity * 0.4); // Less extreme thinning
-            currentPressure = prevPressure + (targetPressure - prevPressure) * 0.2; // Damping
+            currentPressure = prevPressure + (targetPressure - prevPressure) * 0.15; // Slightly more damped
+        } else if (state.pressureEnabled === false) {
+            currentPressure = 0.5; // Strictly constant when disabled
         }
 
         const point = {
@@ -104,10 +106,10 @@ class PenTool {
 
         // Update current path
         // Optimization: during active drawing, only smooth if we have enough points
-        // and use a lower iteration count.
+        // Increased iterations slightly for better real-time smoothness
         let drawPoints = this.streamlinePoints;
-        if (drawPoints.length > 8) {
-            drawPoints = Utils.chaikin(drawPoints, 1);
+        if (drawPoints.length > 6) {
+            drawPoints = Utils.chaikin(drawPoints, 2);
         }
 
         this.currentPath.points = drawPoints;
@@ -133,19 +135,24 @@ class PenTool {
         if (!this.currentPath.isStraightened) {
             let finalPoints = [...this.streamlinePoints];
 
-            // Apply Tapering (natural end)
-            // Gradually reduce pressure of the last ~8 points
-            const taperCount = Math.min(8, finalPoints.length);
-            for (let i = 0; i < taperCount; i++) {
-                const idx = finalPoints.length - 1 - i;
-                const taperFactor = i / taperCount; // 0 at the very end, approaches 1 backwards
-                // Ensure pressure goes towards zero or a very small value
-                const minTaper = 0.1;
-                finalPoints[idx].pressure = Math.max(minTaper, finalPoints[idx].pressure * taperFactor);
+            // Apply Tapering (natural end) - Only if pressure is enabled
+            if (state.pressureEnabled !== false) {
+                const taperCount = Math.min(10, finalPoints.length);
+                for (let i = 0; i < taperCount; i++) {
+                    const idx = finalPoints.length - 1 - i;
+                    const progress = i / taperCount; // 0 at the very end, 1 at the start of taper
+
+                    // Reduce thickness by 50% at the end (interpolated)
+                    // At end (progress=0), multiply by 0.5
+                    // At start of taper (progress=1), multiply by 1.0
+                    const reductionFactor = 0.5 + 0.5 * progress;
+                    finalPoints[idx].pressure *= reductionFactor;
+                }
             }
 
-            if (finalPoints.length > 5) {
-                finalPoints = Utils.chaikin(finalPoints, 2);
+            if (finalPoints.length > 3) {
+                // Higher iterations for final path to eliminate jaggedness (catallanma)
+                finalPoints = Utils.chaikin(finalPoints, 3);
             }
             this.currentPath.points = Utils.smoothPressure(finalPoints);
         }

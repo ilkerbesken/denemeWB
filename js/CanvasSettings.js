@@ -53,51 +53,73 @@ class CanvasSettings {
         });
     }
 
-    applySettings(canvas, ctx) {
-        const container = canvas.parentElement;
+    applySettings(canvas, ctx, syncFromCanvas = null) {
+        const dpr = window.devicePixelRatio || 1;
+        let cssWidth, cssHeight;
 
-        // Boyut hesapla
-        let width = canvas.width;
-        let height = canvas.height;
-
-        if (container) {
-            if (this.settings.size === 'full') {
-                width = container.clientWidth - 40;
-                height = container.clientHeight - 40;
-            } else {
-                const size = this.sizes[this.settings.size];
-
-                if (this.settings.orientation === 'portrait') {
-                    width = size.width;
-                    height = size.height;
+        if (syncFromCanvas) {
+            // Sync dimensions from another canvas (useful for offscreen cache)
+            cssWidth = syncFromCanvas.clientWidth;
+            cssHeight = syncFromCanvas.clientHeight;
+        } else {
+            const container = canvas.parentElement;
+            if (container) {
+                if (this.settings.size === 'full') {
+                    cssWidth = container.clientWidth - 40;
+                    cssHeight = container.clientHeight - 40;
                 } else {
-                    width = size.height;
-                    height = size.width;
+                    const size = this.sizes[this.settings.size];
+                    let w = size.width;
+                    let h = size.height;
+
+                    if (this.settings.orientation === 'portrait') {
+                        cssWidth = w;
+                        cssHeight = h;
+                    } else {
+                        cssWidth = h;
+                        cssHeight = w;
+                    }
+
+                    // Fit to screen
+                    const maxWidth = container.clientWidth - 40;
+                    const maxHeight = container.clientHeight - 40;
+                    const scale = Math.min(maxWidth / cssWidth, maxHeight / cssHeight, 0.9);
+
+                    if (scale < 1) {
+                        cssWidth = Math.floor(cssWidth * scale);
+                        cssHeight = Math.floor(cssHeight * scale);
+                    }
                 }
-
-                // Ekrana sığdır (maksimum %90 ölçek)
-                const maxWidth = container.clientWidth - 40;
-                const maxHeight = container.clientHeight - 40;
-
-                const scale = Math.min(maxWidth / width, maxHeight / height, 0.9);
-
-                if (scale < 1) {
-                    width = Math.floor(width * scale);
-                    height = Math.floor(height * scale);
-                }
+            } else {
+                // Fallback for off-dom canvas with no sync target
+                cssWidth = canvas.clientWidth || 800;
+                cssHeight = canvas.clientHeight || 600;
             }
-
-            // Canvas boyutunu ayarla
-            canvas.width = width;
-            canvas.height = height;
         }
 
-        // Arkaplan rengini ayarla
-        this.drawBackground(canvas, ctx);
+        // Apply styles and dimensions
+        canvas.style.width = cssWidth + 'px';
+        canvas.style.height = cssHeight + 'px';
+        canvas.width = Math.floor(cssWidth * dpr);
+        canvas.height = Math.floor(cssHeight * dpr);
+
+        // Apply DPR scale to the coordinate system
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset
+        ctx.scale(dpr, dpr);
+
+        // Render background
+        this.drawBackground(canvas, ctx, null, cssWidth, cssHeight);
     }
 
-    drawBackground(canvas, ctx, visibleBounds) {
-        let x = 0, y = 0, w = canvas.width, h = canvas.height;
+    drawBackground(canvas, ctx, visibleBounds, explicitW = null, explicitH = null) {
+        let logicalW = explicitW || canvas.clientWidth || parseInt(canvas.style.width);
+        let logicalH = explicitH || canvas.clientHeight || parseInt(canvas.style.height);
+
+        // Final fallback to physical dimensions (normalized by DPR)
+        if (!logicalW || isNaN(logicalW)) logicalW = canvas.width / (window.devicePixelRatio || 1);
+        if (!logicalH || isNaN(logicalH)) logicalH = canvas.height / (window.devicePixelRatio || 1);
+
+        let x = 0, y = 0, w = logicalW, h = logicalH;
 
         if (visibleBounds) {
             x = visibleBounds.x;
@@ -107,7 +129,7 @@ class CanvasSettings {
         }
 
         // Arkaplan rengi
-        ctx.fillStyle = this.colors[this.settings.backgroundColor];
+        ctx.fillStyle = this.colors[this.settings.backgroundColor] || '#ffffff';
         ctx.fillRect(x, y, w, h);
 
         // Desen çiz
