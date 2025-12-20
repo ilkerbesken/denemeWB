@@ -98,7 +98,65 @@ body {
 }
 
 input[type="range"] {
-    width: 100px;
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+/* Track styles */
+input[type="range"]::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, #2196f3 0%, #2196f3 var(--value, 0%), #e0e0e0 var(--value, 0%), #e0e0e0 100%);
+    height: 6px;
+    border-radius: 10px;
+}
+
+input[type="range"]::-moz-range-track {
+    background: linear-gradient(to right, #2196f3 0%, #2196f3 var(--value, 0%), #e0e0e0 var(--value, 0%), #e0e0e0 100%);
+    height: 6px;
+    border-radius: 10px;
+}
+
+/* Thumb (top) styles */
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 16px;
+    width: 16px;
+    background: #ffffff;
+    /* Beyaz top */
+    border: 2px solid #bbb;
+    /* Gri çerçeve */
+    border-radius: 50%;
+    margin-top: -5px;
+    /* Çubukla ortalamak için */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+input[type="range"]::-moz-range-thumb {
+    height: 16px;
+    width: 16px;
+    background: #ffffff;
+    border: 2px solid #bbb;
+    border-radius: 50%;
+}
+
+/* Firefox Mavi Kısım */
+input[type="range"]::-moz-range-progress {
+    background: #2196f3;
+    height: 6px;
+    border-radius: 10px 0 0 10px;
+}
+
+/* Limit overflow to prevent blue shadow from bleeding out of the input */
+.slider-container,
+.property-popup-responsive {
+    overflow: visible;
+}
+
+input[type="range"] {
+    overflow: visible;
 }
 
 .label {
@@ -468,11 +526,7 @@ input[type="range"] {
 }
 
 .properties-sidebar input[type="range"] {
-    width: 6px;
-    height: 50px;
-    /* Reduced from 60 to accomodate labels */
-    appearance: slider-vertical;
-    cursor: pointer;
+    width: 100%;
 }
 
 /* Labels in vertical sidebar? */
@@ -694,6 +748,55 @@ input[type="range"] {
     width: max-content;
 }
 
+/* Brush Settings Specific Popup */
+.brush-settings-popup {
+    flex-direction: column;
+    min-width: 130px;
+    padding: 12px;
+    gap: 16px;
+}
+
+.brush-setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.brush-setting-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 2px;
+}
+
+.brush-setting-item .label {
+    margin-right: 0;
+    font-weight: 600;
+    font-size: 10px;
+    color: #333;
+}
+
+.brush-setting-item input[type="range"] {
+    width: 100%;
+    height: 16px;
+    margin: 0;
+}
+
+.slider-val-left,
+.slider-val-top {
+    font-size: 10px;
+    color: #2196f3;
+    font-weight: 600;
+    background: #f0f7ff;
+    border: 1px solid #d0e7ff;
+    padding: 1px 6px;
+    border-radius: 4px;
+    min-width: 30px;
+    text-align: center;
+    display: inline-block;
+}
+
 .property-trigger-btn {
     flex: 1;
     display: flex;
@@ -782,6 +885,14 @@ input[type="range"] {
     margin: 0;
 }
 
+.mobile-only {
+    display: none !important;
+}
+
+.desktop-only {
+    display: flex !important;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
 
@@ -793,6 +904,122 @@ input[type="range"] {
         padding: 4px;
         -webkit-overflow-scrolling: touch;
         /* Smooth scrolling on iOS */
+    }
+
+    .mobile-only {
+        display: flex !important;
+    }
+
+    button.mobile-only {
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        background: white;
+        color: #555;
+        flex-shrink: 0;
+        cursor: pointer;
+    }
+
+    .desktop-only {
+        display: none !important;
+    }
+
+    .mobile-only.active {
+        background: #e3f2fd;
+        border-color: #2196f3;
+        color: #2196f3;
+    }
+
+    .mobile-only svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    #btnColorToggle.floating-action-btn {
+        position: fixed;
+        left: 12px;
+        bottom: 50px;
+        z-index: 100;
+        width: 32px;
+        height: 32px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        border-radius: 8px;
+    }
+
+    #btnColorToggle.floating-action-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    /* Hide desktop slider containers/labels when treating as popup */
+    .property-popup-responsive {
+        display: none;
+        position: fixed;
+        bottom: 90px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        padding: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        z-index: 2000;
+        min-width: 200px;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .property-popup-responsive.show {
+        display: flex;
+        animation: slideUp 0.2s ease-out;
+    }
+
+    .property-popup-responsive .brush-setting-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 8px;
+    }
+
+    .property-popup-responsive .label {
+        margin-bottom: 0;
+        font-weight: 600;
+        font-size: 12px;
+    }
+
+    .property-popup-responsive .slider-container {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .property-popup-responsive input[type="range"] {
+        width: 100%;
+        height: 16px;
+        appearance: none;
+        margin: 0;
+    }
+
+    .property-popup-responsive .slider-val-top {
+        margin-bottom: 0;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translate(-50%, 10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
     }
 
     .toolbar::-webkit-scrollbar {
@@ -815,22 +1042,126 @@ input[type="range"] {
         overflow-y: auto;
     }
 
-    /* Properties Sidebar (Move to Right on Mobile to avoid overlap) */
+    #colorSidebar {
+        display: none;
+        /* Hide by default on mobile */
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 2001;
+        /* Above property popups */
+    }
+
+    #colorSidebar.show {
+        display: flex;
+    }
+
     .properties-sidebar {
-        left: auto;
-        right: 12px;
-        top: 60px;
-        /* Below toolbar */
+        left: 0;
+        right: 0;
+        margin: 0 auto;
+        top: auto;
+        bottom: 50px;
         transform: none;
-        /* Reset vertical centering */
-        max-height: calc(100vh - 120px);
+        flex-direction: row;
+        width: max-content;
+        max-width: 95vw;
+        max-height: initial;
+        padding: 6px 10px;
+        overflow-x: auto;
+        border-radius: 12px;
+        gap: 4px;
+        display: flex;
+        background: white;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 90;
+    }
+
+    .properties-sidebar .tool-group {
+        display: flex;
+        flex-direction: row;
+        border-right: 1px solid #e0e0e0;
+        border-bottom: none;
+        padding: 0 4px;
+        height: 100%;
+        justify-content: center;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .properties-sidebar .tool-group:last-child {
+        border-right: none;
+        padding-right: 0;
+    }
+
+    /* Tighten brush setting groups for a "single block" feel */
+    #toolGroupThickness,
+    #toolGroupOpacity,
+    #toolGroupStabilization,
+    #toolGroupDecimation {
+        border-right: none;
+        padding: 0;
+        gap: 2px;
+    }
+
+    #arrowSettings {
+        width: auto !important;
+        flex-direction: row !important;
+        gap: 8px;
+    }
+
+    .properties-sidebar .tool-btn,
+    .property-trigger-btn {
+        width: 24px;
+        height: 24px;
+        flex: none;
+        padding: 0;
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        color: #1C274C;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .properties-sidebar .tool-btn:hover,
+    .property-trigger-btn:hover {
+        background: #f5f5f5;
+        border-color: #d0d0d0;
+    }
+
+    .properties-sidebar .tool-btn svg,
+    .property-trigger-btn svg {
+        width: 14px;
+        height: 14px;
+        stroke: #1C274C;
+        stroke-width: 2;
+    }
+
+    .properties-sidebar .tool-btn.active,
+    .property-trigger-btn.active {
+        background: #e3f2fd;
+        border-color: #2196f3;
+        color: #2196f3;
+    }
+
+    .properties-sidebar .tool-btn.active svg,
+    .property-trigger-btn.active svg {
+        stroke: #2196f3;
     }
 
     .property-popup {
-        left: auto;
-        right: 100%;
-        margin-left: 0;
-        margin-right: 9px;
+        position: fixed;
+        left: 50%;
+        right: auto;
+        top: auto;
+        bottom: 90px;
+        margin: 0;
+        transform: translateX(-50%);
+        z-index: 2500;
     }
 
     /* Status Bar */

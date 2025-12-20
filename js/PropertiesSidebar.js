@@ -5,48 +5,99 @@ class PropertiesSidebar {
     }
 
     init() {
+        this.isInteractionStarted = false;
         this.setupEventListeners();
     }
 
     setupEventListeners() {
-        // Opacity Slider
-        const opacitySlider = document.getElementById('opacitySlider');
+        // Opacity Slider Sync
+        const opacitySliders = document.querySelectorAll('.opacity-slider');
         const opacityVal = document.getElementById('opacityVal');
-        opacitySlider.addEventListener('input', (e) => {
-            const val = parseInt(e.target.value);
-            this.app.state.opacity = val / 100;
-            if (opacityVal) opacityVal.textContent = val + '%';
+        const opacityValMobile = document.getElementById('opacityValMobile');
+        opacitySliders.forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
 
-            if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
-                this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { opacity: this.app.state.opacity });
-                this.app.render();
-            }
+                // Save state ONCE at the start of continuous interaction
+                if (!this.isInteractionStarted && this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
+                    this.app.history.saveState(this.app.state.objects);
+                    this.isInteractionStarted = true;
+                }
+
+                this.app.state.opacity = val / 100;
+                if (opacityVal) opacityVal.textContent = val + '%';
+                if (opacityValMobile) opacityValMobile.textContent = val + '%';
+                // Sync all opacity sliders
+                opacitySliders.forEach(s => { if (s !== e.target) s.value = val; });
+
+                if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
+                    this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { opacity: this.app.state.opacity });
+                    this.app.render();
+                }
+            });
+            slider.addEventListener('change', (e) => {
+                this.isInteractionStarted = false; // Reset flag for next interaction
+            });
         });
 
-        opacitySlider.addEventListener('change', (e) => {
-            if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
-                this.app.history.saveState(this.app.state.objects);
-            }
-        });
-
-        // Stroke Width Slider
-        const widthSlider = document.getElementById('strokeWidth');
+        // Stroke Width Slider Sync
+        const widthSliders = document.querySelectorAll('.stroke-width-slider');
         const widthVal = document.getElementById('strokeWidthVal');
-        widthSlider.addEventListener('input', (e) => {
-            const val = parseInt(e.target.value);
-            this.app.state.strokeWidth = val;
-            if (widthVal) widthVal.textContent = val;
+        const widthValMobile = document.getElementById('strokeWidthValMobile');
+        widthSliders.forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
 
-            if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
-                this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { width: this.app.state.strokeWidth });
-                this.app.render();
-            }
+                // Save state ONCE at the start of continuous interaction
+                if (!this.isInteractionStarted && this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
+                    this.app.history.saveState(this.app.state.objects);
+                    this.isInteractionStarted = true;
+                }
+
+                this.app.state.strokeWidth = val;
+                if (widthVal) widthVal.textContent = val;
+                if (widthValMobile) widthValMobile.textContent = val;
+                // Sync all width sliders
+                widthSliders.forEach(s => { if (s !== e.target) s.value = val; });
+
+                if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
+                    this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { width: this.app.state.strokeWidth });
+                    this.app.render();
+                }
+            });
+            slider.addEventListener('change', (e) => {
+                this.isInteractionStarted = false; // Reset flag
+            });
         });
 
-        widthSlider.addEventListener('change', (e) => {
-            if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
-                this.app.history.saveState(this.app.state.objects);
-            }
+        // Stabilization Slider Sync
+        const stabSliders = document.querySelectorAll('.stabilization-slider');
+        const stabVal = document.getElementById('stabilizationVal');
+        const stabValMobile = document.getElementById('stabilizationValMobile');
+        stabSliders.forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                this.app.state.stabilization = val / 100;
+                if (stabVal) stabVal.textContent = val;
+                if (stabValMobile) stabValMobile.textContent = val;
+                // Sync all stabilization sliders
+                stabSliders.forEach(s => { if (s !== e.target) s.value = val; });
+            });
+        });
+
+        // Decimation Slider Sync
+        const decSliders = document.querySelectorAll('.decimation-slider');
+        const decVal = document.getElementById('decimationVal');
+        const decValMobile = document.getElementById('decimationValMobile');
+        decSliders.forEach(slider => {
+            slider.addEventListener('input', (e) => {
+                const val = parseInt(e.target.value);
+                this.app.state.decimation = val / 100;
+                if (decVal) decVal.textContent = val;
+                if (decValMobile) decValMobile.textContent = val;
+                // Sync all decimation sliders
+                decSliders.forEach(s => { if (s !== e.target) s.value = val; });
+            });
         });
 
         // Pressure Sensitivity Button
@@ -70,9 +121,9 @@ class PropertiesSidebar {
 
                 // Update Selection
                 if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
+                    this.app.history.saveState(this.app.state.objects); // Save state BEFORE change
                     this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { lineStyle: style });
                     this.app.render();
-                    this.app.history.saveState(this.app.state.objects);
                 }
             });
         });
@@ -141,19 +192,59 @@ class PropertiesSidebar {
         const popupStart = document.getElementById('popupArrowStart');
         const popupEnd = document.getElementById('popupArrowEnd');
 
+        // Combined Brush Settings Trigger
+        const btnBrushSettingsTrigger = document.getElementById('btnBrushSettingsTrigger');
+        const popupBrushSettings = document.getElementById('popupBrushSettings');
+
+        const btnColorToggle = document.getElementById('btnColorToggle');
+        const colorSidebar = document.getElementById('colorSidebar');
+
         const closeAllPopups = () => {
             if (popupStart) popupStart.style.display = 'none';
             if (popupEnd) popupEnd.style.display = 'none';
             if (btnStartTrigger) btnStartTrigger.classList.remove('active');
             if (btnEndTrigger) btnEndTrigger.classList.remove('active');
+
+            if (popupBrushSettings) popupBrushSettings.style.display = 'none';
+            if (btnBrushSettingsTrigger) btnBrushSettingsTrigger.classList.remove('active');
+
+            // Close mobile popups
+            ['Thickness', 'Opacity', 'Stabilization', 'Decimation'].forEach(name => {
+                const popup = document.getElementById(`popup${name}`);
+                const btn = document.getElementById(`btn${name}Trigger`);
+                if (popup) popup.classList.remove('show');
+                if (btn) btn.classList.remove('active');
+            });
         };
 
         // Close popups when clicking outside
         document.addEventListener('click', (e) => {
-            if (!e.target.closest('.property-trigger-btn') && !e.target.closest('.property-popup')) {
+            if (!e.target.closest('.property-trigger-btn') &&
+                !e.target.closest('.property-popup') &&
+                !e.target.closest('.property-popup-responsive') &&
+                !e.target.closest('#colorSidebar') &&
+                !e.target.closest('#btnColorToggle')) {
                 closeAllPopups();
+                if (colorSidebar) colorSidebar.classList.remove('show');
+                if (btnColorToggle) btnColorToggle.classList.remove('active');
             }
         });
+
+        // Color Toggle Logic
+        if (btnColorToggle && colorSidebar) {
+            btnColorToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isVisible = colorSidebar.classList.contains('show');
+                closeAllPopups();
+                if (!isVisible) {
+                    colorSidebar.classList.add('show');
+                    btnColorToggle.classList.add('active');
+                } else {
+                    colorSidebar.classList.remove('show');
+                    btnColorToggle.classList.remove('active');
+                }
+            });
+        }
 
         if (btnStartTrigger && popupStart) {
             btnStartTrigger.addEventListener('click', (e) => {
@@ -179,6 +270,36 @@ class PropertiesSidebar {
             });
         }
 
+        // Brush Settings Trigger Logic
+        if (btnBrushSettingsTrigger && popupBrushSettings) {
+            btnBrushSettingsTrigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isVisible = popupBrushSettings.style.display === 'flex';
+                closeAllPopups();
+                if (!isVisible) {
+                    popupBrushSettings.style.display = 'flex';
+                    btnBrushSettingsTrigger.classList.add('active');
+                }
+            });
+        }
+
+        // Mobile Triggers (Individual popups)
+        ['Thickness', 'Opacity', 'Stabilization', 'Decimation'].forEach(name => {
+            const btn = document.getElementById(`btn${name}Trigger`);
+            const popup = document.getElementById(`popup${name}`);
+            if (btn && popup) {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const isVisible = popup.classList.contains('show');
+                    closeAllPopups();
+                    if (!isVisible) {
+                        popup.classList.add('show');
+                        btn.classList.add('active');
+                    }
+                });
+            }
+        });
+
         // Close popup when options are selected
         const popupButtons = document.querySelectorAll('.property-popup .tool-btn');
         popupButtons.forEach(btn => {
@@ -202,17 +323,19 @@ class PropertiesSidebar {
 
     updateUIForTool(tool) {
         // Opacity Logic
+        // We only want to set a default opacity when switching to a tool that specifically 
+        // benefits from it (like highlighter), but we shouldn't reset it every time 
+        // if the user is just switching between similar tools.
         if (tool === 'highlighter') {
-            this.app.state.opacity = 0.7;
-            document.getElementById('opacitySlider').value = 70;
-            const opacityVal = document.getElementById('opacityVal');
-            if (opacityVal) opacityVal.textContent = '70%';
-        } else if (['pen', 'line', 'rectangle', 'ellipse'].includes(tool)) {
-            this.app.state.opacity = 1.0;
-            document.getElementById('opacitySlider').value = 100;
-            const opacityVal = document.getElementById('opacityVal');
-            if (opacityVal) opacityVal.textContent = '100%';
+            // Only force 70% if it was fully opaque, to allow user to customize highlighter too
+            if (this.app.state.opacity === 1.0) {
+                this.app.state.opacity = 0.7;
+                document.getElementById('opacitySlider').value = 70;
+                const opacityVal = document.getElementById('opacityVal');
+                if (opacityVal) opacityVal.textContent = '70%';
+            }
         }
+        // We removed the forced reset to 1.0 for pen/shapes to allow persistent user choice.
 
         // Pressure Logic
         const pressureBtn = document.getElementById('pressureBtn');
@@ -229,6 +352,33 @@ class PropertiesSidebar {
             pressureBtn.classList.remove('active');
             pressureBtn.style.display = 'none'; // Hide for arrow
         }
+
+        // Brush Settings Visibility Logic
+        const isFreehand = (tool === 'pen' || tool === 'highlighter');
+        const showBrushSettings = ['pen', 'highlighter', 'rectangle', 'ellipse', 'line', 'arrow', 'select'].includes(tool);
+
+        // Desktop Unified Settings
+        const brushSettingsGroup = document.getElementById('toolGroupBrushSettings');
+        if (brushSettingsGroup) {
+            brushSettingsGroup.style.display = showBrushSettings ? 'flex' : 'none';
+
+            // Also manage internal visibility of stabilization/decimation inside the popup
+            const stabItem = document.querySelector('#popupBrushSettings .brush-setting-item:nth-child(3)');
+            const decItem = document.querySelector('#popupBrushSettings .brush-setting-item:nth-child(4)');
+
+            if (stabItem) stabItem.style.display = isFreehand ? 'block' : 'none';
+            if (decItem) decItem.style.display = isFreehand ? 'block' : 'none';
+        }
+
+        // Mobile Individual Groups
+        ['Thickness', 'Opacity'].forEach(id => {
+            const group = document.getElementById(`toolGroup${id}`);
+            if (group) group.style.display = showBrushSettings ? 'flex' : 'none';
+        });
+        ['Stabilization', 'Decimation'].forEach(id => {
+            const group = document.getElementById(`toolGroup${id}`);
+            if (group) group.style.display = isFreehand ? 'flex' : 'none';
+        });
 
         // Line Style Logic: Hide wavy for rect/ellipse
         const wavyBtn = document.querySelector('.tool-btn[data-linestyle="wavy"]');

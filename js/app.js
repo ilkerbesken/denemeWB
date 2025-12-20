@@ -23,6 +23,8 @@ class WhiteboardApp {
             arrowEndStyle: 'triangle', // 'none', 'triangle', 'line', 'circle', 'square', 'bar'
             arrowPathType: 'straight', // 'straight', 'curved', 'elbow'
             eraserMode: 'object', // 'object', 'partial'
+            stabilization: 0.5, // 0.0 to 1.0 (corresponds to 0-100% slider)
+            decimation: 0.10, // Default 10% of width
             objects: []
         };
 
@@ -61,6 +63,20 @@ class WhiteboardApp {
         // Initial draw
         this.redrawOffscreen();
         this.render();
+
+        // Range Slider Progress Sync (Pure CSS progress bars are tricky, so we use a CSS variable)
+        const updateRangeProgress = (input) => {
+            const percent = (input.value - input.min) / (input.max - input.min) * 100;
+            input.style.setProperty('--value', percent + '%');
+        };
+
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            updateRangeProgress(input);
+            input.addEventListener('input', () => updateRangeProgress(input));
+        });
+
+        // Expose to window for PropertiesSidebar to use during manual sync
+        window.updateRangeProgress = updateRangeProgress;
     }
 
     setupCanvas() {
@@ -90,31 +106,19 @@ class WhiteboardApp {
     // but the instruction implies its existence and purpose.
     setTool(tool) {
         this.state.currentTool = tool;
-        // Logic for showing/hiding settings panels based on the tool
-        // This part is typically handled by a PropertiesSidebar or similar UI manager.
-        // For the purpose of this edit, we'll simulate the logic here.
-        const highlighterSettings = document.getElementById('highlighterSettings');
-        const arrowSettings = document.getElementById('arrowSettings');
-        const arrowPathSettings = document.getElementById('arrowPathSettings');
-        const eraserSettings = document.getElementById('eraserSettings');
 
-        // Assuming these elements exist and are managed by a sidebar or similar.
-        // The original instruction snippet was placed incorrectly in setupCanvasModal,
-        // but the logic itself is for tool-specific UI visibility.
-        if (highlighterSettings) {
-            highlighterSettings.style.display = tool === 'highlighter' ? 'flex' : 'none';
-        }
-        if (arrowSettings) {
-            arrowSettings.style.display = tool === 'arrow' ? 'flex' : 'none';
-        }
-        if (arrowPathSettings) {
-            arrowPathSettings.style.display = tool === 'arrow' ? 'flex' : 'none';
-        }
-        if (eraserSettings) {
-            eraserSettings.style.display = tool === 'eraser' ? 'flex' : 'none';
+        // Canvas imleç stili
+        if (tool === 'eraser') {
+            this.canvas.style.cursor = 'crosshair';
+        } else if (tool === 'hand') {
+            this.canvas.style.cursor = 'grab';
+        } else if (tool === 'select') {
+            this.canvas.style.cursor = 'default';
+        } else {
+            this.canvas.style.cursor = 'crosshair';
         }
 
-        // Other UI updates would typically go here or be delegated to propertiesSidebar.updateUIForTool(tool);
+        this.updateStatus();
     }
 
     setupCanvasModal() {
@@ -208,11 +212,8 @@ class WhiteboardApp {
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
         document.addEventListener('keyup', (e) => this.handleKeyUp(e));
 
-        // Mouse pozisyonunu takip et
-        this.canvas.addEventListener('mousemove', (e) => {
-            this.currentMousePos = { x: e.offsetX, y: e.offsetY };
-            this.updateStatus();
-        });
+        // Mouse pozisyonunu takip et (App.js handles pointermove, but we can update state here if needed)
+        // Redundant mousemove removed to unify in pointermove
 
         // Context menu (sağ tık)
         this.canvas.addEventListener('contextmenu', (e) => {
@@ -254,67 +255,12 @@ class WhiteboardApp {
             });
         });
 
-        // Highlighter Cap Settings
-        document.querySelectorAll('.tool-btn[data-highlighter-cap]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const cap = btn.dataset.highlighterCap;
-                this.state.highlighterCap = cap;
-
-                // Update UI
-                document.querySelectorAll('.tool-btn[data-highlighter-cap]').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-            });
-        });
-
-
-        // Opaklık Slider
-        document.getElementById('opacitySlider').addEventListener('input', (e) => {
-            const val = parseInt(e.target.value);
-            this.state.opacity = val / 100;
-
-            // Eğer seçili nesne varsa opaklığını değiştir
-            // SelectTool logic handles styling.
-            if (this.state.currentTool === 'select' && this.tools.select.selectedObjects.length > 0) {
-                this.tools.select.updateSelectedObjectsStyle(this.state, { opacity: this.state.opacity });
-                this.redrawOffscreen();
-                this.render();
-            }
-        });
-
-        document.getElementById('opacitySlider').addEventListener('change', (e) => {
-            // Save history on release
-            if (this.state.currentTool === 'select' && this.tools.select.selectedObjects.length > 0) {
-                this.history.saveState(this.state.objects);
-            }
-        });
-
-        // Kalınlık
-        document.getElementById('strokeWidth').addEventListener('input', (e) => {
-            this.state.strokeWidth = parseInt(e.target.value);
-
-            // Eğer seçili nesne varsa kalınlığını değiştir
-            if (this.state.currentTool === 'select' && this.tools.select.selectedObjects.length > 0) {
-                this.tools.select.updateSelectedObjectsStyle(this.state, { width: this.state.strokeWidth });
-                this.redrawOffscreen();
-                this.render();
-            }
-        });
-
-        // Kalınlık seçimi tamamlandığında history kaydet
-        document.getElementById('strokeWidth').addEventListener('change', (e) => {
-            if (this.state.currentTool === 'select' && this.tools.select.selectedObjects.length > 0) {
-                this.history.saveState(this.state.objects);
-            }
-        });
-
         // Temizle
         document.getElementById('clearBtn').addEventListener('click', () => {
-            if (confirm('Tüm çizimleri temizlemek istediğinizden emin misiniz?')) {
-                this.history.saveState(this.state.objects);
-                this.state.objects = [];
-                this.redrawOffscreen();
-                this.render();
-            }
+            this.history.saveState(this.state.objects);
+            this.state.objects = [];
+            this.redrawOffscreen();
+            this.render();
         });
 
         // Geri al
@@ -328,28 +274,7 @@ class WhiteboardApp {
         });
 
         // Basınç Hassasiyeti - Handled in PropertiesSidebar.js
-
-        // Çizgi Stili
-        document.querySelectorAll('.tool-btn[data-linestyle]').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const style = btn.dataset.linestyle;
-                this.state.lineStyle = style;
-
-                // UI Güncelle
-                document.querySelectorAll('.tool-btn[data-linestyle]').forEach(b =>
-                    b.classList.remove('active')
-                );
-                btn.classList.add('active');
-
-                // Eğer seçili nesne varsa stilini değiştir
-                if (this.state.currentTool === 'select' && this.tools.select.selectedObjects.length > 0) {
-                    this.tools.select.updateSelectedObjectsStyle(this.state, { lineStyle: style });
-                    this.redrawOffscreen();
-                    this.render();
-                    this.history.saveState(this.state.objects);
-                }
-            });
-        });
+        // Çizgi Stili - Handled in PropertiesSidebar.js
     }
 
     setupContextMenu() {
@@ -431,22 +356,6 @@ class WhiteboardApp {
         });
     }
 
-    setTool(toolName) {
-        this.state.currentTool = toolName;
-
-        // Canvas imleç stili
-        if (toolName === 'eraser') {
-            this.canvas.style.cursor = 'crosshair';
-        } else if (toolName === 'hand') {
-            this.canvas.style.cursor = 'grab';
-        } else if (toolName === 'select') {
-            this.canvas.style.cursor = 'default';
-        } else {
-            this.canvas.style.cursor = 'crosshair';
-        }
-
-        this.updateStatus();
-    }
 
     handlePointerDown(e) {
         if (this.isSpacePressed) {
@@ -459,8 +368,10 @@ class WhiteboardApp {
 
         const worldPos = this.zoomManager.getPointerWorldPos(e);
 
-        // Seç aracı için sürükleme başlamadan önce history kaydet
-        if (this.state.currentTool === 'select' && tool.selectedObjects.length > 0) {
+        // Save state for tools that modify state.objects immediately or via move (Eraser/Select)
+        if (this.state.currentTool === 'eraser') {
+            this.history.saveState(this.state.objects);
+        } else if (this.state.currentTool === 'select' && tool.selectedObjects.length > 0) {
             const clickPoint = { x: worldPos.x, y: worldPos.y };
             const selectedIndex = tool.selectedObjects[0];
             const selectedObj = this.state.objects[selectedIndex];
@@ -495,7 +406,10 @@ class WhiteboardApp {
         const needsRedraw = tool.handlePointerMove(e, worldPos, this.canvas, this.ctx, this.state);
         const afterCount = this.state.objects.length;
 
-        if (needsRedraw || beforeCount !== afterCount) {
+        // Mouse pozisyonunu her harekette güncelle
+        this.currentMousePos = { x: e.offsetX, y: e.offsetY };
+
+        if (needsRedraw || beforeCount !== afterCount || this.state.currentTool === 'eraser') {
             // Optimization & Logic Fix:
             // If SelectTool is dragging/resizing, it modifies state.objects in-place.
             // We must update the offscreen canvas to reflect these changes.
@@ -505,8 +419,10 @@ class WhiteboardApp {
                 }
             }
 
-            // Fix for Eraser: If objects were removed, we MUST redraw offscreen
-            if (beforeCount !== afterCount) {
+            // Fix for Eraser: If something was modified or count changed, we MUST redraw offscreen
+            if (this.state.currentTool === 'eraser' && (needsRedraw || beforeCount !== afterCount)) {
+                this.redrawOffscreen();
+            } else if (beforeCount !== afterCount) {
                 this.redrawOffscreen();
             }
 
@@ -517,8 +433,12 @@ class WhiteboardApp {
     handlePointerUp(e) {
         if (this.zoomManager.isPanning) {
             this.zoomManager.endPan();
-            // Restore cursor based on space key
-            this.canvas.style.cursor = this.isSpacePressed ? 'grab' : (this.state.currentTool === 'eraser' ? 'crosshair' : (this.state.currentTool === 'select' ? 'default' : 'crosshair'));
+            // Restore cursor based on space key and current tool
+            if (this.isSpacePressed) {
+                this.canvas.style.cursor = 'grab';
+            } else {
+                this.setTool(this.state.currentTool); // Use setTool to restore correct cursor
+            }
             return;
         }
 
@@ -529,28 +449,36 @@ class WhiteboardApp {
         const completedObject = tool.handlePointerUp(e, worldPos, this.canvas, this.ctx, this.state);
 
         if (completedObject) {
-            // DEFER history save to unblock the next pointerdown immediately.
-            // This is critical for fast handwriting on iPad.
-            setTimeout(() => {
-                this.history.saveState(this.state.objects);
+            // 1. SAVE STATE BEFORE ADDING (to allow undo to previous state)
+            this.history.saveState(this.state.objects);
 
-                if (completedObject.isStraightened && completedObject.originalPoints) {
-                    // Auto-straightened object: Inject Freehand state
-                    const freehandObj = JSON.parse(JSON.stringify(completedObject));
-                    freehandObj.points = completedObject.originalPoints;
-                    freehandObj.isStraightened = false;
-                    delete freehandObj.originalPoints;
-                    this.state.objects.push(freehandObj);
-                    this.history.saveState(this.state.objects);
-                    this.state.objects.pop();
+            // 2. IF AUTO-STRAIGHTENED, INJECT INTERMEDIATE STATE
+            if (completedObject.isStraightened && completedObject.originalPoints) {
+                // To allow undo back to squiggly:
+                // We need a state that has all current objects PLUS the squiggly one
+                const freehandObj = JSON.parse(JSON.stringify(completedObject));
+                freehandObj.points = completedObject.originalPoints;
+                freehandObj.isStraightened = false;
+                delete freehandObj.originalPoints;
+
+                const intermediateObjects = JSON.parse(JSON.stringify(this.state.objects));
+                if (completedObject.isHighlighter) {
+                    intermediateObjects.unshift(freehandObj);
+                } else {
+                    intermediateObjects.push(freehandObj);
                 }
-            }, 0);
 
+                // Save the intermediate (squiggly) state to the undo stack
+                this.history.saveState(intermediateObjects);
+            }
+
+            // 3. ADD THE FINAL OBJECT TO REAL STATE
             if (completedObject.isHighlighter) {
                 this.state.objects.unshift(completedObject);
             } else {
                 this.state.objects.push(completedObject);
             }
+
             this.redrawOffscreen();
         }
 
@@ -752,6 +680,8 @@ class WhiteboardApp {
 
         // 4. Draw Active/Preview Tools (Dynamic content)
         const currentTool = this.tools[this.state.currentTool];
+        let needsNextFrame = false;
+
         if (currentTool.isDrawing && currentTool.currentPath) {
             currentTool.drawPreview(this.ctx, currentTool.currentPath);
         } else if (currentTool.isDrawing && currentTool.currentLine) {
@@ -762,6 +692,16 @@ class WhiteboardApp {
             currentTool.drawPreview(this.ctx, currentTool.currentEllipse);
         } else if (currentTool.isDrawing && currentTool.currentArrow) {
             currentTool.drawPreview(this.ctx, currentTool.currentArrow);
+        } else if (this.state.currentTool === 'eraser' && currentTool.currentTrail) {
+            // Eraser trail can exist even if not currently erasing (fading)
+            if (currentTool.drawPreview(this.ctx)) {
+                needsNextFrame = true;
+            }
+        }
+
+        // Request next frame if an animation (like eraser trail fade) is active
+        if (needsNextFrame) {
+            requestAnimationFrame(() => this.render());
         }
 
         // Silgi imleci - World Coordinates
@@ -771,7 +711,7 @@ class WhiteboardApp {
                 offsetX: this.currentMousePos.x,
                 offsetY: this.currentMousePos.y
             });
-            currentTool.drawCursor(this.ctx, worldPos.x, worldPos.y);
+            currentTool.drawCursor(this.ctx, worldPos.x, worldPos.y, this.state);
         }
 
         // Seçim gösterimi
@@ -803,8 +743,7 @@ class WhiteboardApp {
             ellipse: 'Elips',
             arrow: 'Ok',
             eraser: 'Silgi',
-            arrow: 'Ok',
-            eraser: 'Silgi',
+            hand: 'El',
             select: 'Seç',
             highlighter: 'Vurgulayıcı'
         };

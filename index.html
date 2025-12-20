@@ -113,25 +113,157 @@
             </div>
         </div>
 
+        <!-- Mobile Only: Color Palette Toggle Button -->
+        <button id="btnColorToggle" class="mobile-only floating-action-btn" title="Renk Paleti">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                class="lucide lucide-palette-icon lucide-palette">
+                <path
+                    d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
+                <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
+                <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
+                <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
+                <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
+            </svg>
+        </button>
+
         <!-- NEW: Properties Sidebar (Right of Color Palette) -->
         <div id="propertiesSidebar" class="floating-sidebar properties-sidebar">
-            <div class="tool-group">
-                <span class="label">Kalınlık</span>
-                <div class="slider-container">
-                    <span class="slider-val-top" id="strokeWidthVal">4</span>
-                    <input type="range" id="strokeWidth" min="1" max="20" value="4">
-                    <span class="slider-val-bottom">0</span>
+            <!-- Brush Settings Group (Desktop Only) -->
+            <div class="tool-group desktop-only" id="toolGroupBrushSettings">
+                <button id="btnBrushSettingsTrigger" class="property-trigger-btn" title="Araç Seçenekleri">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-settings-2">
+                        <path d="M20 7h-9" />
+                        <path d="M14 17H5" />
+                        <circle cx="17" cy="17" r="3" />
+                        <circle cx="7" cy="7" r="3" />
+                    </svg>
+                    <span class="label" style="margin-left: 4px; font-size: 8px;"></span>
+                </button>
+
+                <div id="popupBrushSettings" class="property-popup brush-settings-popup">
+                    <div class="brush-setting-item">
+                        <div class="brush-setting-header">
+                            <span class="label">Kalınlık</span>
+                            <span class="slider-val-left" id="strokeWidthVal">4</span>
+                        </div>
+                        <input type="range" class="stroke-width-slider" id="strokeWidth" min="1" max="20" value="4">
+                    </div>
+                    <div class="brush-setting-item">
+                        <div class="brush-setting-header">
+                            <span class="label">Opaklık</span>
+                            <span class="slider-val-left" id="opacityVal">100%</span>
+                        </div>
+                        <input type="range" class="opacity-slider" id="opacitySlider" min="0" max="100" value="100"
+                            step="10">
+                    </div>
+                    <div class="brush-setting-item">
+                        <div class="brush-setting-header">
+                            <span class="label">Stabilizasyon</span>
+                            <span class="slider-val-left" id="stabilizationVal">50</span>
+                        </div>
+                        <input type="range" class="stabilization-slider" id="stabilizationSlider" min="0" max="100"
+                            value="50">
+                    </div>
+                    <div class="brush-setting-item">
+                        <div class="brush-setting-header">
+                            <span class="label">Örnekleme</span>
+                            <span class="slider-val-left" id="decimationVal">10</span>
+                        </div>
+                        <input type="range" class="decimation-slider" id="decimationSlider" min="0" max="50" value="10">
+                    </div>
                 </div>
             </div>
 
-            <div class="tool-group">
-                <span class="label">Opaklık</span>
-                <div class="slider-container">
-                    <span class="slider-val-top" id="opacityVal">100%</span>
-                    <input type="range" id="opacitySlider" min="0" max="100" value="100" step="10">
-                    <span class="slider-val-bottom">0</span>
+            <!-- Individual Brush Settings (Mobile Only - Legacy way) -->
+            <div class="tool-group mobile-only" id="toolGroupThickness">
+                <button id="btnThicknessTrigger" class="property-trigger-btn" title="Kalınlık">
+                    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="12" cy="12" r="5" />
+                    </svg>
+                </button>
+                <div id="popupThickness" class="property-popup-responsive">
+                    <div class="brush-setting-header">
+                        <span class="label">Kalınlık</span>
+                        <span class="slider-val-top" id="strokeWidthValMobile">4</span>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" class="stroke-width-slider" id="strokeWidthMobile" min="1" max="20"
+                            value="4">
+                        <span class="slider-val-bottom">0</span>
+                    </div>
                 </div>
             </div>
+
+            <div class="tool-group mobile-only" id="toolGroupOpacity">
+                <button id="btnOpacityTrigger" class="property-trigger-btn" title="Opaklık">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-blend-icon lucide-blend">
+                        <circle cx="9" cy="9" r="7" />
+                        <circle cx="15" cy="15" r="7" />
+                    </svg>
+                </button>
+                <div id="popupOpacity" class="property-popup-responsive">
+                    <div class="brush-setting-header">
+                        <span class="label">Opaklık</span>
+                        <span class="slider-val-top" id="opacityValMobile">100%</span>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" class="opacity-slider" id="opacitySliderMobile" min="0" max="100"
+                            value="100" step="10">
+                        <span class="slider-val-bottom">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tool-group mobile-only" id="toolGroupStabilization">
+                <button id="btnStabilizationTrigger" class="property-trigger-btn" title="Pürüzsüzlük">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-activity-icon lucide-activity">
+                        <path
+                            d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" />
+                    </svg>
+                </button>
+                <div id="popupStabilization" class="property-popup-responsive">
+                    <div class="brush-setting-header">
+                        <span class="label">Stabilizasyon</span>
+                        <span class="slider-val-top" id="stabilizationValMobile">50</span>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" class="stabilization-slider" id="stabilizationSliderMobile" min="0"
+                            max="100" value="50">
+                        <span class="slider-val-bottom">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tool-group mobile-only" id="toolGroupDecimation">
+                <button id="btnDecimationTrigger" class="property-trigger-btn" title="Örnekleme">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-square-dot-icon lucide-square-dot">
+                        <rect width="18" height="18" x="3" y="3" rx="2" />
+                        <circle cx="12" cy="12" r="1" />
+                    </svg>
+                </button>
+                <div id="popupDecimation" class="property-popup-responsive">
+                    <div class="brush-setting-header">
+                        <span class="label">Örnekleme</span>
+                        <span class="slider-val-top" id="decimationValMobile">10</span>
+                    </div>
+                    <div class="slider-container">
+                        <input type="range" class="decimation-slider" id="decimationSliderMobile" min="0" max="50"
+                            value="10">
+                        <span class="slider-val-bottom">0</span>
+                    </div>
+                </div>
+            </div>
+
+
 
             <div class="tool-group">
                 <button class="tool-btn active" data-linestyle="solid" title="Düz Çizgi">
@@ -142,19 +274,22 @@
                 <button class="tool-btn" data-linestyle="dashed" title="Kesik Çizgi">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M4 12L20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-dasharray="4 3" />
+                            stroke-dasharray="6 6" />
                     </svg>
                 </button>
                 <button class="tool-btn" data-linestyle="dotted" title="Noktalı Çizgi">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4 12L20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-dasharray="0.1 3" />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-ellipsis-icon lucide-ellipsis">
+                        <circle cx="12" cy="12" r="1" />
+                        <circle cx="19" cy="12" r="1" />
+                        <circle cx="5" cy="12" r="1" />
                     </svg>
                 </button>
                 <button class="tool-btn" data-linestyle="dash-dot" title="Kesik-Nokta Çizgi">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M4 12L20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-dasharray="5 3 0.1 3" />
+                            stroke-dasharray="9 6" />
                     </svg>
                 </button>
                 <button class="tool-btn" data-linestyle="wavy" title="Dalgalı Çizgi">
@@ -167,9 +302,10 @@
 
             <div class="tool-group">
                 <button class="tool-btn active" id="pressureBtn" title="Basınç Hassasiyeti">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" />
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-line-squiggle-icon lucide-line-squiggle">
+                        <path d="M7 3.5c5-2 7 2.5 3 4C1.5 10 2 15 5 16c5 2 9-10 14-7s.5 13.5-4 12c-5-2.5.5-11 6-2" />
                     </svg>
                 </button>
             </div>

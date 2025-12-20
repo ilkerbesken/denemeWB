@@ -230,6 +230,7 @@ class ZoomManager {
         this.lastMousePos = { x: e.clientX, y: e.clientY };
 
         this.updateUI();
+        this.app.redrawOffscreen();
         this.app.render();
     }
 

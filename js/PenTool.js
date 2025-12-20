@@ -5,14 +5,13 @@ class PenTool {
         this.points = [];
         this.rawPoints = [];
         this.lastPoint = null;
-        this.minDistance = 1; // Çok küçük mesafe = daha fazla nokta = daha smooth
+        this.minDistance = 0.5;
         this.onRepaint = onRepaint;
         this.straightenTimer = null;
         this.isStraightLocked = false;
-
-        // Streamline state
         this.streamlinePoints = [];
         this.lastStreamlined = null;
+        this.lastPressure = 0.5;
     }
 
     handlePointerDown(e, pos, canvas, ctx, state) {
@@ -23,15 +22,13 @@ class PenTool {
         this.streamlinePoints = [];
         this.lastStreamlined = null;
         this.lastPoint = null;
+        this.lastPressure = (state.pressureEnabled !== false && state.currentTool !== 'highlighter')
+            ? Utils.normalizePressure(pos.pressure)
+            : 0.5;
 
         clearTimeout(this.straightenTimer);
 
-        const point = {
-            x: pos.x,
-            y: pos.y,
-            pressure: (state.pressureEnabled !== false && state.currentTool !== 'highlighter') ? Utils.normalizePressure(pos.pressure) : (state.currentTool === 'highlighter' ? 0.5 : 0.5)
-        };
-
+        const point = { x: pos.x, y: pos.y, pressure: this.lastPressure, time: Date.now() };
         this.rawPoints.push(point);
         this.points.push(point);
         this.lastPoint = point;
@@ -53,550 +50,333 @@ class PenTool {
     handlePointerMove(e, pos, canvas, ctx, state) {
         if (!this.isDrawing) return;
 
-        // Pressure simulation for mouse / smoothing for pen
-        let currentPressure = (state.pressureEnabled !== false && state.currentTool !== 'highlighter')
-            ? Utils.normalizePressure(pos.pressure)
-            : 0.5;
-
-        // If mouse (pressure is always 0.5 or 0), simulate based on velocity
-        if (e.pointerType === 'mouse' && state.pressureEnabled !== false) {
-            const dist = Utils.distance(this.lastPoint || pos, pos);
-            const time = 16; // Approx 60fps
-            const velocity = dist / time;
-
-            // Damping for stability (moving average with previous)
-            const prevPressure = this.lastPoint ? this.lastPoint.pressure : 0.5;
-            const targetPressure = Math.max(0.35, 1.0 - velocity * 0.4); // Less extreme thinning
-            currentPressure = prevPressure + (targetPressure - prevPressure) * 0.15; // Slightly more damped
-        } else if (state.pressureEnabled === false) {
-            currentPressure = 0.5; // Strictly constant when disabled
-        }
-
         const point = {
             x: pos.x,
             y: pos.y,
-            pressure: currentPressure
+            pressure: (state.pressureEnabled !== false && state.currentTool !== 'highlighter')
+                ? Utils.normalizePressure(pos.pressure)
+                : 0.5,
+            time: Date.now()
         };
 
-        // Eğer kilitlendiyse, sadece son noktayı güncelle (Line tool gibi davran)
+        const zoom = ctx.getTransform().a || 1.0;
+
         if (this.isStraightLocked) {
             this.points[this.points.length - 1] = point;
             this.currentPath.points = [this.points[0], point];
+            this.lastPoint = point;
             return true;
         }
 
-        // Minimum mesafe kontrolü
-        if (this.lastPoint && Utils.distance(this.lastPoint, point) < this.minDistance) {
-            return false;
+        const dist = Utils.distance(this.lastPoint || point, point);
+        if (this.lastPoint) {
+            // Safety break for unexpected jumps
+            if (dist > 80) return false;
+
+            // ADAPTIVE DECIMATION
+            const decimationFactor = state.decimation !== undefined ? state.decimation : 0.10;
+            const minMoveThreshold = Math.max(0.2, (state.strokeWidth * decimationFactor) / zoom);
+            if (dist < minMoveThreshold) return false;
         }
+
+        // RAW JITTER FILTER
+        if (this.points.length > 2) {
+            const pPre = this.points[this.points.length - 1];
+            const pPre2 = this.points[this.points.length - 2];
+            const v1 = { x: pPre.x - pPre2.x, y: pPre.y - pPre2.y };
+            const v2 = { x: point.x - pPre.x, y: point.y - pPre.y };
+            const dist1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y), dist2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+            const dot = (v1.x * v2.x + v1.y * v2.y) / (dist1 * dist2 || 1);
+            if (dot < -0.8 && dist < state.strokeWidth * 0.5) return false;
+        }
+
+        // Pressure smoothing
+        this.lastPressure = this.lastPressure + (point.pressure - this.lastPressure) * 0.25;
+        point.pressure = this.lastPressure;
 
         this.points.push(point);
         this.lastPoint = point;
 
-        // Streamline (tldraw-style): Pull the point towards the actual cursor
-        const streamlineFactor = 0.92; // High responsiveness as requested
+        // ZOOM-RESPONSIVE USER STABILIZATION
+        // Combines user preference (from slider) with zoom-based precision adjustment
+        const userStab = state.stabilization !== undefined ? state.stabilization : 0.5;
+        const zoomDampener = (Math.min(zoom, 5) - 1) * 0.1;
+        const streamlineFactor = Math.max(0.0, (userStab * 0.98) - zoomDampener);
+
+
         const prev = this.lastStreamlined;
         const streamlined = {
-            x: prev.x + (point.x - prev.x) * streamlineFactor,
-            y: prev.y + (point.y - prev.y) * streamlineFactor,
-            pressure: prev.pressure + (point.pressure - prev.pressure) * streamlineFactor
+            x: prev.x + (point.x - prev.x) * (1 - streamlineFactor),
+            y: prev.y + (point.y - prev.y) * (1 - streamlineFactor),
+            pressure: prev.pressure + (point.pressure - prev.pressure) * (1 - streamlineFactor)
         };
         this.lastStreamlined = streamlined;
         this.streamlinePoints.push(streamlined);
 
-        // Update current path
-        // Optimization: during active drawing, only smooth if we have enough points
-        // Increased iterations slightly for better real-time smoothness
-        let drawPoints = this.streamlinePoints;
-        if (drawPoints.length > 6) {
-            drawPoints = Utils.chaikin(drawPoints, 2);
+        // REAL-TIME SMOOTHING 
+        // Apply a lightweight smoothing pass during drawing so the preview matches 
+        // the final high-quality output and doesn't look "angular".
+        if (this.streamlinePoints.length > 5) {
+            let pts = [...this.streamlinePoints];
+            // Lightweight sanitize during move
+            const precision = 0.4 / zoom;
+            if (pts.length > 10) {
+                const head = pts.slice(0, 2);
+                let lastKept = head[head.length - 1];
+                const mid = pts.slice(2, -2).filter((p) => {
+                    if (Utils.distance(p, lastKept) > precision) {
+                        lastKept = p;
+                        return true;
+                    }
+                    return false;
+                });
+                const tail = pts.slice(-2);
+                pts = [...head, ...mid, ...tail];
+            }
+            pts = Utils.chaikin(pts, 3);
+            this.currentPath.points = Utils.smoothPressure(pts);
+        } else {
+            this.currentPath.points = this.streamlinePoints;
         }
 
-        this.currentPath.points = drawPoints;
-
-        // Auto-straighten timer
         clearTimeout(this.straightenTimer);
         this.straightenTimer = setTimeout(() => {
-            if (this.isDrawing && this.points.length > 10) {
-                this.straightenPath();
-            }
-        }, 500); // 0.5s bekleme
+            if (this.isDrawing && this.points.length > 20) this.straightenPath();
+        }, 500);
 
         return true;
     }
 
     handlePointerUp(e, pos, canvas, ctx, state) {
         if (!this.isDrawing) return null;
-
         this.isDrawing = false;
         clearTimeout(this.straightenTimer);
 
-        // Final smoothing and tapering
+        const zoom = ctx.getTransform().a || 1.0;
+        const precision = 0.4 / zoom;
+
         if (!this.currentPath.isStraightened) {
-            let finalPoints = [...this.streamlinePoints];
+            let pts = [...this.streamlinePoints];
 
-            // Apply Tapering (natural end) - Only if pressure is enabled
-            if (state.pressureEnabled !== false) {
-                const taperCount = Math.min(10, finalPoints.length);
-                for (let i = 0; i < taperCount; i++) {
-                    const idx = finalPoints.length - 1 - i;
-                    const progress = i / taperCount; // 0 at the very end, 1 at the start of taper
+            // Catch-up
+            if (this.lastPoint && pts.length > 0) {
+                const endPos = this.lastPoint;
+                pts.push({
+                    x: pts[pts.length - 1].x + (endPos.x - pts[pts.length - 1].x) * 0.8,
+                    y: pts[pts.length - 1].y + (endPos.y - pts[pts.length - 1].y) * 0.8,
+                    pressure: endPos.pressure
+                });
+            }
 
-                    // Reduce thickness by 50% at the end (interpolated)
-                    // At end (progress=0), multiply by 0.5
-                    // At start of taper (progress=1), multiply by 1.0
-                    const reductionFactor = 0.5 + 0.5 * progress;
-                    finalPoints[idx].pressure *= reductionFactor;
+            const sanitize = (arr, thresh) => {
+                if (arr.length < 4) return arr;
+                let result = [...arr];
+                while (result.length > 3) {
+                    const p1 = result[0], p2 = result[1], p3 = result[2];
+                    const v1 = { x: p2.x - p1.x, y: p2.y - p1.y }, v2 = { x: p3.x - p2.x, y: p3.y - p2.y };
+                    const dot = (v1.x * v2.x + v1.y * v2.y) / (Math.sqrt(v1.x * v1.x + v1.y * v1.y) * Math.sqrt(v2.x * v2.x + v2.y * v2.y) || 1);
+                    if (dot < -0.7 || Utils.distance(p1, p2) < thresh) result.shift();
+                    else break;
                 }
-            }
+                while (result.length > 3) {
+                    const len = result.length;
+                    const p3 = result[len - 1], p2 = result[len - 2], p1 = result[len - 3];
+                    const v1 = { x: p2.x - p1.x, y: p2.y - p1.y }, v2 = { x: p3.x - p2.x, y: p3.y - p2.y };
+                    const dot = (v1.x * v2.x + v1.y * v2.y) / (Math.sqrt(v1.x * v1.x + v1.y * v1.y) * Math.sqrt(v2.x * v2.x + v2.y * v2.y) || 1);
+                    if (dot < -0.7 || Utils.distance(p2, p3) < thresh) result.pop();
+                    else break;
+                }
+                return result;
+            };
 
-            if (finalPoints.length > 3) {
-                // Higher iterations for final path to eliminate jaggedness (catallanma)
-                finalPoints = Utils.chaikin(finalPoints, 3);
-            }
-            this.currentPath.points = Utils.smoothPressure(finalPoints);
+            pts = sanitize(pts, precision);
+            if (pts.length > 3) pts = Utils.chaikin(pts, 3);
+            this.currentPath.points = Utils.smoothPressure(pts);
         }
 
         const completedPath = this.currentPath;
         this.currentPath = null;
         this.points = [];
-        this.rawPoints = [];
         this.lastPoint = null;
-
         return completedPath;
     }
 
     straightenPath() {
         if (this.points.length < 2) return;
-
-        const start = this.points[0];
-        const end = this.points[this.points.length - 1];
-
-        // Düz çizgi oluştur (arada nokta olmadan)
-        // Ya da düz çizgi üzerinde interpolate edilmiş noktalar
-        // Düz çizgi çizimi 2 nokta ile handle ediliyor draw metodunda
-
-        const straightPoints = [start, end];
-
-        // Orijinal (freehand) noktaları sakla - Undo için
         this.currentPath.originalPoints = [...this.points];
-
-        this.currentPath.points = straightPoints;
-        this.currentPath.isStraightened = true; // Flag to prevent re-smoothing on up
-        this.isStraightLocked = true; // Kilit modunu aç
-
-        // Repaint triggers
+        this.currentPath.points = [this.points[0], this.points[this.points.length - 1]];
+        this.currentPath.isStraightened = true;
+        this.isStraightLocked = true;
         if (this.onRepaint) this.onRepaint();
     }
 
     draw(ctx, object) {
-        if (!object.points || object.points.length < 2) return;
-
+        if (!object.points || object.points.length < 1) return;
         ctx.save();
         ctx.globalAlpha = object.opacity !== undefined ? object.opacity : 1.0;
-        ctx.strokeStyle = object.color;
-
-        if (object.isHighlighter) {
-            // Transparency is now handled by object.opacity from state (defaulted to 0.7 in app.js)
-            // But if we want to ensure it works even if object.opacity is missing for old highlighters:
-            if (object.opacity === undefined) ctx.globalAlpha = 0.7;
-        }
-
-        // Manual Dashing Implementation
-        // We will walk the path and manually stroke dash segments
-        // This avoids browser artifacts at segment joins and ensures perfect spacing control
-
-        let pattern = []; // [dash, gap, dash, gap...]
-        const w = object.width;
-
-        switch (object.lineStyle) {
-            case 'solid': pattern = []; break; // Solid
-            case 'dotted': pattern = [w * 0.1, w * 3]; break;
-            case 'dashed': pattern = [w * 3, w * 3]; break;
-            case 'dash-dot': pattern = [w * 4, w * 3, w * 0.1, w * 3]; break;
-            case 'wavy':
-                this.drawWavy(ctx, object);
-                ctx.restore();
-                return;
-        }
-
-        // If solid, use standard variable width drawing (it's efficient and looks good)
-        if (pattern.length === 0) {
-            this.drawSolid(ctx, object);
-            ctx.restore();
-            return;
-        }
-
-        // For dashed styles
-        ctx.lineCap = object.cap || 'round'; // Use correct cap
-        ctx.lineJoin = 'round';
-
-        // Prepare path walker
-        const pathPoints = this.flattenPath(object);
-
-        let patternIdx = 0;
-        let distInState = 0; // Distance covered in current pattern state (dash or gap)
-        let isDash = true; // Start with dash
-
-        let currentSubPath = []; // Points for current dash segment
-
-        // Helper to draw a dashed segment
-        const strokeDash = (points) => {
-            if (points.length < 2) return;
-
-            ctx.beginPath();
-            ctx.moveTo(points[0].x, points[0].y);
-
-            // Calculate average pressure for this dash
-            let totalPressure = 0;
-            points.forEach(p => totalPressure += p.pressure);
-            const avgPressure = totalPressure / points.length;
-
-            ctx.lineWidth = Utils.getPressureWidth(object.width, avgPressure);
-
-            for (let i = 1; i < points.length; i++) {
-                ctx.lineTo(points[i].x, points[i].y);
-            }
-            ctx.stroke();
-        };
-
-        for (let i = 0; i < pathPoints.length - 1; i++) {
-            const p1 = pathPoints[i];
-            const p2 = pathPoints[i + 1];
-
-            const segmentLen = Utils.distance(p1, p2);
-            let remainingSegmentLen = segmentLen;
-            let cursor = 0; // progress along this segment (0 to segmentLen)
-
-            while (remainingSegmentLen > 0) {
-                const targetLen = pattern[patternIdx];
-                const spaceRemainingInState = targetLen - distInState;
-
-                if (remainingSegmentLen <= spaceRemainingInState) {
-                    // This entire segment (or remainder of it) fits in current state
-                    if (isDash) {
-                        if (currentSubPath.length === 0) currentSubPath.push(p1);
-                        // Add interpolated point at the end if needed, but here p2 is the end
-                        currentSubPath.push(p2);
-                    }
-
-                    distInState += remainingSegmentLen;
-                    remainingSegmentLen = 0;
-                } else {
-                    // State change happens in the middle of this segment
-                    const ratio = (cursor + spaceRemainingInState) / segmentLen;
-                    const splitPoint = {
-                        x: p1.x + (p2.x - p1.x) * ratio,
-                        y: p1.y + (p2.y - p1.y) * ratio,
-                        pressure: p1.pressure + (p2.pressure - p1.pressure) * ratio
-                    };
-
-                    if (isDash) {
-                        currentSubPath.push(splitPoint);
-                        strokeDash(currentSubPath);
-                        currentSubPath = [];
-                    }
-
-                    // Advance state
-                    distInState = 0;
-                    patternIdx = (patternIdx + 1) % pattern.length;
-                    isDash = (patternIdx % 2 === 0);
-
-                    // If we just started a dash, add the split point as start
-                    if (isDash) {
-                        currentSubPath.push(splitPoint);
-                    }
-
-                    cursor += spaceRemainingInState;
-                    remainingSegmentLen -= spaceRemainingInState;
-                }
-            }
-        }
-
-        // Draw last pending dash if any
-        if (isDash && currentSubPath.length > 1) {
-            strokeDash(currentSubPath);
-        }
-
+        const style = object.lineStyle || 'solid';
+        if (style === 'solid' || object.isHighlighter) this.drawSolid(ctx, object);
+        else if (style === 'wavy') this.drawWavy(ctx, object);
+        else this.drawDashed(ctx, object);
         ctx.restore();
     }
 
     drawSolid(ctx, object) {
-        if (object.points.length < 1) return;
+        let pts = object.points;
+        const len = pts.length;
+        if (len < 1) return;
+        ctx.fillStyle = object.color;
 
-        // Highlighter: Single continuous path with constant width
         if (object.isHighlighter) {
             ctx.lineWidth = object.width;
-            ctx.lineCap = object.cap || 'round';
-            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+            ctx.strokeStyle = object.color;
             ctx.beginPath();
-            ctx.moveTo(object.points[0].x, object.points[0].y);
-
-            if (object.points.length === 1) {
-                ctx.lineTo(object.points[0].x, object.points[0].y);
-            } else if (object.points.length === 2) {
-                ctx.lineTo(object.points[1].x, object.points[1].y);
-            } else {
-                for (let i = 1; i < object.points.length - 1; i++) {
-                    const xc = (object.points[i].x + object.points[i + 1].x) / 2;
-                    const yc = (object.points[i].y + object.points[i + 1].y) / 2;
-                    ctx.quadraticCurveTo(object.points[i].x, object.points[i].y, xc, yc);
-                }
-                const last = object.points[object.points.length - 1];
-                ctx.lineTo(last.x, last.y);
-            }
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let i = 1; i < len; i++) ctx.lineTo(pts[i].x, pts[i].y);
             ctx.stroke();
             return;
         }
 
-        // Pen: Polygon-based drawing (Variable Width)
-        if (object.points.length === 1) {
-            const p = object.points[0];
-            const radius = Utils.getPressureWidth(object.width, p.pressure) / 2;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-            ctx.fillStyle = object.color;
-            ctx.fill();
+        if (len === 1) {
+            const r = Utils.getPressureWidth(object.width, pts[0].pressure || 0.5) / 2;
+            ctx.beginPath(); ctx.arc(pts[0].x, pts[0].y, r, 0, Math.PI * 2); ctx.fill();
             return;
         }
 
-        // Draw in segments to avoid massive self-intersecting polygons
-        ctx.fillStyle = object.color;
+        const envelope = [];
+        let lastNx = 0, lastNy = 0;
 
-        const pts = object.points;
-        const len = pts.length;
-        const baseWidth = object.width;
+        // ADAPTIVE SMOOTHING WINDOW
+        // Thicker strokes need a wider gaze to prevent "forking" at joints.
+        // Also adjusted for point density (Chaikin 3 adds more points).
+        const look = Math.max(10, Math.floor(object.width * 0.8));
 
         for (let i = 0; i < len; i++) {
             const p = pts[i];
-            const pressure = p.pressure !== undefined ? p.pressure : 0.5;
-            const r = Utils.getPressureWidth(baseWidth, pressure) / 2;
+            let dx = 0, dy = 0;
+            const start = Math.max(0, i - look), end = Math.min(len - 1, i + look);
+            for (let j = start; j < end; j++) {
+                dx += (pts[j + 1].x - pts[j].x); dy += (pts[j + 1].y - pts[j].y);
+            }
+            if (dx === 0 && dy === 0) {
+                if (i < len - 1) { dx = pts[i + 1].x - p.x; dy = pts[i + 1].y - p.y; }
+                else if (i > 0) { dx = p.x - pts[i - 1].x; dy = p.y - pts[i - 1].y; }
+            }
+            let dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            let nx = -dy / dist, ny = dx / dist;
 
-            // Draw joint circle
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-            ctx.fill();
+            // WIDTH-ADAPTIVE NORMAL BLENDING
+            // If the width is high, we must be much stricter about normal flips to avoid bow-ties.
+            if (i > 0) {
+                const dot = nx * lastNx + ny * lastNy;
+                const blendThreshold = object.width > 8 ? 0.995 : 0.98;
+                if (dot < blendThreshold) {
+                    const lerpFactor = object.width > 12 ? 0.2 : 0.5; // Slower transition for thick lines
+                    nx = lastNx + (nx - lastNx) * lerpFactor;
+                    ny = lastNy + (ny - lastNy) * lerpFactor;
+                    const d2 = Math.sqrt(nx * nx + ny * ny) || 1; nx /= d2; ny /= d2;
+                }
+            }
+            lastNx = nx; lastNy = ny;
+            const r = Utils.getPressureWidth(object.width, p.pressure || 0.5) / 2;
+            envelope.push({ x: p.x, y: p.y, r, nx, ny, angle: Math.atan2(dy, dx) });
+        }
 
-            // Draw connecting ribbon segment
-            if (i < len - 1) {
-                const pNext = pts[i + 1];
-                const d = Utils.distance(p, pNext);
+        ctx.beginPath();
+        const s = envelope[0];
+        // Start Cap (Higher Resolution for smoothness)
+        for (let a = 0; a <= 180; a += 5) {
+            const rad = (s.angle + Math.PI / 2) + (a * Math.PI / 180);
+            ctx.lineTo(s.x + Math.cos(rad) * s.r, s.y + Math.sin(rad) * s.r);
+        }
+        // Left Side
+        for (let i = 1; i < len - 1; i++) {
+            ctx.lineTo(envelope[i].x - envelope[i].nx * envelope[i].r, envelope[i].y - envelope[i].ny * envelope[i].r);
+        }
+        // End Cap (Higher Resolution for smoothness)
+        const endE = envelope[len - 1];
+        if (endE) {
+            for (let a = 0; a <= 180; a += 5) {
+                const rad = (endE.angle - Math.PI / 2) + (a * Math.PI / 180);
+                ctx.lineTo(endE.x + Math.cos(rad) * endE.r, endE.y + Math.sin(rad) * endE.r);
+            }
+        }
+        // Right Side
+        for (let i = len - 2; i >= 1; i--) {
+            ctx.lineTo(envelope[i].x + envelope[i].nx * envelope[i].r, envelope[i].y + envelope[i].ny * envelope[i].r);
+        }
+        ctx.closePath();
+        ctx.fill();
 
-                if (d > 0.1) {
-                    const pNextPressure = pNext.pressure !== undefined ? pNext.pressure : 0.5;
-                    const rNext = Utils.getPressureWidth(baseWidth, pNextPressure) / 2;
+        // Sub-pixel seam sealer for high-res displays
+        if (object.opacity > 0.95) {
+            ctx.lineWidth = 0.3; ctx.strokeStyle = object.color; ctx.lineJoin = 'round'; ctx.stroke();
+        }
+    }
 
-                    const angle = Math.atan2(pNext.y - p.y, pNext.x - p.x);
-                    const sin = Math.sin(angle);
-                    const cos = Math.cos(angle);
 
-                    const nx = -sin;
-                    const ny = cos;
-
-                    ctx.beginPath();
-                    ctx.moveTo(p.x + nx * r, p.y + ny * r);
-                    ctx.lineTo(pNext.x + nx * rNext, pNext.y + ny * rNext);
-                    ctx.lineTo(pNext.x - nx * rNext, pNext.y - ny * rNext);
-                    ctx.lineTo(p.x - nx * r, p.y - ny * r);
-                    ctx.fill();
+    drawDashed(ctx, object) {
+        const pts = this.flattenPath(object);
+        const w = object.width;
+        let pattern = [w * 3, w * 3];
+        if (object.lineStyle === 'dotted') pattern = [w * 0.1, w * 4];
+        else if (object.lineStyle === 'dash-dot') pattern = [w * 4, w * 2, w * 0.1, w * 2];
+        ctx.lineWidth = w; ctx.strokeStyle = object.color; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath();
+        let dist = 0, pIdx = 0, isDash = true;
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 0; i < pts.length - 1; i++) {
+            const p1 = pts[i], p2 = pts[i + 1], seg = Utils.distance(p1, p2);
+            let rem = seg;
+            while (rem > 0) {
+                const target = pattern[pIdx] - dist;
+                if (rem < target) { if (isDash) ctx.lineTo(p2.x, p2.y); else ctx.moveTo(p2.x, p2.y); dist += rem; rem = 0; }
+                else {
+                    const ratio = target / rem;
+                    const x = p1.x + (p2.x - p1.x) * ratio, y = p1.y + (p2.y - p1.y) * ratio;
+                    if (isDash) ctx.lineTo(x, y); else ctx.moveTo(x, y);
+                    rem -= target; dist = 0; pIdx = (pIdx + 1) % pattern.length; isDash = (pIdx % 2 === 0);
                 }
             }
         }
-    }
-
-
-    flattenPath(object) {
-        // Convert bezier path to high-resolution polyline for accurate dashing
-        if (object.points.length < 3) return object.points;
-
-        let flattened = [object.points[0]];
-        const steps = 5; // Resolution per segment
-
-        for (let i = 0; i < object.points.length - 2; i++) {
-            const p0 = object.points[i];
-            const p1 = object.points[i + 1];
-            const p2 = object.points[i + 2];
-
-            const cp1x = p0.x + (p1.x - p0.x) * 0.66;
-            const cp1y = p0.y + (p1.y - p0.y) * 0.66;
-            const cp2x = p1.x + (p2.x - p1.x) * 0.33;
-            const cp2y = p1.y + (p2.y - p1.y) * 0.33;
-            const midX = (cp1x + cp2x) / 2;
-            const midY = (cp1y + cp2y) / 2;
-
-            // Sample quadratic bezier (p0 -> mid via control points)
-            // Wait, previous draw used 2 QCs here? 
-            // Previous code: quadraticCurveTo(cp1x, cp1y, midX, midY)
-            // That's ONE quadratic curve from p0 to midX,midY with cp1 as control.
-
-            // Wait, previous code logic was:
-            // p0 is start.
-            // cp1 is control.
-            // mid is end.
-
-            // So we sample this single Quad curve.
-            for (let s = 1; s <= steps; s++) {
-                const t = s / steps;
-                const it = 1 - t;
-                // Quad Bezier: (1-t)^2 * P0 + 2(1-t)t * P1 + t^2 * P2
-                // P0=(p0.x,y), P1=(cp1x,cp1y), P2=(midX,midY)
-
-                const x = it * it * p0.x + 2 * it * t * cp1x + t * t * midX;
-                const y = it * it * p0.y + 2 * it * t * cp1y + t * t * midY;
-                const pressure = p0.pressure + (p1.pressure - p0.pressure) * (t * 0.5); // Approx pressure interpolation
-
-                flattened.push({ x, y, pressure });
-            }
-        }
-
-        // Add last point
-        flattened.push(object.points[object.points.length - 1]);
-
-        return flattened;
-    }
-
-    drawWavy(ctx, object) {
-        if (object.points.length < 2) return;
-
-        const amplitude = Math.max(2, object.width * 0.8);
-        // Eski haline (sabit frekans) yakın bir değer
-        const wavelength = 20 + object.width * 2; // Hafif ölçekleme, ama eskisi kadar agresif değil
-        const frequency = (Math.PI * 2) / wavelength;
-
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-
-        let totalDist = 0;
-
-        ctx.beginPath();
-
-        // İlk nokta
-        const p0 = object.points[0];
-
-        // Bezier noktalarını topla
-        // Normal draw'daki mantığın aynısını kullanarak curve üzerinde gezineceğiz
-
-        if (object.points.length === 2) {
-            // Düz çizgi üzerinde dalga
-            const p1 = object.points[0];
-            const p2 = object.points[1];
-            const width = Utils.getPressureWidth(object.width, (p1.pressure + p2.pressure) / 2);
-            this.drawWavySegment(ctx, p1.x, p1.y, p2.x, p2.y, totalDist, amplitude, frequency, width);
-            ctx.stroke();
-            return;
-        }
-
-        // 3+ nokta
-        let startX = object.points[0].x;
-        let startY = object.points[0].y;
-
-        for (let i = 0; i < object.points.length - 2; i++) {
-            const p0 = object.points[i];
-            const p1 = object.points[i + 1];
-            const p2 = object.points[i + 2];
-
-            const cp1x = p0.x + (p1.x - p0.x) * 0.66;
-            const cp1y = p0.y + (p1.y - p0.y) * 0.66;
-            const cp2x = p1.x + (p2.x - p1.x) * 0.33;
-            const cp2y = p1.y + (p2.y - p1.y) * 0.33;
-
-            const midX = (cp1x + cp2x) / 2;
-            const midY = (cp1y + cp2y) / 2;
-
-            const pressure = (p0.pressure + p1.pressure) / 2;
-            const width = Utils.getPressureWidth(object.width, pressure);
-
-            // Quadratic curve'ü sample al
-            totalDist = this.drawWavyQuadCurve(ctx, startX, startY, cp1x, cp1y, midX, midY, totalDist, amplitude, frequency, width);
-
-            startX = midX;
-            startY = midY;
-        }
-
-        // Son segment
-        const lastIdx = object.points.length - 1;
-        const pLast1 = object.points[lastIdx - 1];
-        const pLast2 = object.points[lastIdx];
-
-        this.drawWavySegment(ctx, startX, startY, pLast2.x, pLast2.y, totalDist, amplitude, frequency, Utils.getPressureWidth(object.width, (pLast1.pressure + pLast2.pressure) / 2));
-
         ctx.stroke();
     }
 
-
-    drawWavyQuadCurve(ctx, x0, y0, cpX, cpY, x1, y1, startDist, amplitude, frequency, width) {
-        const steps = 10; // Precision
-        let prevX = x0;
-        let prevY = y0;
-        let dist = startDist;
-
-        // Curve uzunluğu tahmini için
-        const chord = Math.hypot(x1 - x0, y1 - y0);
-        if (chord < 1) return dist; // Çok küçükse atla
-
-        // Daha fazla adım gerekirse artırılabilir
-        const stepCount = Math.max(steps, Math.floor(chord / 2));
-
-        for (let i = 1; i <= stepCount; i++) {
-            const t = i / stepCount;
-            const inverseT = 1 - t;
-
-            // Quadratic Bezier formula
-            const x = inverseT * inverseT * x0 + 2 * inverseT * t * cpX + t * t * x1;
-            const y = inverseT * inverseT * y0 + 2 * inverseT * t * cpY + t * t * y1;
-
-            dist = this.drawWavySegment(ctx, prevX, prevY, x, y, dist, amplitude, frequency, width);
-            prevX = x;
-            prevY = y;
-        }
-        return dist;
-    }
-
-    drawWavySegment(ctx, x0, y0, x1, y1, startDist, amplitude, frequency, width) {
-        const dx = x1 - x0;
-        const dy = y1 - y0;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        if (len < 0.1) return startDist;
-
-        const ux = dx / len;
-        const uy = dy / len;
-        // Normal vector (-uy, ux)
-        const nx = -uy;
-        const ny = ux;
-
-        // Dalga çiz
-        // Tek tek nokta koymak yerine lineTo ile ilerle
-        // Ancak performansı korumak için, bu segment çok kısaysa sadece sonuna kadar dalgayı ilerlet.
-        // Ama biz zaten curve'ü parçaladık, bu segmentler küçük.
-        // O yüzden sadece bu segment boyunca lineer interpolasyon yapıp dalgayı ekleyelim.
-
-        // Küçük segment olduğu için tek bir adım yeterli mi? Hayır, segment düz olsa da dalga olmalı.
-        // Segment uzunluğuna göre adım sayısı
-        const segmentSteps = Math.ceil(len / 2); // 2px steps
-
-        ctx.lineWidth = width;
-
-        for (let i = 0; i <= segmentSteps; i++) {
-            const t = i / segmentSteps;
-            const px = x0 + dx * t;
-            const py = y0 + dy * t;
-
-            const currentDist = startDist + len * t;
-            const offset = Math.sin(currentDist * frequency) * amplitude;
-
-            const wx = px + nx * offset;
-            const wy = py + ny * offset;
-
-            if (currentDist === 0) {
-                ctx.moveTo(wx, wy);
-            } else {
-                ctx.lineTo(wx, wy);
+    flattenPath(object) {
+        if (object.points.length < 2) return object.points;
+        let res = [object.points[0]];
+        for (let i = 0; i < object.points.length - 1; i++) {
+            const p1 = object.points[i], p2 = object.points[i + 1];
+            const d = Utils.distance(p1, p2);
+            const steps = Math.max(1, Math.ceil(d / 2));
+            for (let s = 1; s <= steps; s++) {
+                const t = s / steps;
+                res.push({ x: p1.x + (p2.x - p1.x) * t, y: p1.y + (p2.y - p1.y) * t });
             }
         }
-        return startDist + len;
+        return res;
     }
 
-    drawPreview(ctx, object) {
-        this.draw(ctx, object);
+    drawWavy(ctx, object) {
+        const pts = this.flattenPath(object);
+        const amp = object.width * 1.2, freq = (Math.PI * 2) / (15 + object.width * 2);
+        ctx.lineWidth = object.width; ctx.strokeStyle = object.color; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath();
+        let total = 0;
+        for (let i = 0; i < pts.length - 1; i++) {
+            const p1 = pts[i], p2 = pts[i + 1], dx = p2.x - p1.x, dy = p2.y - p1.y, len = Math.sqrt(dx * dx + dy * dy);
+            if (len < 0.1) continue;
+            const nx = -dy / len, ny = dx / len;
+            for (let t = 0; t <= 1; t += 0.2) {
+                const offset = Math.sin((total + len * t) * freq) * amp;
+                const x = p1.x + dx * t + nx * offset, y = p1.y + dy * t + ny * offset;
+                if (i === 0 && t === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            total += len;
+        }
+        ctx.stroke();
     }
+
+    drawPreview(ctx, object) { this.draw(ctx, object); }
 }
