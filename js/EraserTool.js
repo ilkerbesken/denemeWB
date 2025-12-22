@@ -153,29 +153,72 @@ class EraserTool {
             case 'arrow':
                 return this.segmentsIntersect(obj.start, obj.end, p1, p2, effectiveRadius);
 
-            case 'rectangle': {
-                const x1 = Math.min(obj.start.x, obj.end.x);
-                const y1 = Math.min(obj.start.y, obj.end.y);
-                const x2 = Math.max(obj.start.x, obj.end.x);
-                const y2 = Math.max(obj.start.y, obj.end.y);
-                // Check 4 edges of rectangle
-                const corners = [{ x: x1, y: y1 }, { x: x2, y: y1 }, { x: x2, y: y2 }, { x: x1, y: y2 }];
-                for (let i = 0; i < 4; i++) {
-                    if (this.segmentsIntersect(corners[i], corners[(i + 1) % 4], p1, p2, effectiveRadius)) return true;
+            case 'rectangle':
+            case 'rect':
+            case 'ellipse':
+            case 'triangle':
+            case 'trapezoid':
+            case 'star':
+            case 'diamond':
+            case 'parallelogram':
+            case 'oval':
+            case 'heart':
+            case 'cloud': {
+                // For modern shapes, we use a hybrid approach:
+                // 1. Check if either eraser point is inside the shape
+                if (app.tools.shape && app.tools.shape.isPointInside) {
+                    if (app.tools.shape.isPointInside(obj, p1) || app.tools.shape.isPointInside(obj, p2)) {
+                        return true;
+                    }
                 }
-                // Also check if eraser move started or ended inside
-                if (this.rectIntersectsCircle(obj, p1, radius) || this.rectIntersectsCircle(obj, p2, radius)) return true;
+
+                // 2. Check if the eraser segment intersects any edge of the shape
+                // Get base vertices (unrotated)
+                let vertices = (obj.type === 'rectangle' || obj.type === 'rect' || obj.type === 'ellipse' || obj.type === 'oval') ? [
+                    { x: obj.x, y: obj.y },
+                    { x: obj.x + obj.width, y: obj.y },
+                    { x: obj.x + obj.width, y: obj.y + obj.height },
+                    { x: obj.x, y: obj.y + obj.height }
+                ] : (app.tools.shape ? app.tools.shape.getVertices(obj) : []);
+
+                // Apply rotation to vertices if shape is rotated
+                if (obj.rotation && vertices.length > 0) {
+                    const centerX = obj.x + obj.width / 2;
+                    const centerY = obj.y + obj.height / 2;
+                    const cos = Math.cos(obj.rotation);
+                    const sin = Math.sin(obj.rotation);
+                    vertices = vertices.map(v => {
+                        const dx = v.x - centerX;
+                        const dy = v.y - centerY;
+                        return {
+                            x: centerX + (dx * cos - dy * sin),
+                            y: centerY + (dx * sin + dy * cos)
+                        };
+                    });
+                }
+
+                if (vertices.length > 0) {
+                    for (let i = 0; i < vertices.length; i++) {
+                        const v1 = vertices[i];
+                        const v2 = vertices[(i + 1) % vertices.length];
+                        if (this.segmentsIntersect(v1, v2, p1, p2, effectiveRadius)) return true;
+                    }
+                }
+
+                // Fallback for old Rectangle (start/end)
+                if (obj.start && obj.end && obj.type === 'rectangle') {
+                    const x1 = Math.min(obj.start.x, obj.end.x);
+                    const y1 = Math.min(obj.start.y, obj.end.y);
+                    const x2 = Math.max(obj.start.x, obj.end.x);
+                    const y2 = Math.max(obj.start.y, obj.end.y);
+                    const corners = [{ x: x1, y: y1 }, { x: x2, y: y1 }, { x: x2, y: y2 }, { x: x1, y: y2 }];
+                    for (let i = 0; i < 4; i++) {
+                        if (this.segmentsIntersect(corners[i], corners[(i + 1) % 4], p1, p2, effectiveRadius)) return true;
+                    }
+                }
+
                 return false;
             }
-
-            case 'ellipse':
-                // Approximate with points along the ellipse or just check if move path gets close to center/bounds
-                if (this.ellipseIntersectsCircle(obj, p1, radius) || this.ellipseIntersectsCircle(obj, p2, radius)) return true;
-                // Add center point check for the path
-                const cx = (obj.start.x + obj.end.x) / 2;
-                const cy = (obj.start.y + obj.end.y) / 2;
-                if (this.pointDistanceToSegment({ x: cx, y: cy }, p1, p2) < effectiveRadius) return true;
-                return false;
 
             default:
                 return false;

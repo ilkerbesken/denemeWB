@@ -25,18 +25,30 @@ class WhiteboardApp {
             eraserMode: 'object', // 'object', 'partial'
             stabilization: 0.5, // 0.0 to 1.0 (corresponds to 0-100% slider)
             decimation: 0.10, // Default 10% of width
+            fillEnabled: false, // Live fill toggle
             objects: []
         };
 
         this.zoomManager = new ZoomManager(this);
+        this.fillManager = new FillManager();
 
         // Araçlar
+        const shapeTool = new ShapeTool(() => this.render());
         this.tools = {
             pen: new PenTool(() => this.render()),
             highlighter: new PenTool(() => this.render()), // Re-use PenTool
             line: new LineTool(),
-            rectangle: new RectangleTool(),
-            ellipse: new EllipseTool(),
+            rectangle: shapeTool,
+            ellipse: shapeTool,
+            triangle: shapeTool,
+            trapezoid: shapeTool,
+            star: shapeTool,
+            diamond: shapeTool,
+            parallelogram: shapeTool,
+            oval: shapeTool,
+            heart: shapeTool,
+            cloud: shapeTool,
+            shape: shapeTool,
             arrow: new ArrowTool(),
 
             eraser: new EraserTool(),
@@ -59,6 +71,9 @@ class WhiteboardApp {
         this.setupEventListeners();
         this.setupToolbar();
         this.setupCanvasModal();
+
+        // Initialize UI for default tool
+        this.propertiesSidebar.updateUIForTool(this.state.currentTool);
 
         // Initial draw
         this.redrawOffscreen();
@@ -101,13 +116,61 @@ class WhiteboardApp {
         });
     }
 
-    // Assuming setTool is a method that updates the current tool and its UI.
-    // This method is not explicitly defined in the provided document,
-    // but the instruction implies its existence and purpose.
+    /**
+     * Set the active tool and update all related UI elements (icons, active classes, properties)
+     */
     setTool(tool) {
         this.state.currentTool = tool;
 
-        // Canvas imleç stili
+        const shapeTypes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
+        const isShape = shapeTypes.includes(tool);
+
+        if (isShape) {
+            this.state.currentShapeType = tool;
+        }
+
+        // --- UI Updates ---
+        const shapePickerBtn = document.getElementById('shapePickerBtn');
+        const shapeDropdown = document.getElementById('shapeDropdown');
+
+        // 1. Reset all active states in main toolbar
+        document.querySelectorAll('.tool-group > .tool-btn[data-tool], #shapePickerBtn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+
+        // 2. Map tool selection to DOM updates
+        const toolBtn = document.querySelector(`.tool-btn[data-tool="${tool}"]`);
+
+        if (isShape && shapePickerBtn) {
+            shapePickerBtn.classList.add('active');
+
+            // Sync icon from dropdown to the main picker button
+            const sourceBtn = toolBtn || document.querySelector(`#shapeDropdown .tool-btn[data-tool="${tool}"]`);
+            if (sourceBtn) {
+                const iconSvg = sourceBtn.querySelector('svg').cloneNode(true);
+                const currentIcon = shapePickerBtn.querySelector('svg');
+                if (currentIcon) shapePickerBtn.replaceChild(iconSvg, currentIcon);
+
+                // Highlight inside dropdown too
+                if (shapeDropdown) {
+                    shapeDropdown.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                    sourceBtn.classList.add('active');
+                }
+            }
+        } else if (toolBtn) {
+            toolBtn.classList.add('active');
+            // If switching tools, clear any stale shape highlights
+            if (shapeDropdown) {
+                shapeDropdown.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            }
+        }
+
+        // --- Context & Sidebar Sync ---
+        if (this.propertiesSidebar) {
+            this.propertiesSidebar.updateUIForTool(tool);
+        }
+
+        // --- Cursor Sync ---
         if (tool === 'eraser') {
             this.canvas.style.cursor = 'crosshair';
         } else if (tool === 'hand') {
@@ -238,20 +301,34 @@ class WhiteboardApp {
     }
 
     setupToolbar() {
+        // Shape Picker Toggle Logic
+        const shapePickerBtn = document.getElementById('shapePickerBtn');
+        const shapeDropdown = document.getElementById('shapeDropdown');
+
+        if (shapePickerBtn && shapeDropdown) {
+            shapePickerBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                shapeDropdown.classList.toggle('show');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!shapeDropdown.contains(e.target) && e.target !== shapePickerBtn) {
+                    shapeDropdown.classList.remove('show');
+                }
+            });
+        }
+
         // Araç butonları
         document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tool = btn.dataset.tool;
                 this.setTool(tool);
 
-                // Update UI for the selected tool (opacity, pressure, etc.)
-                this.propertiesSidebar.updateUIForTool(tool);
-
-                // Aktif buton görünümü
-                document.querySelectorAll('.tool-btn[data-tool]').forEach(b =>
-                    b.classList.remove('active')
-                );
-                btn.classList.add('active');
+                // If picked from the shape dropdown, close it
+                if (btn.closest('#shapeDropdown')) {
+                    shapeDropdown.classList.remove('show');
+                }
             });
         });
 
@@ -310,12 +387,21 @@ class WhiteboardApp {
                         }
                         break;
                     case 'delete':
-                        // deleteSelected now removes from state internally and checks
-                        // Returns deleted items for undo history? logic might differ.
-                        // Wait, deleteSelected in SelectTool ALREADY splices from state.
-                        // So we don't need to do anything here except for history saving which is done above.
-                        // result return value is just for confirmation?
                         result = selectTool.deleteSelected(this.state);
+                        break;
+                    case 'applyColor':
+                        selectTool.updateSelectedObjectsStyle(this.state, {
+                            color: this.state.strokeColor,
+                            strokeColor: this.state.strokeColor,
+                            fillColor: this.state.fillEnabled ? this.state.strokeColor : 'transparent'
+                        });
+                        break;
+                    case 'changeBorderColor':
+                        selectTool.updateSelectedObjectsStyle(this.state, {
+                            color: this.state.strokeColor,
+                            strokeColor: this.state.strokeColor,
+                            stayFillColor: true
+                        });
                         break;
                     case 'duplicate':
                         selectTool.duplicateSelected(this.state);
@@ -600,13 +686,6 @@ class WhiteboardApp {
                 }
             } else {
                 this.setTool(toolShortcuts[e.key.toLowerCase()]);
-
-                // Buton görünümünü güncelle
-                document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
-                    btn.classList.toggle('active',
-                        btn.dataset.tool === toolShortcuts[e.key.toLowerCase()]
-                    );
-                });
             }
         }
     }
@@ -683,13 +762,15 @@ class WhiteboardApp {
         let needsNextFrame = false;
 
         if (currentTool.isDrawing && currentTool.currentPath) {
+            // Live Fill Rendering
+            if (currentTool.currentPath.filled && this.fillManager) {
+                this.fillManager.drawFill(this.ctx, currentTool.currentPath);
+            }
             currentTool.drawPreview(this.ctx, currentTool.currentPath);
         } else if (currentTool.isDrawing && currentTool.currentLine) {
             currentTool.drawPreview(this.ctx, currentTool.currentLine);
-        } else if (currentTool.isDrawing && currentTool.currentRect) {
-            currentTool.drawPreview(this.ctx, currentTool.currentRect);
-        } else if (currentTool.isDrawing && currentTool.currentEllipse) {
-            currentTool.drawPreview(this.ctx, currentTool.currentEllipse);
+        } else if (currentTool.isDrawing && currentTool.currentShape) {
+            currentTool.drawPreview(this.ctx, currentTool.currentShape);
         } else if (currentTool.isDrawing && currentTool.currentArrow) {
             currentTool.drawPreview(this.ctx, currentTool.currentArrow);
         } else if (this.state.currentTool === 'eraser' && currentTool.currentTrail) {
@@ -728,6 +809,11 @@ class WhiteboardApp {
         if (obj.type === 'group') {
             obj.children.forEach(child => this.drawObject(ctx, child));
         } else {
+            // Fill pass for closed pen paths
+            if ((obj.type === 'pen' || obj.type === 'highlighter') && obj.filled && this.fillManager) {
+                this.fillManager.drawFill(ctx, obj);
+            }
+
             const tool = this.tools[obj.type];
             if (tool) {
                 tool.draw(ctx, obj);
@@ -741,6 +827,14 @@ class WhiteboardApp {
             line: 'Çizgi',
             rectangle: 'Dikdörtgen',
             ellipse: 'Elips',
+            triangle: 'Üçgen',
+            trapezoid: 'Yamuk',
+            star: 'Yıldız',
+            diamond: 'Karo',
+            parallelogram: 'Paralel Kenar',
+            oval: 'Oval',
+            heart: 'Kalp',
+            cloud: 'Bulut',
             arrow: 'Ok',
             eraser: 'Silgi',
             hand: 'El',

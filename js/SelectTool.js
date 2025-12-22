@@ -56,13 +56,23 @@ class SelectTool {
                 // Orijinal bounds'u (döndürülmemiş) kullanmak için
                 // getBoundingBox döndürülmüş AABB veriyor.
                 // Bize resize için "unrotated" bounds lazım.
+                const allShapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
                 let unrotatedBounds = bounds;
-                if ((selectedObj.type === 'rectangle' || selectedObj.type === 'ellipse') && selectedObj.angle) {
-                    const minX = Math.min(selectedObj.start.x, selectedObj.end.x);
-                    const maxX = Math.max(selectedObj.start.x, selectedObj.end.x);
-                    const minY = Math.min(selectedObj.start.y, selectedObj.end.y);
-                    const maxY = Math.max(selectedObj.start.y, selectedObj.end.y);
-                    unrotatedBounds = { minX, minY, maxX, maxY };
+                if (allShapes.includes(selectedObj.type) && (selectedObj.rotation || selectedObj.angle)) {
+                    if (selectedObj.x !== undefined) {
+                        unrotatedBounds = {
+                            minX: selectedObj.x,
+                            minY: selectedObj.y,
+                            maxX: selectedObj.x + selectedObj.width,
+                            maxY: selectedObj.y + selectedObj.height
+                        };
+                    } else if (selectedObj.start && selectedObj.end) {
+                        const minX = Math.min(selectedObj.start.x, selectedObj.end.x);
+                        const maxX = Math.max(selectedObj.start.x, selectedObj.end.x);
+                        const minY = Math.min(selectedObj.start.y, selectedObj.end.y);
+                        const maxY = Math.max(selectedObj.start.y, selectedObj.end.y);
+                        unrotatedBounds = { minX, minY, maxX, maxY };
+                    }
                 }
 
                 const handle = this.getHandleAtPoint(clickPoint, unrotatedBounds, selectedObj);
@@ -131,8 +141,11 @@ class SelectTool {
 
         // Seçili nesne üzerinde değiliz
         if (clickedIndex !== -1) {
-            // Yeni bir nesneye tıkladık
+            // Yeni bir nesneye tıkladık -> Seç ve sürüklemeyi başlat
             this.selectedObjects = [clickedIndex];
+            this.isDragging = true;
+            this.dragStartPoint = clickPoint;
+            this.dragCurrentPoint = clickPoint;
         } else {
             // Boş alana tıkladık -> Drag Select Başlat
             this.selectedObjects = []; // Mevcut seçimi temizle
@@ -356,20 +369,21 @@ class SelectTool {
                 break;
 
             case 'rectangle':
-                // Başlangıç ve bitiş noktalarını taşı
-                obj.start.x += deltaX;
-                obj.start.y += deltaY;
-                obj.end.x += deltaX;
-                obj.end.y += deltaY;
-                break;
-
+            case 'rect':
             case 'ellipse':
-                // Merkez noktasını taşı
-                if (obj.center) {
-                    obj.center.x += deltaX;
-                    obj.center.y += deltaY;
+            case 'triangle':
+            case 'trapezoid':
+            case 'star':
+            case 'diamond':
+            case 'parallelogram':
+            case 'oval':
+            case 'heart':
+            case 'cloud':
+                // Support both start/end (OLD) and x/y (NEW) formats
+                if (obj.x !== undefined) {
+                    obj.x += deltaX;
+                    obj.y += deltaY;
                 }
-                // Başlangıç ve bitiş noktalarını da taşı (varsa)
                 if (obj.start) {
                     obj.start.x += deltaX;
                     obj.start.y += deltaY;
@@ -377,6 +391,10 @@ class SelectTool {
                 if (obj.end) {
                     obj.end.x += deltaX;
                     obj.end.y += deltaY;
+                }
+                if (obj.center) {
+                    obj.center.x += deltaX;
+                    obj.center.y += deltaY;
                 }
                 break;
         }
@@ -408,48 +426,31 @@ class SelectTool {
                 return dist < threshold;
 
             case 'rectangle':
-                // Dikdörtgenin içinde veya kenarlarına yakın mı?
-                const minX = Math.min(obj.start.x, obj.end.x);
-                const maxX = Math.max(obj.start.x, obj.end.x);
-                const minY = Math.min(obj.start.y, obj.end.y);
-                const maxY = Math.max(obj.start.y, obj.end.y);
-
-                return point.x >= minX - threshold &&
-                    point.x <= maxX + threshold &&
-                    point.y >= minY - threshold &&
-                    point.y <= maxY + threshold;
-
+            case 'rect':
             case 'ellipse':
-                // Ellipse radius/center hesapla (eğer yoksa)
-                let centerX, centerY, radiusX, radiusY;
-
-                if (obj.center) {
-                    centerX = obj.center.x;
-                    centerY = obj.center.y;
-                    radiusX = obj.radiusX;
-                    radiusY = obj.radiusY;
-                } else {
-                    centerX = (obj.start.x + obj.end.x) / 2;
-                    centerY = (obj.start.y + obj.end.y) / 2;
-                    radiusX = Math.abs(obj.end.x - obj.start.x) / 2;
-                    radiusY = Math.abs(obj.end.y - obj.start.y) / 2;
+            case 'triangle':
+            case 'trapezoid':
+            case 'star':
+            case 'diamond':
+            case 'parallelogram':
+            case 'oval':
+            case 'heart':
+            case 'cloud':
+                // Use ShapeTool's generic hit detection
+                const shapeTool = app.tools.shape || app.tools.rectangle;
+                if (shapeTool && shapeTool.isPointInside) {
+                    if (shapeTool.isPointInside(obj, point)) return true;
                 }
 
-                // Click noktasını ters döndür (eğer açı varsa)
-                let testPoint = { ...point };
-                if (obj.angle) {
-                    const cos = Math.cos(-obj.angle);
-                    const sin = Math.sin(-obj.angle);
-                    testPoint = {
-                        x: cos * (point.x - centerX) - sin * (point.y - centerY) + centerX,
-                        y: sin * (point.x - centerX) + cos * (point.y - centerY) + centerY
-                    };
+                // If not inside, check if near border (optional but good for non-filled shapes)
+                const bounds = this.getBoundingBox(obj);
+                if (point.x >= bounds.minX - threshold && point.x <= bounds.maxX + threshold &&
+                    point.y >= bounds.minY - threshold && point.y <= bounds.maxY + threshold) {
+                    // For rectangles, BBox check IS the inside check. 
+                    // For other shapes, it's a rough fallback if shapeTool fails.
+                    if (obj.type === 'rectangle' || obj.type === 'rect') return true;
                 }
-
-                const dx = (testPoint.x - centerX) / radiusX;
-                const dy = (testPoint.y - centerY) / radiusY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                return distance <= 1 + (threshold / Math.max(radiusX, radiusY));
+                return false;
 
             default:
                 return false;
@@ -457,7 +458,147 @@ class SelectTool {
     }
 
     getBoundingBox(obj) {
-        if (obj.type === 'pen' || obj.type === 'highlighter') {
+        let minX = Infinity, minY = Infinity;
+        let maxX = -Infinity, maxY = -Infinity;
+        let padding = 0;
+
+        // Base padding (from stroke width)
+        if (obj.strokeWidth !== undefined) {
+            padding = obj.strokeWidth / 2;
+        } else if (obj.width !== undefined && (obj.type === 'pen' || obj.type === 'highlighter' || obj.type === 'line' || obj.type === 'arrow')) {
+            padding = obj.width / 2;
+        }
+
+        // Arrow specific extra padding for heads
+        if (obj.type === 'arrow') {
+            padding = Math.max(padding, 20 + (obj.width || 2));
+        }
+
+        if (obj.type === 'group') {
+            obj.children.forEach(child => {
+                const childBounds = this.getBoundingBox(child);
+                minX = Math.min(minX, childBounds.minX);
+                minY = Math.min(minY, childBounds.minY);
+                maxX = Math.max(maxX, childBounds.maxX);
+                maxY = Math.max(maxY, childBounds.maxY);
+            });
+            // Children bounds already include their padding
+            return { minX, minY, maxX, maxY };
+        } else if (obj.type === 'pen' || obj.type === 'highlighter') {
+            obj.points.forEach(p => {
+                minX = Math.min(minX, p.x);
+                minY = Math.min(minY, p.y);
+                maxX = Math.max(maxX, p.x);
+                maxY = Math.max(maxY, p.y);
+            });
+        } else if (obj.type === 'line' || obj.type === 'arrow') {
+            minX = Math.min(obj.start.x, obj.end.x);
+            minY = Math.min(obj.start.y, obj.end.y);
+            maxX = Math.max(obj.start.x, obj.end.x);
+            maxY = Math.max(obj.start.y, obj.end.y);
+        } else if (['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'].includes(obj.type)) {
+            const rotation = obj.rotation !== undefined ? obj.rotation : (obj.angle || 0);
+            if (rotation !== 0) {
+                const corners = this.getRotatedCorners(obj);
+                corners.forEach(p => {
+                    minX = Math.min(minX, p.x);
+                    minY = Math.min(minY, p.y);
+                    maxX = Math.max(maxX, p.x);
+                    maxY = Math.max(maxY, p.y);
+                });
+            } else {
+                if (obj.x !== undefined) {
+                    minX = obj.x;
+                    minY = obj.y;
+                    maxX = obj.x + obj.width;
+                    maxY = obj.y + obj.height;
+                } else if (obj.start && obj.end) {
+                    minX = Math.min(obj.start.x, obj.end.x);
+                    minY = Math.min(obj.start.y, obj.end.y);
+                    maxX = Math.max(obj.start.x, obj.end.x);
+                    maxY = Math.max(obj.start.y, obj.end.y);
+                } else if (obj.center) {
+                    minX = obj.center.x - obj.radiusX;
+                    minY = obj.center.y - obj.radiusY;
+                    maxX = obj.center.x + obj.radiusX;
+                    maxY = obj.center.y + obj.radiusY;
+                }
+            }
+        }
+
+        // Fallback or fix for undefined min/max if object is empty
+        if (minX === Infinity) return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+
+        // Apply Padding
+        return {
+            minX: minX - padding,
+            minY: minY - padding,
+            maxX: maxX + padding,
+            maxY: maxY + padding
+        };
+    }
+
+    getRotatedCorners(obj) {
+        let rx, ry, rw, rh;
+        if (obj.x !== undefined) {
+            rx = obj.x; ry = obj.y; rw = obj.width; rh = obj.height;
+        } else if (obj.start && obj.end) {
+            rx = Math.min(obj.start.x, obj.end.x);
+            ry = Math.min(obj.start.y, obj.end.y);
+            rw = Math.max(0.1, Math.abs(obj.end.x - obj.start.x));
+            rh = Math.max(0.1, Math.abs(obj.end.y - obj.start.y));
+        } else if (obj.center) {
+            rx = obj.center.x - obj.radiusX;
+            ry = obj.center.y - obj.radiusY;
+            rw = obj.radiusX * 2;
+            rh = obj.radiusY * 2;
+        } else {
+            return [];
+        }
+
+        const centerX = rx + rw / 2;
+        const centerY = ry + rh / 2;
+        const rotation = obj.rotation !== undefined ? obj.rotation : (obj.angle || 0);
+
+        const rotate = (x, y) => {
+            const cos = Math.cos(rotation);
+            const sin = Math.sin(rotation);
+            return {
+                x: cos * (x - centerX) - sin * (y - centerY) + centerX,
+                y: sin * (x - centerX) + cos * (y - centerY) + centerY
+            };
+        };
+
+        return [
+            rotate(rx, ry),
+            rotate(rx + rw, ry),
+            rotate(rx + rw, ry + rh),
+            rotate(rx, ry + rh)
+        ];
+    }
+    getRawBounds(obj) {
+        if (obj.x !== undefined) {
+            return {
+                minX: obj.x,
+                minY: obj.y,
+                maxX: obj.x + obj.width,
+                maxY: obj.y + obj.height
+            };
+        } else if (obj.start && obj.end) {
+            return {
+                minX: Math.min(obj.start.x, obj.end.x),
+                minY: Math.min(obj.start.y, obj.end.y),
+                maxX: Math.max(obj.start.x, obj.end.x),
+                maxY: Math.max(obj.start.y, obj.end.y)
+            };
+        } else if (obj.center) {
+            return {
+                minX: obj.center.x - (obj.radiusX || 0),
+                minY: obj.center.y - (obj.radiusY || 0),
+                maxX: obj.center.x + (obj.radiusX || 0),
+                maxY: obj.center.y + (obj.radiusY || 0)
+            };
+        } else if (obj.points) {
             let minX = Infinity, minY = Infinity;
             let maxX = -Infinity, maxY = -Infinity;
             obj.points.forEach(p => {
@@ -466,66 +607,11 @@ class SelectTool {
                 maxX = Math.max(maxX, p.x);
                 maxY = Math.max(maxY, p.y);
             });
-            // Padding for width
-            const pad = (obj.width || 2) / 2;
-            return { minX: minX - pad, minY: minY - pad, maxX: maxX + pad, maxY: maxY + pad };
-        }
-        else if (obj.type === 'rectangle' || obj.type === 'ellipse') {
-            // Açı varsa veya yoksa bounding box hesapla
-            // Basit AABB (Axis Aligned Bounding Box) hesaplıyoruz
-            // Döndürülmüş nesneler için bu kutu nesneden daha büyük olabilir
-
-            let corners = [];
-            const minX = Math.min(obj.start.x, obj.end.x);
-            const maxX = Math.max(obj.start.x, obj.end.x);
-            const minY = Math.min(obj.start.y, obj.end.y);
-            const maxY = Math.max(obj.start.y, obj.end.y);
-
-            // Add padding for stroke width?
-            // Usually not strictly needed for basic bbox but good for accuracy
-            // Skipping detailed padding for now as shapes are usually large enough
-
-            if (obj.angle) {
-                const centerX = (minX + maxX) / 2;
-                const centerY = (minY + maxY) / 2;
-
-                // 4 köşeyi döndür
-                const rotate = (x, y) => {
-                    const cos = Math.cos(obj.angle);
-                    const sin = Math.sin(obj.angle);
-                    return {
-                        x: cos * (x - centerX) - sin * (y - centerY) + centerX,
-                        y: sin * (x - centerX) + cos * (y - centerY) + centerY
-                    };
-                };
-
-                corners = [
-                    rotate(minX, minY),
-                    rotate(maxX, minY),
-                    rotate(maxX, maxY),
-                    rotate(minX, maxY)
-                ];
-
-                let rMinX = Infinity, rMinY = Infinity, rMaxX = -Infinity, rMaxY = -Infinity;
-                corners.forEach(p => {
-                    rMinX = Math.min(rMinX, p.x);
-                    rMinY = Math.min(rMinY, p.y);
-                    rMaxX = Math.max(rMaxX, p.x);
-                    rMaxY = Math.max(rMaxY, p.y);
-                });
-                return { minX: rMinX, minY: rMinY, maxX: rMaxX, maxY: rMaxY };
-            }
-
             return { minX, minY, maxX, maxY };
         }
-        else {
-            const minX = Math.min(obj.start.x, obj.end.x);
-            const minY = Math.min(obj.start.y, obj.end.y);
-            const maxX = Math.max(obj.start.x, obj.end.x);
-            const maxY = Math.max(obj.start.y, obj.end.y);
-            return { minX, minY, maxX, maxY };
-        }
+        return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
     }
+
 
     pointToLineDistance(point, lineStart, lineEnd) {
         const dx = lineEnd.x - lineStart.x;
@@ -631,14 +717,11 @@ class SelectTool {
                 ctx.restore();
             }
 
-            // Eğer açı varsa ve destekleniyorsa (rectangle/ellipse), döndürülmemiş bounds ile handle hesapla
-            // getHandlePositions içinde döndürme yapılıyor zaten
-            if ((obj.type === 'rectangle' || obj.type === 'ellipse') && obj.angle) {
-                const minX = Math.min(obj.start.x, obj.end.x);
-                const maxX = Math.max(obj.start.x, obj.end.x);
-                const minY = Math.min(obj.start.y, obj.end.y);
-                const maxY = Math.max(obj.start.y, obj.end.y);
-                handles = this.getHandlePositions({ minX, minY, maxX, maxY }, obj);
+            // Eğer açı varsa ve destekleniyorsa, döndürülmemiş bounds ile handle hesapla
+            const rotation = obj.rotation !== undefined ? obj.rotation : (obj.angle || 0);
+            if (rotation !== 0) {
+                const rawBounds = this.getRawBounds(obj);
+                handles = this.getHandlePositions(rawBounds, obj);
             } else {
                 handles = this.getHandlePositions(bounds, obj);
             }
@@ -963,6 +1046,19 @@ class SelectTool {
             menu.style.left = e.clientX + 'px';
         }
 
+        // Show/Hide "Change Border Color" only for shapes
+        const borderItem = document.getElementById('ctxChangeBorderColor');
+        if (borderItem) {
+            let isShape = false;
+            if (this.selectedObjects.length === 1) {
+                const obj = state.objects[this.selectedObjects[0]];
+                if (obj && ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'].includes(obj.type)) {
+                    isShape = true;
+                }
+            }
+            borderItem.style.display = isShape ? 'flex' : 'none';
+        }
+
         menu.classList.add('show');
 
         return true;
@@ -972,16 +1068,21 @@ class SelectTool {
     flipHorizontal(state) {
         if (this.selectedObjects.length === 0) return false;
 
-        const selectedIndex = this.selectedObjects[0];
-        const obj = state.objects[selectedIndex];
+        // Bounding box merkezi hesapla (tüm seçim için)
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        this.selectedObjects.forEach(index => {
+            const b = this.getBoundingBox(state.objects[index]);
+            minX = Math.min(minX, b.minX);
+            minY = Math.min(minY, b.minY);
+            maxX = Math.max(maxX, b.maxX);
+            maxY = Math.max(maxY, b.maxY);
+        });
 
-        if (!obj) return false;
+        const centerX = (minX + maxX) / 2;
 
-        // Bounding box merkezi hesapla
-        const bounds = this.getBoundingBox(obj);
-        const centerX = (bounds.minX + bounds.maxX) / 2;
-
-        this.flipObjectHorizontal(obj, centerX);
+        this.selectedObjects.forEach(index => {
+            this.flipObjectHorizontal(state.objects[index], centerX);
+        });
         return true;
     }
 
@@ -1009,23 +1110,40 @@ class SelectTool {
                 break;
 
             case 'rectangle':
-                const tempRectStartX = obj.start.x;
-                obj.start.x = centerX - (obj.end.x - centerX);
-                obj.end.x = centerX - (tempRectStartX - centerX);
-                // Dikdörtgenin içindeki açı da (eğer varsa) flip edilmeli mi? Evet, -angle.
-                if (obj.angle) obj.angle = -obj.angle;
-                break;
-
+            case 'rect':
             case 'ellipse':
-                if (obj.center) {
-                    obj.center.x = centerX - (obj.center.x - centerX);
+            case 'triangle':
+            case 'trapezoid':
+            case 'star':
+            case 'diamond':
+            case 'parallelogram':
+            case 'oval':
+            case 'heart':
+            case 'cloud':
+                if (obj.x !== undefined) {
+                    // Reposition centered around centerX
+                    obj.x = 2 * centerX - obj.x - obj.width;
+
+                    // Mirror rotation
+                    if (obj.rotation !== undefined) obj.rotation = -obj.rotation;
+                    if (obj.angle !== undefined) obj.angle = -obj.angle;
+
+                    // Handle internal points if it's a legacy shape with start/end
+                    if (obj.start && obj.end) {
+                        const tempStartX = obj.start.x;
+                        obj.start.x = 2 * centerX - obj.end.x;
+                        obj.end.x = 2 * centerX - tempStartX;
+                    }
+                    if (obj.center) {
+                        obj.center.x = 2 * centerX - obj.center.x;
+                    }
+                } else if (obj.start && obj.end) {
+                    // Support for line/arrow style objects if they fall here
+                    const tempStartX = obj.start.x;
+                    obj.start.x = 2 * centerX - obj.end.x;
+                    obj.end.x = 2 * centerX - tempStartX;
+                    if (obj.angle) obj.angle = -obj.angle;
                 }
-                if (obj.start && obj.end) {
-                    const tempEllipseStartX = obj.start.x;
-                    obj.start.x = centerX - (obj.end.x - centerX);
-                    obj.end.x = centerX - (tempEllipseStartX - centerX);
-                }
-                if (obj.angle) obj.angle = -obj.angle;
                 break;
         }
     }
@@ -1033,16 +1151,21 @@ class SelectTool {
     flipVertical(state) {
         if (this.selectedObjects.length === 0) return false;
 
-        const selectedIndex = this.selectedObjects[0];
-        const obj = state.objects[selectedIndex];
+        // Bounding box merkezi hesapla (tüm seçim için)
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        this.selectedObjects.forEach(index => {
+            const b = this.getBoundingBox(state.objects[index]);
+            minX = Math.min(minX, b.minX);
+            minY = Math.min(minY, b.minY);
+            maxX = Math.max(maxX, b.maxX);
+            maxY = Math.max(maxY, b.maxY);
+        });
 
-        if (!obj) return false;
+        const centerY = (minY + maxY) / 2;
 
-        // Bounding box merkezi hesapla
-        const bounds = this.getBoundingBox(obj);
-        const centerY = (bounds.minY + bounds.maxY) / 2;
-
-        this.flipObjectVertical(obj, centerY);
+        this.selectedObjects.forEach(index => {
+            this.flipObjectVertical(state.objects[index], centerY);
+        });
         return true;
     }
 
@@ -1070,122 +1193,44 @@ class SelectTool {
                 break;
 
             case 'rectangle':
-                const tempRectStartY = obj.start.y;
-                obj.start.y = centerY - (obj.end.y - centerY);
-                obj.end.y = centerY - (tempRectStartY - centerY);
-                if (obj.angle) obj.angle = -obj.angle;
-                break;
-
+            case 'rect':
             case 'ellipse':
-                if (obj.center) {
-                    obj.center.y = centerY - (obj.center.y - centerY);
+            case 'triangle':
+            case 'trapezoid':
+            case 'star':
+            case 'diamond':
+            case 'parallelogram':
+            case 'oval':
+            case 'heart':
+            case 'cloud':
+                if (obj.x !== undefined) {
+                    // Reposition centered around centerY
+                    obj.y = 2 * centerY - obj.y - obj.height;
+
+                    // Mirror rotation
+                    if (obj.rotation !== undefined) obj.rotation = -obj.rotation;
+                    if (obj.angle !== undefined) obj.angle = -obj.angle;
+
+                    // Handle internal points if it's a legacy shape with start/end
+                    if (obj.start && obj.end) {
+                        const tempStartY = obj.start.y;
+                        obj.start.y = 2 * centerY - obj.end.y;
+                        obj.end.y = 2 * centerY - tempStartY;
+                    }
+                    if (obj.center) {
+                        obj.center.y = 2 * centerY - obj.center.y;
+                    }
+                } else if (obj.start && obj.end) {
+                    const tempStartY = obj.start.y;
+                    obj.start.y = 2 * centerY - obj.end.y;
+                    obj.end.y = 2 * centerY - tempStartY;
+                    if (obj.angle) obj.angle = -obj.angle;
                 }
-                if (obj.start && obj.end) {
-                    const tempEllipseStartY = obj.start.y;
-                    obj.start.y = centerY - (obj.end.y - centerY);
-                    obj.end.y = centerY - (tempEllipseStartY - centerY);
-                }
-                if (obj.angle) obj.angle = -obj.angle;
                 break;
         }
     }
 
-    getBoundingBox(obj) {
-        let minX = Infinity, minY = Infinity;
-        let maxX = -Infinity, maxY = -Infinity;
 
-        // Stroke padding calculation
-        let padding = 0;
-        if (obj.width) {
-            padding = obj.width / 2;
-            // Arrow might need more for head
-            if (obj.type === 'arrow') {
-                padding = Math.max(padding, 20 + obj.width);
-            }
-        }
-
-        if (obj.type === 'group') {
-            obj.children.forEach(child => {
-                const childBounds = this.getBoundingBox(child);
-                minX = Math.min(minX, childBounds.minX);
-                minY = Math.min(minY, childBounds.minY);
-                maxX = Math.max(maxX, childBounds.maxX);
-                maxY = Math.max(maxY, childBounds.maxY);
-            });
-            // Children bounds already include their padding
-            return { minX, minY, maxX, maxY };
-        } else if (obj.type === 'pen') {
-            obj.points.forEach(p => {
-                minX = Math.min(minX, p.x);
-                minY = Math.min(minY, p.y);
-                maxX = Math.max(maxX, p.x);
-                maxY = Math.max(maxY, p.y);
-            });
-        } else if (obj.start && obj.end && (obj.type === 'line' || obj.type === 'arrow')) {
-            // Line/Arrow specific
-            minX = Math.min(obj.start.x, obj.end.x);
-            minY = Math.min(obj.start.y, obj.end.y);
-            maxX = Math.max(obj.start.x, obj.end.x);
-            maxY = Math.max(obj.start.y, obj.end.y);
-        } else if (obj.type === 'rectangle' || obj.type === 'ellipse') {
-            // For rotated rects/ellipses, we need the rotated bounding box
-            if (obj.angle) {
-                const corners = this.getRotatedCorners(obj);
-                corners.forEach(p => {
-                    minX = Math.min(minX, p.x);
-                    minY = Math.min(minY, p.y);
-                    maxX = Math.max(maxX, p.x);
-                    maxY = Math.max(maxY, p.y);
-                });
-            } else if (obj.start && obj.end) {
-                minX = Math.min(obj.start.x, obj.end.x);
-                minY = Math.min(obj.start.y, obj.end.y);
-                maxX = Math.max(obj.start.x, obj.end.x);
-                maxY = Math.max(obj.start.y, obj.end.y);
-            } else if (obj.center) {
-                minX = obj.center.x - obj.radiusX;
-                minY = obj.center.y - obj.radiusY;
-                maxX = obj.center.x + obj.radiusX;
-                maxY = obj.center.y + obj.radiusY;
-            }
-        }
-
-        // Fallback or fix for undefined min/max if object is empty
-        if (minX === Infinity) return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
-
-        // Apply Padding
-        return {
-            minX: minX - padding,
-            minY: minY - padding,
-            maxX: maxX + padding,
-            maxY: maxY + padding
-        };
-    }
-
-    getRotatedCorners(obj) {
-        // Helper to reuse rotation logic
-        const minX = Math.min(obj.start.x, obj.end.x);
-        const maxX = Math.max(obj.start.x, obj.end.x);
-        const minY = Math.min(obj.start.y, obj.end.y);
-        const maxY = Math.max(obj.start.y, obj.end.y);
-        const centerX = (minX + maxX) / 2;
-        const centerY = (minY + maxY) / 2;
-
-        const rotate = (x, y) => {
-            const cos = Math.cos(obj.angle);
-            const sin = Math.sin(obj.angle);
-            return {
-                x: cos * (x - centerX) - sin * (y - centerY) + centerX,
-                y: sin * (x - centerX) + cos * (y - centerY) + centerY
-            };
-        };
-        return [
-            rotate(minX, minY),
-            rotate(maxX, minY),
-            rotate(maxX, maxY),
-            rotate(minX, maxY)
-        ];
-    }
 
     // Gruplama İşlevleri
     groupSelected(state) {
@@ -1280,10 +1325,11 @@ class SelectTool {
         };
 
         // Eğer nesne döndürülmüşse, tutamaçları da döndür
-        if (obj && (obj.type === 'rectangle' || obj.type === 'ellipse') && obj.angle) {
+        const rotationAngle = obj ? (obj.rotation !== undefined ? obj.rotation : (obj.angle || 0)) : 0;
+        if (rotationAngle !== 0) {
             const rotate = (point) => {
-                const cos = Math.cos(obj.angle);
-                const sin = Math.sin(obj.angle);
+                const cos = Math.cos(rotationAngle);
+                const sin = Math.sin(rotationAngle);
                 return {
                     x: cos * (point.x - centerX) - sin * (point.y - centerY) + centerX,
                     y: sin * (point.x - centerX) + cos * (point.y - centerY) + centerY
@@ -1471,20 +1517,42 @@ class SelectTool {
                 break;
 
             case 'rectangle':
-                // Use standard content bounds
-                obj.start = { x: contentMinX, y: contentMinY };
-                obj.end = { x: contentMaxX, y: contentMaxY };
-                break;
-
+            case 'rect':
             case 'ellipse':
-                // Use standard content bounds
-                const centerX = (contentMinX + contentMaxX) / 2;
-                const centerY = (contentMinY + contentMaxY) / 2;
-                obj.center = { x: centerX, y: centerY };
-                obj.radiusX = Math.abs(contentMaxX - contentMinX) / 2;
-                obj.radiusY = Math.abs(contentMaxY - contentMinY) / 2;
-                obj.start = { x: contentMinX, y: contentMinY };
-                obj.end = { x: contentMaxX, y: contentMaxY };
+            case 'triangle':
+            case 'trapezoid':
+            case 'star':
+            case 'diamond':
+            case 'parallelogram':
+            case 'oval':
+            case 'heart':
+            case 'cloud':
+                // Use standard content bounds (un-padded)
+                const shapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
+                const sw = obj.strokeWidth || (shapes.includes(obj.type) ? 0 : (obj.width || 0));
+                const padS = sw / 2;
+                const cMinX = minX + padS;
+                const cMinY = minY + padS;
+                const cMaxX = maxX - padS;
+                const cMaxY = maxY - padS;
+
+                if (obj.x !== undefined) {
+                    obj.x = cMinX;
+                    obj.y = cMinY;
+                    obj.width = Math.max(0.1, cMaxX - cMinX);
+                    obj.height = Math.max(0.1, cMaxY - cMinY);
+                } else if (obj.type === 'rectangle') {
+                    obj.start = { x: cMinX, y: cMinY };
+                    obj.end = { x: cMaxX, y: cMaxY };
+                } else if (obj.type === 'ellipse') {
+                    const centerX = (cMinX + cMaxX) / 2;
+                    const centerY = (cMinY + cMaxY) / 2;
+                    obj.center = { x: centerX, y: centerY };
+                    obj.radiusX = Math.abs(cMaxX - cMinX) / 2;
+                    obj.radiusY = Math.abs(cMaxY - cMinY) / 2;
+                    obj.start = { x: cMinX, y: cMinY };
+                    obj.end = { x: cMaxX, y: cMaxY };
+                }
                 break;
 
             case 'highlighter':
@@ -1595,13 +1663,23 @@ class SelectTool {
         // Açı farkı (radyan)
         const deltaAngle = currentAngle - startAngle;
 
-        if (obj.type === 'rectangle' || obj.type === 'ellipse') {
+        const allShapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
+
+        if (allShapes.includes(obj.type)) {
             // Primitive şekiller için açı özelliğini güncelle
             if (!this.originalObjectState) {
                 this.originalObjectState = JSON.parse(JSON.stringify(obj));
-                this.originalObjectState.startAngle = obj.angle || 0;
+                this.originalObjectState.startRotation = obj.rotation !== undefined ? obj.rotation : (obj.angle || 0);
             }
-            obj.angle = (this.originalObjectState.startAngle || 0) + deltaAngle;
+
+            const newAngle = (this.originalObjectState.startRotation || 0) + deltaAngle;
+            if (obj.x !== undefined || obj.center) {
+                obj.rotation = newAngle;
+                obj.angle = newAngle; // Sync both
+            } else {
+                obj.angle = newAngle;
+                obj.rotation = newAngle; // Sync both for compatibility
+            }
         } else {
             // Diğerleri için (line, arrow, pen) nokta dönüşümü yap
             if (!this.originalObjectState) {
@@ -1649,21 +1727,33 @@ class SelectTool {
                 break;
 
             case 'rectangle':
+            case 'rect':
             case 'ellipse':
-                // Eğer bu nesneler grup içinde dönüyorsa, merkezleri etrafında değil, grubun merkezi etrafında dönmeli.
-                // rectangle/ellipse için 'angle' property'si kendi merkezi etrafında dönüşü tutar.
-                // Grubun merkezi etrafında dönerken hem konumları değişir hem de kendi açıları.
-
+            case 'triangle':
+            case 'trapezoid':
+            case 'star':
+            case 'diamond':
+            case 'parallelogram':
+            case 'oval':
+            case 'heart':
+            case 'cloud':
                 // 1. Merkezlerini (veya start/end noktalarını) taşı
                 if (originalObj.start && originalObj.end) {
                     obj.start = rotatePoint(originalObj.start);
                     obj.end = rotatePoint(originalObj.end);
                 } else if (originalObj.center) {
                     obj.center = rotatePoint(originalObj.center);
+                } else if (originalObj.x !== undefined) {
+                    const center = { x: originalObj.x + originalObj.width / 2, y: originalObj.y + originalObj.height / 2 };
+                    const rotatedCenter = rotatePoint(center);
+                    obj.x = rotatedCenter.x - originalObj.width / 2;
+                    obj.y = rotatedCenter.y - originalObj.height / 2;
                 }
 
                 // 2. Kendi ekseni etrafındaki açıyı güncelle
-                obj.angle = (originalObj.angle || 0) + angle;
+                const newA = (originalObj.rotation !== undefined ? originalObj.rotation : (originalObj.angle || 0)) + angle;
+                obj.rotation = newA;
+                obj.angle = newA;
                 break;
         }
     }
@@ -1697,21 +1787,35 @@ class SelectTool {
                 break;
 
             case 'rectangle':
+            case 'rect':
             case 'ellipse':
-                // Eğer bu nesneler grup içinde dönüyorsa, merkezleri etrafında değil, grubun merkezi etrafında dönmeli.
-                // rectangle/ellipse için 'angle' property'si kendi merkezi etrafında dönüşü tutar.
-                // Grubun merkezi etrafında dönerken hem konumları değişir hem de kendi açıları.
-
-                // 1. Merkezlerini (veya start/end noktalarını) taşı
-                if (obj.start && obj.end) {
+            case 'triangle':
+            case 'trapezoid':
+            case 'star':
+            case 'diamond':
+            case 'parallelogram':
+            case 'oval':
+            case 'heart':
+            case 'cloud':
+                // 1. Position update (center of gravity or center of x/y)
+                if (obj.x !== undefined) {
+                    const center = { x: obj.x + obj.width / 2, y: obj.y + obj.height / 2 };
+                    const rotatedCenter = rotatePoint(center);
+                    obj.x = rotatedCenter.x - obj.width / 2;
+                    obj.y = rotatedCenter.y - obj.height / 2;
+                } else if (obj.start && obj.end) {
                     obj.start = rotatePoint(obj.start);
                     obj.end = rotatePoint(obj.end);
                 } else if (obj.center) {
                     obj.center = rotatePoint(obj.center);
                 }
 
-                // 2. Kendi ekseni etrafındaki açıyı güncelle
-                obj.angle = (obj.angle || 0) + angle;
+                // 2. Rotation update
+                if (obj.rotation !== undefined) {
+                    obj.rotation += angle;
+                } else {
+                    obj.angle = (obj.angle || 0) + angle;
+                }
                 break;
 
             case 'pen':
@@ -1748,15 +1852,42 @@ class SelectTool {
 
         if (style.color !== undefined) {
             obj.color = style.color;
+            // Eger obje doluysa fill rengini de guncelle (stayFillColor seçeneği yoksa)
+            if (!style.stayFillColor && (obj.filled || obj.fillColor && obj.fillColor !== 'transparent')) {
+                obj.fillColor = style.color;
+            }
+        }
+        if (style.fillColor !== undefined) {
+            obj.fillColor = style.fillColor;
+        }
+        if (style.filled !== undefined) {
+            obj.filled = style.filled;
         }
         if (style.width !== undefined) {
-            obj.width = style.width;
+            const shapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
+            if (shapes.includes(obj.type)) {
+                obj.strokeWidth = style.width;
+            } else {
+                obj.width = style.width;
+            }
         }
         if (style.lineStyle !== undefined) {
             obj.lineStyle = style.lineStyle;
         }
         if (style.opacity !== undefined) {
             obj.opacity = style.opacity;
+        }
+        if (style.highlighterCap !== undefined) {
+            obj.cap = style.highlighterCap;
+        }
+        if (style.arrowStartStyle !== undefined) {
+            obj.startStyle = style.arrowStartStyle;
+        }
+        if (style.arrowEndStyle !== undefined) {
+            obj.endStyle = style.arrowEndStyle;
+        }
+        if (style.arrowPathType !== undefined) {
+            obj.pathType = style.arrowPathType;
         }
     }
 

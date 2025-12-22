@@ -32,6 +32,7 @@ class PropertiesSidebar {
 
                 if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
                     this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { opacity: this.app.state.opacity });
+                    if (this.app.redrawOffscreen) this.app.redrawOffscreen();
                     this.app.render();
                 }
             });
@@ -62,6 +63,7 @@ class PropertiesSidebar {
 
                 if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
                     this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { width: this.app.state.strokeWidth });
+                    if (this.app.redrawOffscreen) this.app.redrawOffscreen();
                     this.app.render();
                 }
             });
@@ -123,6 +125,7 @@ class PropertiesSidebar {
                 if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
                     this.app.history.saveState(this.app.state.objects); // Save state BEFORE change
                     this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { lineStyle: style });
+                    if (this.app.redrawOffscreen) this.app.redrawOffscreen();
                     this.app.render();
                 }
             });
@@ -131,8 +134,6 @@ class PropertiesSidebar {
         // Highlighter Cap Settings
         document.querySelectorAll('.tool-btn[data-highlighter-cap]').forEach(btn => {
             btn.addEventListener('click', () => {
-                const cap = btn.dataset.highlighter - cap;
-                // Note: dataset prop for 'data-highlighter-cap' becomes 'highlighterCap' in JS camelCase
                 const capValue = btn.dataset.highlighterCap;
 
                 this.app.state.highlighterCap = capValue;
@@ -140,6 +141,14 @@ class PropertiesSidebar {
                 // UI Update
                 document.querySelectorAll('.tool-btn[data-highlighter-cap]').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+
+                // Update Selection
+                if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
+                    this.app.history.saveState(this.app.state.objects);
+                    this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { highlighterCap: capValue });
+                    if (this.app.redrawOffscreen) this.app.redrawOffscreen();
+                    this.app.render();
+                }
             });
         });
 
@@ -152,6 +161,14 @@ class PropertiesSidebar {
                 // UI Update
                 document.querySelectorAll('.tool-btn[data-arrow-start]').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+
+                // Update Selection
+                if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
+                    this.app.history.saveState(this.app.state.objects);
+                    this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { arrowStartStyle: style });
+                    if (this.app.redrawOffscreen) this.app.redrawOffscreen();
+                    this.app.render();
+                }
             });
         });
 
@@ -164,6 +181,14 @@ class PropertiesSidebar {
                 // UI Update
                 document.querySelectorAll('.tool-btn[data-arrow-end]').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
+
+                // Update Selection
+                if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
+                    this.app.history.saveState(this.app.state.objects);
+                    this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { arrowEndStyle: style });
+                    if (this.app.redrawOffscreen) this.app.redrawOffscreen();
+                    this.app.render();
+                }
             });
         });
 
@@ -172,16 +197,27 @@ class PropertiesSidebar {
             btn.addEventListener('click', () => {
                 const pathType = btn.dataset.arrowPath;
                 const isActive = btn.classList.contains('active');
+                let finalPathType = 'straight';
 
                 // Toggle: clicking active button returns to straight
                 if (isActive) {
+                    finalPathType = 'straight';
                     this.app.state.arrowPathType = 'straight';
                     btn.classList.remove('active');
                 } else {
+                    finalPathType = pathType;
                     this.app.state.arrowPathType = pathType;
                     // Deactivate all others
                     document.querySelectorAll('.tool-btn[data-arrow-path]').forEach(b => b.classList.remove('active'));
                     btn.classList.add('active');
+                }
+
+                // Update Selection
+                if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
+                    this.app.history.saveState(this.app.state.objects);
+                    this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { arrowPathType: finalPathType });
+                    if (this.app.redrawOffscreen) this.app.redrawOffscreen();
+                    this.app.render();
                 }
             });
         });
@@ -319,9 +355,103 @@ class PropertiesSidebar {
                 btn.classList.add('active');
             });
         });
+
+        // Fill Toggle
+        // Fill Toggle
+        const fillBtn = document.getElementById('btnFillToggle');
+        if (fillBtn) {
+            fillBtn.addEventListener('click', () => {
+                const currentTool = this.app.state.currentTool;
+
+                if (currentTool === 'select' && this.app.tools.select.selectedObjects.length === 1) {
+                    const objIndex = this.app.tools.select.selectedObjects[0];
+                    const obj = this.app.state.objects[objIndex];
+
+                    if (obj) {
+                        const isShape = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'].includes(obj.type);
+                        const canFill = isShape || (this.app.fillManager && this.app.fillManager.canBeFilled(obj));
+
+                        if (canFill) {
+                            this.app.history.saveState(this.app.state.objects);
+
+                            if (isShape) {
+                                // Toggle fill for advanced shapes
+                                obj.filled = !obj.filled;
+                                obj.fillColor = obj.filled ? (obj.fillColor || obj.color || obj.strokeColor) : 'transparent';
+                                // If it was 'transparent', make it follow current color
+                                if (obj.filled && obj.fillColor === 'transparent') obj.fillColor = obj.color || obj.strokeColor;
+                            } else {
+                                // Toggle fill for freehand via FillManager
+                                this.app.fillManager.toggleFill(obj, obj.color);
+                            }
+
+                            fillBtn.classList.toggle('active', !!obj.filled);
+                            if (this.app.redrawOffscreen) this.app.redrawOffscreen();
+                            this.app.render();
+                        }
+                    }
+                } else if (['pen', 'highlighter', 'rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'].includes(currentTool)) {
+                    // Logic for Live Drawing Mode
+                    this.app.state.fillEnabled = !this.app.state.fillEnabled;
+                    fillBtn.classList.toggle('active', this.app.state.fillEnabled);
+                }
+            });
+        }
     }
 
     updateUIForTool(tool) {
+        // Sync UI with selection if in select tool
+        if (tool === 'select') {
+            const selectTool = this.app.tools.select;
+            if (selectTool.selectedObjects.length === 1) {
+                const obj = this.app.state.objects[selectTool.selectedObjects[0]];
+                if (obj) {
+                    const shapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
+                    // Update State to match selected object (so subsequent changes are relative to it)
+                    if (shapes.includes(obj.type)) {
+                        if (obj.strokeWidth !== undefined) this.app.state.strokeWidth = obj.strokeWidth;
+                    } else {
+                        if (obj.width !== undefined) this.app.state.strokeWidth = obj.width;
+                    }
+
+                    if (obj.opacity !== undefined) this.app.state.opacity = obj.opacity;
+                    if (obj.lineStyle) this.app.state.lineStyle = obj.lineStyle;
+                    if (obj.color) this.app.state.strokeColor = obj.color;
+                    if (obj.cap) this.app.state.highlighterCap = obj.cap;
+                    if (obj.startStyle) this.app.state.arrowStartStyle = obj.startStyle;
+                    if (obj.endStyle) this.app.state.arrowEndStyle = obj.endStyle;
+                    if (obj.pathType) this.app.state.arrowPathType = obj.pathType;
+
+                    // Sync Sliders
+                    const thicknessSliders = document.querySelectorAll('.stroke-width-slider');
+                    thicknessSliders.forEach(s => {
+                        s.value = this.app.state.strokeWidth;
+                        if (window.updateRangeProgress) window.updateRangeProgress(s);
+                    });
+                    const thicknessVal = document.getElementById('strokeWidthVal');
+                    if (thicknessVal) thicknessVal.textContent = this.app.state.strokeWidth;
+
+                    const opacitySliders = document.querySelectorAll('.opacity-slider');
+                    opacitySliders.forEach(s => {
+                        s.value = Math.round(this.app.state.opacity * 100);
+                        if (window.updateRangeProgress) window.updateRangeProgress(s);
+                    });
+                    const opacityVal = document.getElementById('opacityVal');
+                    if (opacityVal) opacityVal.textContent = Math.round(this.app.state.opacity * 100) + '%';
+
+                    // Sync Active Buttons
+                    document.querySelectorAll('.tool-btn[data-linestyle]').forEach(b => b.classList.toggle('active', b.dataset.linestyle === this.app.state.lineStyle));
+                    document.querySelectorAll('.tool-btn[data-highlighter-cap]').forEach(b => b.classList.toggle('active', b.dataset.highlighterCap === this.app.state.highlighterCap));
+                    document.querySelectorAll('.tool-btn[data-arrow-start]').forEach(b => b.classList.toggle('active', b.dataset.arrowStart === this.app.state.arrowStartStyle));
+                    document.querySelectorAll('.tool-btn[data-arrow-end]').forEach(b => b.classList.toggle('active', b.dataset.arrowEnd === this.app.state.arrowEndStyle));
+                    document.querySelectorAll('.tool-btn[data-arrow-path]').forEach(b => b.classList.toggle('active', b.dataset.arrowPath === this.app.state.arrowPathType));
+
+                    // Sync Color Palette
+                    if (this.app.colorPalette) this.app.colorPalette.renderColors();
+                }
+            }
+        }
+
         // Opacity Logic
         // We only want to set a default opacity when switching to a tool that specifically 
         // benefits from it (like highlighter), but we shouldn't reset it every time 
@@ -343,7 +473,7 @@ class PropertiesSidebar {
             this.app.state.pressureEnabled = true;
             pressureBtn.classList.add('active');
             pressureBtn.style.display = 'flex'; // Show for pen
-        } else if (['line', 'rectangle', 'ellipse'].includes(tool)) {
+        } else if (['line', 'rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'].includes(tool)) {
             this.app.state.pressureEnabled = false;
             pressureBtn.classList.remove('active');
             pressureBtn.style.display = 'flex'; // Show for shapes
@@ -355,7 +485,7 @@ class PropertiesSidebar {
 
         // Brush Settings Visibility Logic
         const isFreehand = (tool === 'pen' || tool === 'highlighter');
-        const showBrushSettings = ['pen', 'highlighter', 'rectangle', 'ellipse', 'line', 'arrow', 'select'].includes(tool);
+        const showBrushSettings = ['pen', 'highlighter', 'rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'line', 'arrow', 'select'].includes(tool);
 
         // Desktop Unified Settings
         const brushSettingsGroup = document.getElementById('toolGroupBrushSettings');
@@ -384,14 +514,14 @@ class PropertiesSidebar {
         const wavyBtn = document.querySelector('.tool-btn[data-linestyle="wavy"]');
         if (wavyBtn) {
             let showWavy = true;
-            if (tool === 'rectangle' || tool === 'ellipse') {
+            if (['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'].includes(tool)) {
                 showWavy = false;
             } else if (tool === 'select') {
                 const selectTool = this.app.tools.select;
                 if (selectTool.selectedObjects.length > 0) {
                     const hasShape = selectTool.selectedObjects.some(index => {
                         const obj = this.app.state.objects[index];
-                        return obj && (obj.type === 'rectangle' || obj.type === 'ellipse');
+                        return obj && ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'].includes(obj.type);
                     });
                     if (hasShape) showWavy = false;
                 }
@@ -435,6 +565,46 @@ class PropertiesSidebar {
             document.getElementById('eraserSettings').style.display = 'flex';
         } else {
             document.getElementById('eraserSettings').style.display = 'none';
+        }
+
+        // Fill Settings Visibility
+        const fillSettings = document.getElementById('fillSettings');
+        const fillBtn = document.getElementById('btnFillToggle');
+
+        if (fillSettings && fillBtn) {
+            let showFill = false;
+            let isFilled = false;
+            const shapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
+
+            if (tool === 'select') {
+                const selectTool = this.app.tools.select;
+                if (selectTool.selectedObjects.length === 1) {
+                    const objIndex = selectTool.selectedObjects[0];
+                    const obj = this.app.state.objects[objIndex];
+                    if (obj) {
+                        if (shapes.includes(obj.type)) {
+                            showFill = true;
+                            isFilled = !!obj.filled;
+                        } else if (obj.type === 'pen' || obj.type === 'highlighter') {
+                            const canFill = this.app.fillManager && this.app.fillManager.canBeFilled(obj);
+                            if (canFill) {
+                                showFill = true;
+                                isFilled = !!obj.filled;
+                            }
+                        }
+                    }
+                }
+            } else if (['pen', 'highlighter', ...shapes].includes(tool)) {
+                // Show for pen tools and shapes to allow live toggle
+                showFill = true;
+                isFilled = this.app.state.fillEnabled;
+            }
+
+            fillSettings.style.display = showFill ? 'flex' : 'none';
+            // Only toggle 'active' class, don't mess with click listeners here
+            if (showFill) {
+                fillBtn.classList.toggle('active', isFilled);
+            }
         }
     }
 }

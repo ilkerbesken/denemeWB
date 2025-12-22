@@ -43,7 +43,9 @@ class PenTool {
             opacity: state.opacity,
             lineStyle: state.lineStyle || 'solid',
             cap: state.currentTool === 'highlighter' ? state.highlighterCap : 'round',
-            isHighlighter: state.currentTool === 'highlighter'
+            isHighlighter: state.currentTool === 'highlighter',
+            filled: state.fillEnabled,
+            fillColor: state.strokeColor
         };
     }
 

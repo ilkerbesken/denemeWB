@@ -64,35 +64,106 @@
             </div>
 
             <div class="tool-group">
-                <button class="tool-btn" data-tool="rectangle" title="Dikdörtgen (R)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-rectangle-horizontal-icon lucide-rectangle-horizontal">
-                        <rect width="20" height="12" x="2" y="6" rx="2" />
-                    </svg>
-                </button>
-                <button class="tool-btn" data-tool="ellipse" title="Elips (E)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-circle-icon lucide-circle">
-                        <circle cx="12" cy="12" r="10" />
-                    </svg>
-                </button>
+                <div class="tool-btn-container" id="shapeToolContainer">
+                    <button class="tool-btn" id="shapePickerBtn" title="Şekiller">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                            class="lucide lucide-rectangle-horizontal">
+                            <rect width="20" height="12" x="2" y="6" rx="2" />
+                        </svg>
+                    </button>
+                    <div id="shapeDropdown" class="shape-dropdown">
+                        <button class="tool-btn" data-tool="rectangle" title="Dikdörtgen (R)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="lucide lucide-rectangle-horizontal">
+                                <rect width="20" height="12" x="2" y="6" rx="2" />
+                            </svg>
+                        </button>
+                        <button class="tool-btn" data-tool="ellipse" title="Elips (E)">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="lucide lucide-circle">
+                                <circle cx="12" cy="12" r="10" />
+                            </svg>
+                        </button>
+                        <button class="tool-btn" data-tool="triangle" title="Üçgen">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M12 3L2 21H22L12 3Z" />
+                            </svg>
+                        </button>
+                        <button class="tool-btn" data-tool="trapezoid" title="Yamuk">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M7 6L17 6L21 18L3 18L7 6Z" />
+                            </svg>
+                        </button>
+                        <button class="tool-btn" data-tool="star" title="Yıldız">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="lucide lucide-star">
+                                <polygon
+                                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                            </svg>
+                        </button>
+                        <button class="tool-btn" data-tool="diamond" title="Karo">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M12 2L22 12L12 22L2 12L12 2Z" />
+                            </svg>
+                        </button>
+                        <button class="tool-btn" data-tool="parallelogram" title="Paralel Kenar">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M7 6L21 6L17 18L3 18L7 6Z" />
+                            </svg>
+                        </button>
+                        <button class="tool-btn" data-tool="oval" title="Oval">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <rect x="2" y="6" width="20" height="12" rx="6" ry="6" />
+                            </svg>
+                        </button>
+                        <button class="tool-btn" data-tool="heart" title="Kalp">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path
+                                    d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                            </svg>
+                        </button>
+                        <button class="tool-btn" data-tool="cloud" title="Bulut">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path
+                                    d="M17.5 19c2.5 0 4.5-2 4.5-4.5 0-2.3-1.6-4.2-3.8-4.5a7 7 0 1 0-13.4 2.5C2.7 13.2 1 15.1 1 17.5 1 20 3 22 5.5 22h12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
                 <button class="tool-btn" data-tool="arrow" title="Ok (A)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-minus-icon lucide-minus">
+                        class="lucide lucide-minus">
                         <path d="M5 12h14" />
                     </svg>
                 </button>
                 <button class="tool-btn" data-tool="line" title="Çizgi (L)" style="display: none;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-minus-icon lucide-minus">
+                        class="lucide lucide-minus">
                         <path d="M5 12h14" />
                     </svg>
                 </button>
             </div>
+
 
             <div class="tool-group">
                 <button class="tool-btn" id="canvasSettingsBtn" title="Tuval Ayarları (C)">
@@ -296,6 +367,19 @@
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M3 12Q6 7 9 12T15 12T21 12" stroke="currentColor" stroke-width="2"
                             stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="tool-group" id="fillSettings" style="display: none;">
+                <button id="btnFillToggle" class="tool-btn" title="İçini Doldur">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-paint-bucket">
+                        <path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z" />
+                        <path d="m5 2 5 5" />
+                        <path d="M2 13h15" />
+                        <path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z" />
                     </svg>
                 </button>
             </div>
@@ -553,6 +637,15 @@
                 <span class="menu-shortcut">Del</span>
             </div>
             <div class="context-menu-separator"></div>
+            <!--<div class="context-menu-item" data-action="applyColor">
+                <span class="menu-icon">🎨</span>
+                <span>Aktif Rengi Uygula</span>
+            </div>
+            <div id="ctxChangeBorderColor" class="context-menu-item" data-action="changeBorderColor">
+                <span class="menu-icon">🖍️</span>
+                <span>Çerçeve Rengini Değiştir</span>
+            </div>-->
+            <div class="context-menu-separator"></div>
             <div class="context-menu-item" data-action="flipHorizontal">
                 <span class="menu-icon">↔️</span>
                 <span>Yatay Döndür</span>
@@ -655,6 +748,7 @@
     <script src="./js/utils.js?v=0.7.1"></script>
     <script src="./js/ZoomManager.js?v=0.7.1"></script>
     <script src="./js/CanvasSettings.js?v=0.7.1"></script>
+    <script src="./js/FillManager.js?v=0.7.1"></script>
     <script src="./js/PenTool.js?v=0.7.1"></script>
     <script src="./js/LineTool.js?v=0.7.1"></script>
     <script src="./js/RectangleTool.js?v=0.7.1"></script>
@@ -666,6 +760,7 @@
     <script src="./js/ColorPalette.js?v=0.7.1"></script>
     <script src="./js/PropertiesSidebar.js?v=0.7.1"></script>
     <script src="./js/HistoryManager.js?v=0.7.1"></script>
+    <script src="./js/ShapeTool.js?v=0.7.1"></script>
     <script src="./js/app.js?v=0.7.1"></script>
 </body>
 
