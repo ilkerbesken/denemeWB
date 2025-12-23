@@ -130,39 +130,8 @@
                     <span class="label" style="margin-left: 4px; font-size: 8px;"></span>
                 </button>
 
-                <div id="popupBrushSettings" class="property-popup brush-settings-popup">
-                    <div class="brush-setting-item">
-                        <div class="brush-setting-header">
-                            <span class="label">Kalınlık</span>
-                            <span class="slider-val-left" id="strokeWidthVal">4</span>
-                        </div>
-                        <input type="range" class="stroke-width-slider" id="strokeWidth" min="1" max="20" value="4">
-                    </div>
-                    <div class="brush-setting-item">
-                        <div class="brush-setting-header">
-                            <span class="label">Opaklık</span>
-                            <span class="slider-val-left" id="opacityVal">100%</span>
-                        </div>
-                        <input type="range" class="opacity-slider" id="opacitySlider" min="0" max="100" value="100"
-                            step="10">
-                    </div>
-                    <div class="brush-setting-item">
-                        <div class="brush-setting-header">
-                            <span class="label">Stabilizasyon</span>
-                            <span class="slider-val-left" id="stabilizationVal">50</span>
-                        </div>
-                        <input type="range" class="stabilization-slider" id="stabilizationSlider" min="0" max="100"
-                            value="50">
-                    </div>
-                    <div class="brush-setting-item">
-                        <div class="brush-setting-header">
-                            <span class="label">Örnekleme</span>
-                            <span class="slider-val-left" id="decimationVal">10</span>
-                        </div>
-                        <input type="range" class="decimation-slider" id="decimationSlider" min="0" max="50" value="10">
-                    </div>
-                </div>
             </div>
+
 
 
 
@@ -337,47 +306,7 @@
                                 stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                     </button>
-                    <div id="popupArrowStart" class="property-popup">
-                        <button class="tool-btn active" data-arrow-start="none" title="Uç Yok">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-arrow-start="triangle" title="Dolu ok">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <line x1="8" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-                                <path d="M8 12 L4 9 L4 15 Z" fill="currentColor" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-arrow-start="line" title="Ok">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <line x1="8" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-                                <line x1="4" y1="8" x2="4" y2="16" stroke="currentColor" stroke-width="2" />
-                                <line x1="4" y1="10" x2="8" y2="12" stroke="currentColor" stroke-width="2" />
-                                <line x1="4" y1="14" x2="8" y2="12" stroke="currentColor" stroke-width="2" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-arrow-start="circle" title="Yuvarlak">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <line x1="8" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-                                <circle cx="4" cy="12" r="3" fill="currentColor" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-arrow-start="square" title="Kare">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <line x1="8" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-                                <rect x="1" y="9" width="6" height="6" fill="currentColor" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-arrow-start="bar" title="Dikey Çizgi">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <line x1="6" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-                                <line x1="4" y1="8" x2="4" y2="16" stroke="currentColor" stroke-width="3" />
-                            </svg>
-                        </button>
-                    </div>
                 </div>
-
                 <!-- End Style Wrap -->
                 <div style="position: relative;">
                     <button id="btnArrowEndTrigger" class="property-trigger-btn" title="Bitiş Ucu">
@@ -387,45 +316,6 @@
                                 stroke-linecap="round" stroke-linejoin="round" />
                         </svg>
                     </button>
-                    <div id="popupArrowEnd" class="property-popup">
-                        <button class="tool-btn" data-arrow-end="none" title="Uç Yok">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn active" data-arrow-end="triangle" title="Dolu ok">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <line x1="4" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" />
-                                <path d="M16 12 L20 9 L20 15 Z" fill="currentColor" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-arrow-end="line" title="Ok">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <line x1="4" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" />
-                                <line x1="20" y1="8" x2="20" y2="16" stroke="currentColor" stroke-width="2" />
-                                <line x1="16" y1="10" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-                                <line x1="16" y1="14" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-arrow-end="circle" title="Yuvarlak">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <line x1="4" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" />
-                                <circle cx="20" cy="12" r="3" fill="currentColor" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-arrow-end="square" title="Kare">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <line x1="4" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" />
-                                <rect x="17" y="9" width="6" height="6" fill="currentColor" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-arrow-end="bar" title="Dikey Çizgi">
-                            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <line x1="4" y1="12" x2="18" y2="12" stroke="currentColor" stroke-width="2" />
-                                <line x1="20" y1="8" x2="20" y2="16" stroke="currentColor" stroke-width="3" />
-                            </svg>
-                        </button>
-                    </div>
                 </div>
             </div>
 
@@ -643,6 +533,119 @@
             </div>
         </div>
     </div>
+
+    <!-- Moved Popups -->
+    <div id="popupBrushSettings" class="property-popup brush-settings-popup">
+        <div class="brush-setting-item">
+            <div class="brush-setting-header">
+                <span class="label">Kalınlık</span>
+                <span class="slider-val-left" id="strokeWidthVal">4</span>
+            </div>
+            <input type="range" class="stroke-width-slider" id="strokeWidth" min="1" max="20" value="4">
+        </div>
+        <div class="brush-setting-item">
+            <div class="brush-setting-header">
+                <span class="label">Opaklık</span>
+                <span class="slider-val-left" id="opacityVal">100%</span>
+            </div>
+            <input type="range" class="opacity-slider" id="opacitySlider" min="0" max="100" value="100" step="10">
+        </div>
+        <div class="brush-setting-item">
+            <div class="brush-setting-header">
+                <span class="label">Stabilizasyon</span>
+                <span class="slider-val-left" id="stabilizationVal">50</span>
+            </div>
+            <input type="range" class="stabilization-slider" id="stabilizationSlider" min="0" max="100" value="50">
+        </div>
+        <div class="brush-setting-item">
+            <div class="brush-setting-header">
+                <span class="label">Örnekleme</span>
+                <span class="slider-val-left" id="decimationVal">10</span>
+            </div>
+            <input type="range" class="decimation-slider" id="decimationSlider" min="0" max="50" value="10">
+        </div>
+    </div>
+
+    <div id="popupArrowStart" class="property-popup">
+        <button class="tool-btn active" data-arrow-start="none" title="Uç Yok">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
+            </svg>
+        </button>
+        <button class="tool-btn" data-arrow-start="triangle" title="Dolu ok">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="8" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
+                <path d="M8 12 L4 9 L4 15 Z" fill="currentColor" />
+            </svg>
+        </button>
+        <button class="tool-btn" data-arrow-start="line" title="Ok">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="8" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
+                <line x1="4" y1="8" x2="4" y2="16" stroke="currentColor" stroke-width="2" />
+                <line x1="4" y1="10" x2="8" y2="12" stroke="currentColor" stroke-width="2" />
+                <line x1="4" y1="14" x2="8" y2="12" stroke="currentColor" stroke-width="2" />
+            </svg>
+        </button>
+        <button class="tool-btn" data-arrow-start="circle" title="Yuvarlak">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="8" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
+                <circle cx="4" cy="12" r="3" fill="currentColor" />
+            </svg>
+        </button>
+        <button class="tool-btn" data-arrow-start="square" title="Kare">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="8" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
+                <rect x="1" y="9" width="6" height="6" fill="currentColor" />
+            </svg>
+        </button>
+        <button class="tool-btn" data-arrow-start="bar" title="Dikey Çizgi">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="6" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
+                <line x1="4" y1="8" x2="4" y2="16" stroke="currentColor" stroke-width="3" />
+            </svg>
+        </button>
+    </div>
+
+    <div id="popupArrowEnd" class="property-popup">
+        <button class="tool-btn" data-arrow-end="none" title="Uç Yok">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
+            </svg>
+        </button>
+        <button class="tool-btn active" data-arrow-end="triangle" title="Dolu ok">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="4" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" />
+                <path d="M16 12 L20 9 L20 15 Z" fill="currentColor" />
+            </svg>
+        </button>
+        <button class="tool-btn" data-arrow-end="line" title="Ok">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="4" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" />
+                <line x1="20" y1="8" x2="20" y2="16" stroke="currentColor" stroke-width="2" />
+                <line x1="16" y1="10" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
+                <line x1="16" y1="14" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
+            </svg>
+        </button>
+        <button class="tool-btn" data-arrow-end="circle" title="Yuvarlak">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="4" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" />
+                <circle cx="20" cy="12" r="3" fill="currentColor" />
+            </svg>
+        </button>
+        <button class="tool-btn" data-arrow-end="square" title="Kare">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="4" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" />
+                <rect x="17" y="9" width="6" height="6" fill="currentColor" />
+            </svg>
+        </button>
+        <button class="tool-btn" data-arrow-end="bar" title="Dikey Çizgi">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <line x1="4" y1="12" x2="18" y2="12" stroke="currentColor" stroke-width="2" />
+                <line x1="20" y1="8" x2="20" y2="16" stroke="currentColor" stroke-width="3" />
+            </svg>
+        </button>
+    </div>
+
 
     <script src="./js/utils.js?v=0.7.1"></script>
     <script src="./js/ZoomManager.js?v=0.7.1"></script>

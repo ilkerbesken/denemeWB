@@ -284,6 +284,7 @@ class PropertiesSidebar {
                 if (!isVisible) {
                     popupStart.style.display = 'grid';
                     btnStartTrigger.classList.add('active');
+                    this.positionPopup(btnStartTrigger, popupStart);
                 }
             });
         }
@@ -296,6 +297,7 @@ class PropertiesSidebar {
                 if (!isVisible) {
                     popupEnd.style.display = 'grid';
                     btnEndTrigger.classList.add('active');
+                    this.positionPopup(btnEndTrigger, popupEnd);
                 }
             });
         }
@@ -309,6 +311,7 @@ class PropertiesSidebar {
                 if (!isVisible) {
                     popupBrushSettings.style.display = 'flex';
                     btnBrushSettingsTrigger.classList.add('active');
+                    this.positionPopup(btnBrushSettingsTrigger, popupBrushSettings);
                 }
             });
         }
@@ -376,6 +379,22 @@ class PropertiesSidebar {
                 }
             });
         }
+
+        // Close popups on sidebar scroll
+        if (this.container) {
+            this.container.addEventListener('scroll', () => {
+                closeAllPopups();
+            }, { passive: true });
+        }
+    }
+
+    positionPopup(trigger, popup) {
+        const rect = trigger.getBoundingClientRect();
+        popup.style.position = 'fixed';
+        popup.style.top = (rect.bottom + 8) + 'px';
+        popup.style.left = rect.left + 'px';
+        popup.style.transform = 'none';
+        popup.style.zIndex = '1001'; // Ensure it is above everything
     }
 
     updateUIForTool(tool) {
