@@ -11,6 +11,7 @@
 <body>
     <div id="app">
         <div class="toolbar">
+            <div class="app-logo">WB</div>
             <div class="tool-group">
                 <button class="tool-btn" data-tool="select" title="Seç (V)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -64,90 +65,13 @@
             </div>
 
             <div class="tool-group">
-                <div class="tool-btn-container" id="shapeToolContainer">
-                    <button class="tool-btn" id="shapePickerBtn" title="Şekiller">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                            class="lucide lucide-rectangle-horizontal">
-                            <rect width="20" height="12" x="2" y="6" rx="2" />
-                        </svg>
-                    </button>
-                    <div id="shapeDropdown" class="shape-dropdown">
-                        <button class="tool-btn" data-tool="rectangle" title="Dikdörtgen (R)">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" class="lucide lucide-rectangle-horizontal">
-                                <rect width="20" height="12" x="2" y="6" rx="2" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-tool="ellipse" title="Elips (E)">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" class="lucide lucide-circle">
-                                <circle cx="12" cy="12" r="10" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-tool="triangle" title="Üçgen">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <path d="M12 3L2 21H22L12 3Z" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-tool="trapezoid" title="Yamuk">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <path d="M7 6L17 6L21 18L3 18L7 6Z" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-tool="star" title="Yıldız">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" class="lucide lucide-star">
-                                <polygon
-                                    points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-tool="diamond" title="Karo">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <path d="M12 2L22 12L12 22L2 12L12 2Z" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-tool="parallelogram" title="Paralel Kenar">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <path d="M7 6L21 6L17 18L3 18L7 6Z" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-tool="oval" title="Oval">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <rect x="2" y="6" width="20" height="12" rx="6" ry="6" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-tool="heart" title="Kalp">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <path
-                                    d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-                            </svg>
-                        </button>
-                        <button class="tool-btn" data-tool="cloud" title="Bulut">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <path
-                                    d="M17.5 19c2.5 0 4.5-2 4.5-4.5 0-2.3-1.6-4.2-3.8-4.5a7 7 0 1 0-13.4 2.5C2.7 13.2 1 15.1 1 17.5 1 20 3 22 5.5 22h12" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
+                <button class="tool-btn" id="shapePickerBtn" data-tool="rectangle" title="Şekiller">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-rectangle-horizontal">
+                        <rect width="20" height="12" x="2" y="6" rx="2" />
+                    </svg>
+                </button>
                 <button class="tool-btn" data-tool="arrow" title="Ok (A)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -155,15 +79,7 @@
                         <path d="M5 12h14" />
                     </svg>
                 </button>
-                <button class="tool-btn" data-tool="line" title="Çizgi (L)" style="display: none;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-minus">
-                        <path d="M5 12h14" />
-                    </svg>
-                </button>
             </div>
-
 
             <div class="tool-group">
                 <button class="tool-btn" id="canvasSettingsBtn" title="Tuval Ayarları (C)">
@@ -200,8 +116,8 @@
 
         <!-- NEW: Properties Sidebar (Right of Color Palette) -->
         <div id="propertiesSidebar" class="floating-sidebar properties-sidebar">
-            <!-- Brush Settings Group (Desktop Only) -->
-            <div class="tool-group desktop-only" id="toolGroupBrushSettings">
+            <!-- Brush Settings Group -->
+            <div class="tool-group" id="toolGroupBrushSettings">
                 <button id="btnBrushSettingsTrigger" class="property-trigger-btn" title="Araç Seçenekleri">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -248,95 +164,79 @@
                 </div>
             </div>
 
-            <!-- Individual Brush Settings (Mobile Only - Legacy way) -->
-            <div class="tool-group mobile-only" id="toolGroupThickness">
-                <button id="btnThicknessTrigger" class="property-trigger-btn" title="Kalınlık">
-                    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="12" cy="12" r="5" />
-                    </svg>
-                </button>
-                <div id="popupThickness" class="property-popup-responsive">
-                    <div class="brush-setting-header">
-                        <span class="label">Kalınlık</span>
-                        <span class="slider-val-top" id="strokeWidthValMobile">4</span>
-                    </div>
-                    <div class="slider-container">
-                        <input type="range" class="stroke-width-slider" id="strokeWidthMobile" min="1" max="20"
-                            value="4">
-                        <span class="slider-val-bottom">0</span>
-                    </div>
-                </div>
-            </div>
 
-            <div class="tool-group mobile-only" id="toolGroupOpacity">
-                <button id="btnOpacityTrigger" class="property-trigger-btn" title="Opaklık">
+
+
+
+            <div class="tool-group" id="shapeSettings" style="display: none;">
+                <button class="tool-btn active" data-tool="rectangle" title="Dikdörtgen">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-blend-icon lucide-blend">
-                        <circle cx="9" cy="9" r="7" />
-                        <circle cx="15" cy="15" r="7" />
+                        class="lucide lucide-rectangle-horizontal">
+                        <rect width="20" height="12" x="2" y="6" rx="2" />
                     </svg>
                 </button>
-                <div id="popupOpacity" class="property-popup-responsive">
-                    <div class="brush-setting-header">
-                        <span class="label">Opaklık</span>
-                        <span class="slider-val-top" id="opacityValMobile">100%</span>
-                    </div>
-                    <div class="slider-container">
-                        <input type="range" class="opacity-slider" id="opacitySliderMobile" min="0" max="100"
-                            value="100" step="10">
-                        <span class="slider-val-bottom">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tool-group mobile-only" id="toolGroupStabilization">
-                <button id="btnStabilizationTrigger" class="property-trigger-btn" title="Pürüzsüzlük">
+                <button class="tool-btn" data-tool="ellipse" title="Elips">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-activity-icon lucide-activity">
+                        class="lucide lucide-circle">
+                        <circle cx="12" cy="12" r="10" />
+                    </svg>
+                </button>
+                <button class="tool-btn" data-tool="triangle" title="Üçgen">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 3L2 21H22L12 3Z" />
+                    </svg>
+                </button>
+                <button class="tool-btn" data-tool="trapezoid" title="Yamuk">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M7 6L17 6L21 18L3 18L7 6Z" />
+                    </svg>
+                </button>
+                <button class="tool-btn" data-tool="star" title="Yıldız">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="lucide lucide-star">
+                        <polygon
+                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                </button>
+                <button class="tool-btn" data-tool="diamond" title="Karo">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L22 12L12 22L2 12L12 2Z" />
+                    </svg>
+                </button>
+                <button class="tool-btn" data-tool="parallelogram" title="Paralel Kenar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M7 6L21 6L17 18L3 18L7 6Z" />
+                    </svg>
+                </button>
+                <button class="tool-btn" data-tool="oval" title="Oval">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="6" width="20" height="12" rx="6" ry="6" />
+                    </svg>
+                </button>
+                <button class="tool-btn" data-tool="heart" title="Kalp">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path
-                            d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" />
+                            d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
                     </svg>
                 </button>
-                <div id="popupStabilization" class="property-popup-responsive">
-                    <div class="brush-setting-header">
-                        <span class="label">Stabilizasyon</span>
-                        <span class="slider-val-top" id="stabilizationValMobile">50</span>
-                    </div>
-                    <div class="slider-container">
-                        <input type="range" class="stabilization-slider" id="stabilizationSliderMobile" min="0"
-                            max="100" value="50">
-                        <span class="slider-val-bottom">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="tool-group mobile-only" id="toolGroupDecimation">
-                <button id="btnDecimationTrigger" class="property-trigger-btn" title="Örnekleme">
+                <button class="tool-btn" data-tool="cloud" title="Bulut">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-square-dot-icon lucide-square-dot">
-                        <rect width="18" height="18" x="3" y="3" rx="2" />
-                        <circle cx="12" cy="12" r="1" />
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M17.5 19c2.5 0 4.5-2 4.5-4.5 0-2.3-1.6-4.2-3.8-4.5a7 7 0 1 0-13.4 2.5C2.7 13.2 1 15.1 1 17.5 1 20 3 22 5.5 22h12" />
                     </svg>
                 </button>
-                <div id="popupDecimation" class="property-popup-responsive">
-                    <div class="brush-setting-header">
-                        <span class="label">Örnekleme</span>
-                        <span class="slider-val-top" id="decimationValMobile">10</span>
-                    </div>
-                    <div class="slider-container">
-                        <input type="range" class="decimation-slider" id="decimationSliderMobile" min="0" max="50"
-                            value="10">
-                        <span class="slider-val-bottom">0</span>
-                    </div>
-                </div>
             </div>
-
-
-
-            <div class="tool-group">
+            <div class="tool-group" id="toolGroupLineStyles">
                 <button class="tool-btn active" data-linestyle="solid" title="Düz Çizgi">
                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
@@ -427,10 +327,9 @@
                 </button>
             </div>
 
-            <div class="tool-group" id="arrowSettings"
-                style="display: none; flex-direction: column; gap: 8px; width: 100%;">
+            <div class="tool-group" id="arrowSettings" style="display: none; gap: 8px;">
                 <!-- Start Style Wrap -->
-                <div style="position: relative; width: 100%;">
+                <div style="position: relative;">
                     <button id="btnArrowStartTrigger" class="property-trigger-btn" title="Başlangıç Ucu">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
                             style="width: 20px; height: 20px;">
@@ -480,7 +379,7 @@
                 </div>
 
                 <!-- End Style Wrap -->
-                <div style="position: relative; width: 100%;">
+                <div style="position: relative;">
                     <button id="btnArrowEndTrigger" class="property-trigger-btn" title="Bitiş Ucu">
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
                             style="width: 20px; height: 20px;">
@@ -751,8 +650,7 @@
     <script src="./js/FillManager.js?v=0.7.1"></script>
     <script src="./js/PenTool.js?v=0.7.1"></script>
     <script src="./js/LineTool.js?v=0.7.1"></script>
-    <script src="./js/RectangleTool.js?v=0.7.1"></script>
-    <script src="./js/EllipseTool.js?v=0.7.1"></script>
+    <script src="./js/ShapeTool.js?v=0.7.1"></script>
     <script src="./js/ArrowTool.js?v=0.7.1"></script>
     <script src="./js/EraserTool.js?v=0.7.1"></script>
     <script src="./js/HandTool.js?v=0.7.1"></script>
@@ -760,7 +658,6 @@
     <script src="./js/ColorPalette.js?v=0.7.1"></script>
     <script src="./js/PropertiesSidebar.js?v=0.7.1"></script>
     <script src="./js/HistoryManager.js?v=0.7.1"></script>
-    <script src="./js/ShapeTool.js?v=0.7.1"></script>
     <script src="./js/app.js?v=0.7.1"></script>
 </body>
 

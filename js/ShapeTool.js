@@ -142,6 +142,7 @@ class ShapeTool {
 
         ctx.translate(centerX, centerY);
         ctx.rotate(obj.rotation || 0);
+        ctx.scale(obj.scaleX || 1, obj.scaleY || 1);
         ctx.translate(-centerX, -centerY);
 
         // Sub-draw based on type

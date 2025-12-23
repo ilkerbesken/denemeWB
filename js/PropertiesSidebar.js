@@ -5,6 +5,7 @@ class PropertiesSidebar {
     }
 
     init() {
+        this.container = document.getElementById('propertiesSidebar');
         this.isInteractionStarted = false;
         this.setupEventListeners();
     }
@@ -13,7 +14,6 @@ class PropertiesSidebar {
         // Opacity Slider Sync
         const opacitySliders = document.querySelectorAll('.opacity-slider');
         const opacityVal = document.getElementById('opacityVal');
-        const opacityValMobile = document.getElementById('opacityValMobile');
         opacitySliders.forEach(slider => {
             slider.addEventListener('input', (e) => {
                 const val = parseInt(e.target.value);
@@ -26,7 +26,6 @@ class PropertiesSidebar {
 
                 this.app.state.opacity = val / 100;
                 if (opacityVal) opacityVal.textContent = val + '%';
-                if (opacityValMobile) opacityValMobile.textContent = val + '%';
                 // Sync all opacity sliders
                 opacitySliders.forEach(s => { if (s !== e.target) s.value = val; });
 
@@ -44,7 +43,6 @@ class PropertiesSidebar {
         // Stroke Width Slider Sync
         const widthSliders = document.querySelectorAll('.stroke-width-slider');
         const widthVal = document.getElementById('strokeWidthVal');
-        const widthValMobile = document.getElementById('strokeWidthValMobile');
         widthSliders.forEach(slider => {
             slider.addEventListener('input', (e) => {
                 const val = parseInt(e.target.value);
@@ -57,7 +55,6 @@ class PropertiesSidebar {
 
                 this.app.state.strokeWidth = val;
                 if (widthVal) widthVal.textContent = val;
-                if (widthValMobile) widthValMobile.textContent = val;
                 // Sync all width sliders
                 widthSliders.forEach(s => { if (s !== e.target) s.value = val; });
 
@@ -75,13 +72,11 @@ class PropertiesSidebar {
         // Stabilization Slider Sync
         const stabSliders = document.querySelectorAll('.stabilization-slider');
         const stabVal = document.getElementById('stabilizationVal');
-        const stabValMobile = document.getElementById('stabilizationValMobile');
         stabSliders.forEach(slider => {
             slider.addEventListener('input', (e) => {
                 const val = parseInt(e.target.value);
                 this.app.state.stabilization = val / 100;
                 if (stabVal) stabVal.textContent = val;
-                if (stabValMobile) stabValMobile.textContent = val;
                 // Sync all stabilization sliders
                 stabSliders.forEach(s => { if (s !== e.target) s.value = val; });
             });
@@ -90,13 +85,11 @@ class PropertiesSidebar {
         // Decimation Slider Sync
         const decSliders = document.querySelectorAll('.decimation-slider');
         const decVal = document.getElementById('decimationVal');
-        const decValMobile = document.getElementById('decimationValMobile');
         decSliders.forEach(slider => {
             slider.addEventListener('input', (e) => {
                 const val = parseInt(e.target.value);
                 this.app.state.decimation = val / 100;
                 if (decVal) decVal.textContent = val;
-                if (decValMobile) decValMobile.textContent = val;
                 // Sync all decimation sliders
                 decSliders.forEach(s => { if (s !== e.target) s.value = val; });
             });
@@ -270,14 +263,15 @@ class PropertiesSidebar {
         if (btnColorToggle && colorSidebar) {
             btnColorToggle.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const isVisible = colorSidebar.classList.contains('show');
+                const currentDisplay = window.getComputedStyle(colorSidebar).display;
                 closeAllPopups();
-                if (!isVisible) {
-                    colorSidebar.classList.add('show');
-                    btnColorToggle.classList.add('active');
-                } else {
-                    colorSidebar.classList.remove('show');
+
+                if (currentDisplay !== 'none') {
+                    colorSidebar.style.display = 'none';
                     btnColorToggle.classList.remove('active');
+                } else {
+                    colorSidebar.style.display = 'flex';
+                    btnColorToggle.classList.add('active');
                 }
             });
         }
@@ -319,22 +313,7 @@ class PropertiesSidebar {
             });
         }
 
-        // Mobile Triggers (Individual popups)
-        ['Thickness', 'Opacity', 'Stabilization', 'Decimation'].forEach(name => {
-            const btn = document.getElementById(`btn${name}Trigger`);
-            const popup = document.getElementById(`popup${name}`);
-            if (btn && popup) {
-                btn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const isVisible = popup.classList.contains('show');
-                    closeAllPopups();
-                    if (!isVisible) {
-                        popup.classList.add('show');
-                        btn.classList.add('active');
-                    }
-                });
-            }
-        });
+
 
         // Close popup when options are selected
         const popupButtons = document.querySelectorAll('.property-popup .tool-btn');
@@ -400,6 +379,9 @@ class PropertiesSidebar {
     }
 
     updateUIForTool(tool) {
+        if (!this.container) return;
+        this.container.style.display = 'flex';
+
         // Sync UI with selection if in select tool
         if (tool === 'select') {
             const selectTool = this.app.tools.select;
@@ -445,6 +427,7 @@ class PropertiesSidebar {
                     document.querySelectorAll('.tool-btn[data-arrow-start]').forEach(b => b.classList.toggle('active', b.dataset.arrowStart === this.app.state.arrowStartStyle));
                     document.querySelectorAll('.tool-btn[data-arrow-end]').forEach(b => b.classList.toggle('active', b.dataset.arrowEnd === this.app.state.arrowEndStyle));
                     document.querySelectorAll('.tool-btn[data-arrow-path]').forEach(b => b.classList.toggle('active', b.dataset.arrowPath === this.app.state.arrowPathType));
+                    document.querySelectorAll('#shapeSettings .tool-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === obj.type));
 
                     // Sync Color Palette
                     if (this.app.colorPalette) this.app.colorPalette.renderColors();
@@ -469,29 +452,31 @@ class PropertiesSidebar {
 
         // Pressure Logic
         const pressureBtn = document.getElementById('pressureBtn');
-        if (tool === 'pen') {
-            this.app.state.pressureEnabled = true;
-            pressureBtn.classList.add('active');
-            pressureBtn.style.display = 'flex'; // Show for pen
-        } else if (['line', 'rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'].includes(tool)) {
-            this.app.state.pressureEnabled = false;
+        if (tool === 'pen' || tool === 'highlighter') {
+            pressureBtn.style.display = 'flex';
+            pressureBtn.classList.toggle('active', this.app.state.pressureEnabled);
+        } else if (['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'line'].includes(tool)) {
+            pressureBtn.style.display = 'flex';
             pressureBtn.classList.remove('active');
-            pressureBtn.style.display = 'flex'; // Show for shapes
-        } else if (tool === 'arrow') {
-            this.app.state.pressureEnabled = false;
-            pressureBtn.classList.remove('active');
-            pressureBtn.style.display = 'none'; // Hide for arrow
+        } else {
+            pressureBtn.style.display = 'none';
         }
 
         // Brush Settings Visibility Logic
         const isFreehand = (tool === 'pen' || tool === 'highlighter');
         const showBrushSettings = ['pen', 'highlighter', 'rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'line', 'arrow', 'select'].includes(tool);
 
-        // Desktop Unified Settings
         const brushSettingsGroup = document.getElementById('toolGroupBrushSettings');
+        const lineStylesGroup = document.getElementById('toolGroupLineStyles');
+
         if (brushSettingsGroup) {
             brushSettingsGroup.style.display = showBrushSettings ? 'flex' : 'none';
+        }
+        if (lineStylesGroup) {
+            lineStylesGroup.style.display = showBrushSettings ? 'flex' : 'none';
+        }
 
+        if (brushSettingsGroup) {
             // Also manage internal visibility of stabilization/decimation inside the popup
             const stabItem = document.querySelector('#popupBrushSettings .brush-setting-item:nth-child(3)');
             const decItem = document.querySelector('#popupBrushSettings .brush-setting-item:nth-child(4)');
@@ -499,16 +484,6 @@ class PropertiesSidebar {
             if (stabItem) stabItem.style.display = isFreehand ? 'block' : 'none';
             if (decItem) decItem.style.display = isFreehand ? 'block' : 'none';
         }
-
-        // Mobile Individual Groups
-        ['Thickness', 'Opacity'].forEach(id => {
-            const group = document.getElementById(`toolGroup${id}`);
-            if (group) group.style.display = showBrushSettings ? 'flex' : 'none';
-        });
-        ['Stabilization', 'Decimation'].forEach(id => {
-            const group = document.getElementById(`toolGroup${id}`);
-            if (group) group.style.display = isFreehand ? 'flex' : 'none';
-        });
 
         // Line Style Logic: Hide wavy for rect/ellipse
         const wavyBtn = document.querySelector('.tool-btn[data-linestyle="wavy"]');
@@ -567,6 +542,19 @@ class PropertiesSidebar {
             document.getElementById('eraserSettings').style.display = 'none';
         }
 
+        // Toggle Shape Settings visibility
+        const shapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
+        const shapeSettings = document.getElementById('shapeSettings');
+        if (shapeSettings) {
+            const isShapeActive = shapes.includes(tool);
+            shapeSettings.style.display = isShapeActive ? 'flex' : 'none';
+            if (isShapeActive) {
+                document.querySelectorAll('#shapeSettings .tool-btn').forEach(b =>
+                    b.classList.toggle('active', b.dataset.tool === tool)
+                );
+            }
+        }
+
         // Fill Settings Visibility
         const fillSettings = document.getElementById('fillSettings');
         const fillBtn = document.getElementById('btnFillToggle');
@@ -604,6 +592,22 @@ class PropertiesSidebar {
             // Only toggle 'active' class, don't mess with click listeners here
             if (showFill) {
                 fillBtn.classList.toggle('active', isFilled);
+            }
+        }
+    }
+
+    hide() {
+        if (this.container) {
+            this.container.style.display = 'none';
+        }
+    }
+
+    toggle() {
+        if (this.container) {
+            if (this.container.style.display === 'none' || this.container.style.display === '') {
+                this.container.style.display = 'flex';
+            } else {
+                this.container.style.display = 'none';
             }
         }
     }

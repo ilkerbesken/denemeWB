@@ -1137,6 +1137,11 @@ class SelectTool {
                     if (obj.center) {
                         obj.center.x = 2 * centerX - obj.center.x;
                     }
+
+                    // Toggle scaleX for shapes to flip internal geometry (e.g. parallelogram skew)
+                    if (!obj.scaleX) obj.scaleX = 1;
+                    obj.scaleX *= -1;
+
                 } else if (obj.start && obj.end) {
                     // Support for line/arrow style objects if they fall here
                     const tempStartX = obj.start.x;
@@ -1220,6 +1225,11 @@ class SelectTool {
                     if (obj.center) {
                         obj.center.y = 2 * centerY - obj.center.y;
                     }
+
+                    // Toggle scaleY for shapes to flip internal geometry (e.g. triangle up/down)
+                    if (!obj.scaleY) obj.scaleY = 1;
+                    obj.scaleY *= -1;
+
                 } else if (obj.start && obj.end) {
                     const tempStartY = obj.start.y;
                     obj.start.y = 2 * centerY - obj.end.y;

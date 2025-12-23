@@ -129,40 +129,20 @@ class WhiteboardApp {
             this.state.currentShapeType = tool;
         }
 
-        // --- UI Updates ---
         const shapePickerBtn = document.getElementById('shapePickerBtn');
-        const shapeDropdown = document.getElementById('shapeDropdown');
 
         // 1. Reset all active states in main toolbar
-        document.querySelectorAll('.tool-group > .tool-btn[data-tool], #shapePickerBtn').forEach(btn => {
+        document.querySelectorAll('.toolbar .tool-btn[data-tool], #shapePickerBtn').forEach(btn => {
             btn.classList.remove('active');
         });
 
         // 2. Map tool selection to DOM updates
-        const toolBtn = document.querySelector(`.tool-btn[data-tool="${tool}"]`);
+        const toolBtn = document.querySelector(`.toolbar .tool-btn[data-tool="${tool}"]`);
 
         if (isShape && shapePickerBtn) {
             shapePickerBtn.classList.add('active');
-
-            // Sync icon from dropdown to the main picker button
-            const sourceBtn = toolBtn || document.querySelector(`#shapeDropdown .tool-btn[data-tool="${tool}"]`);
-            if (sourceBtn) {
-                const iconSvg = sourceBtn.querySelector('svg').cloneNode(true);
-                const currentIcon = shapePickerBtn.querySelector('svg');
-                if (currentIcon) shapePickerBtn.replaceChild(iconSvg, currentIcon);
-
-                // Highlight inside dropdown too
-                if (shapeDropdown) {
-                    shapeDropdown.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-                    sourceBtn.classList.add('active');
-                }
-            }
         } else if (toolBtn) {
             toolBtn.classList.add('active');
-            // If switching tools, clear any stale shape highlights
-            if (shapeDropdown) {
-                shapeDropdown.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            }
         }
 
         // --- Context & Sidebar Sync ---
@@ -190,10 +170,19 @@ class WhiteboardApp {
         const applyBtn = document.getElementById('applySettingsBtn');
 
         // Panel aç/kapat
-        openBtn.addEventListener('click', () => {
+        openBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
             this.canvasSettings.togglePanel();
             if (this.canvasSettings.isPanelOpen) {
                 this.canvasSettings.loadSettingsToPanel();
+                if (this.propertiesSidebar) {
+                    this.propertiesSidebar.hide();
+                }
+            } else {
+                // If closing settings, maybe show sidebar again? 
+                // The user said "until a tool is clicked", but usually 
+                // you'd want it back if you close the panel. 
+                // Let's stick strictly to "until a tool is clicked" for now.
             }
         });
 
@@ -301,33 +290,33 @@ class WhiteboardApp {
     }
 
     setupToolbar() {
-        // Shape Picker Toggle Logic
+        // Shape Picker Logic (Now just activates current shape tool)
         const shapePickerBtn = document.getElementById('shapePickerBtn');
-        const shapeDropdown = document.getElementById('shapeDropdown');
-
-        if (shapePickerBtn && shapeDropdown) {
+        if (shapePickerBtn) {
             shapePickerBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                shapeDropdown.classList.toggle('show');
-            });
+                const currentShape = this.state.currentShapeType || 'rectangle';
 
-            // Close dropdown when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!shapeDropdown.contains(e.target) && e.target !== shapePickerBtn) {
-                    shapeDropdown.classList.remove('show');
+                // Check if current tool is a shape tool or effectively the current shape
+                const shapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
+                const isShapeActive = shapes.includes(this.state.currentTool);
+
+                // If we are already on a shape tool, simply toggle sidebar
+                if (isShapeActive) {
+                    this.propertiesSidebar.toggle();
+                } else {
+                    this.setTool(currentShape);
                 }
             });
         }
 
-        // Araç butonları
-        document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => {
+        // Araç butonları (Excluding shape picker to avoid double events)
+        document.querySelectorAll('.tool-btn[data-tool]:not(#shapePickerBtn)').forEach(btn => {
             btn.addEventListener('click', () => {
                 const tool = btn.dataset.tool;
-                this.setTool(tool);
-
-                // If picked from the shape dropdown, close it
-                if (btn.closest('#shapeDropdown')) {
-                    shapeDropdown.classList.remove('show');
+                if (this.state.currentTool === tool) {
+                    this.propertiesSidebar.toggle();
+                } else {
+                    this.setTool(tool);
                 }
             });
         });
