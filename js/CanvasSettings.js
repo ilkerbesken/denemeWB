@@ -4,7 +4,10 @@ class CanvasSettings {
             size: 'full',
             orientation: 'landscape',
             backgroundColor: 'white',
-            pattern: 'none'
+            pattern: 'none',
+            patternColor: 'rgba(0,0,0,0.15)', // Default
+            patternSpacing: 20, // Default px
+            patternThickness: 1 // Default px
         };
 
         // Gerçek boyutlar - 1 mm = 3.7795 piksel (96 DPI)
@@ -43,17 +46,73 @@ class CanvasSettings {
         document.querySelector(`input[name="orientation"][value="${this.settings.orientation}"]`).checked = true;
 
         // Renk seç
-        document.querySelectorAll('.color-option-small').forEach(btn => {
+        document.querySelectorAll('.color-option-small[data-color]').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.color === this.settings.backgroundColor);
         });
+        const customBgBtn = document.getElementById('btnCustomBackground');
+        if (customBgBtn && !this.colors[this.settings.backgroundColor]) {
+            // Custom color logic for background
+            // If the current BG is not in presets, activate custom btn
+            let isPreset = false;
+            document.querySelectorAll('.color-option-small[data-color]').forEach(b => {
+                if (b.dataset.color === this.settings.backgroundColor) isPreset = true;
+            });
+
+            if (!isPreset && this.settings.backgroundColor !== 'white') { // Default white is preset
+                // Set custom button color
+                customBgBtn.style.backgroundColor = this.settings.backgroundColor;
+                customBgBtn.dataset.color = this.settings.backgroundColor;
+                customBgBtn.classList.add('active');
+                customBgBtn.innerHTML = '';
+            }
+        }
 
         // Desen seç
         document.querySelectorAll('.pattern-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.pattern === this.settings.pattern);
         });
+
+        // Desen Rengi Seç
+        document.querySelectorAll('.color-option-small[data-pattern-color]').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.patternColor === this.settings.patternColor);
+        });
+        const customPatternBtn = document.getElementById('btnCustomPatternColor');
+        if (customPatternBtn) {
+            let isPreset = false;
+            document.querySelectorAll('.color-option-small[data-pattern-color]').forEach(b => {
+                if (b.dataset.patternColor === this.settings.patternColor) isPreset = true;
+            });
+            if (!isPreset) {
+                // If custom
+                customPatternBtn.style.backgroundColor = this.settings.patternColor;
+                customPatternBtn.dataset.patternColor = this.settings.patternColor;
+                customPatternBtn.classList.add('active');
+                customPatternBtn.innerHTML = '';
+            } else {
+                customPatternBtn.style.backgroundColor = 'white';
+                customPatternBtn.classList.remove('active');
+                customPatternBtn.innerHTML = '+';
+            }
+        }
+
+        // Desen Aralığı
+        const spacingSlider = document.getElementById('patternSpacingSlider');
+        const spacingVal = document.getElementById('patternSpacingVal');
+        if (spacingSlider) {
+            spacingSlider.value = this.settings.patternSpacing || 20;
+            if (spacingVal) spacingVal.textContent = (this.settings.patternSpacing || 20) + 'px';
+        }
+
+        // Desen Kalınlığı
+        const thicknessSlider = document.getElementById('patternThicknessSlider');
+        const thicknessVal = document.getElementById('patternThicknessVal');
+        if (thicknessSlider) {
+            thicknessSlider.value = this.settings.patternThickness || 1;
+            if (thicknessVal) thicknessVal.textContent = (this.settings.patternThickness || 1) + 'px';
+        }
     }
 
-    applySettings(canvas, ctx, syncFromCanvas = null) {
+    applySettings(canvas, ctx, syncFromCanvas = null, transform = { zoom: 1, pan: { x: 0, y: 0 } }) {
         const dpr = window.devicePixelRatio || 1;
         let cssWidth, cssHeight;
 
@@ -108,10 +167,10 @@ class CanvasSettings {
         ctx.scale(dpr, dpr);
 
         // Render background
-        this.drawBackground(canvas, ctx, null, cssWidth, cssHeight);
+        this.drawBackground(canvas, ctx, null, cssWidth, cssHeight, transform);
     }
 
-    drawBackground(canvas, ctx, visibleBounds, explicitW = null, explicitH = null) {
+    drawBackground(canvas, ctx, visibleBounds, explicitW = null, explicitH = null, transform = { zoom: 1, pan: { x: 0, y: 0 } }) {
         let logicalW = explicitW || canvas.clientWidth || parseInt(canvas.style.width);
         let logicalH = explicitH || canvas.clientHeight || parseInt(canvas.style.height);
 
@@ -129,31 +188,40 @@ class CanvasSettings {
         }
 
         // Arkaplan rengi
-        ctx.fillStyle = this.colors[this.settings.backgroundColor] || '#ffffff';
+        ctx.fillStyle = this.colors[this.settings.backgroundColor] || this.settings.backgroundColor || '#ffffff';
         ctx.fillRect(x, y, w, h);
 
         // Desen çiz
-        this.drawPattern(canvas, ctx, { x, y, w, h });
+        this.drawPattern(canvas, ctx, { x, y, w, h }, transform);
     }
 
-    drawPattern(canvas, ctx, bounds) {
+    drawPattern(canvas, ctx, bounds, transform) {
         const pattern = this.settings.pattern;
-
         if (pattern === 'none') return;
 
-        ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
-        ctx.lineWidth = 1;
+        const { zoom, pan } = transform;
+        const color = this.settings.patternColor || 'rgba(0,0,0,0.15)';
+        const spacing = parseInt(this.settings.patternSpacing) || 20;
+        const thickness = parseFloat(this.settings.patternThickness) || 1;
 
-        const startX = bounds.x;
-        const startY = bounds.y;
-        const endX = bounds.x + bounds.w;
-        const endY = bounds.y + bounds.h;
+        ctx.save();
+        ctx.translate(pan.x, pan.y);
+        ctx.scale(zoom, zoom);
+
+        ctx.strokeStyle = color;
+        ctx.fillStyle = color; // For dots
+        ctx.lineWidth = thickness; // Scaled by zoom
+
+        // Calculate visible world bounds to optimize loops
+        // Screen = World * Zoom + Pan
+        // World = (Screen - Pan) / Zoom
+        const startX = (bounds.x - pan.x) / zoom;
+        const startY = (bounds.y - pan.y) / zoom;
+        const endX = (bounds.x + bounds.w - pan.x) / zoom;
+        const endY = (bounds.y + bounds.h - pan.y) / zoom;
 
         if (pattern === 'dots') {
             // Noktalı desen
-            const spacing = 20;
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-
             // Grid align
             const firstX = Math.floor(startX / spacing) * spacing;
             const firstY = Math.floor(startY / spacing) * spacing;
@@ -161,13 +229,13 @@ class CanvasSettings {
             for (let x = firstX; x < endX; x += spacing) {
                 for (let y = firstY; y < endY; y += spacing) {
                     ctx.beginPath();
-                    ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+                    // Base size 0.5 + thickness. Scaled by zoom automatically.
+                    ctx.arc(x, y, 0.5 + thickness, 0, Math.PI * 2);
                     ctx.fill();
                 }
             }
         } else if (pattern === 'grid') {
             // Kareli desen
-            const spacing = 20;
             const firstX = Math.floor(startX / spacing) * spacing;
             const firstY = Math.floor(startY / spacing) * spacing;
 
@@ -183,7 +251,6 @@ class CanvasSettings {
             ctx.stroke();
         } else if (pattern === 'lines') {
             // Çizgili desen
-            const spacing = 25;
             const firstY = Math.floor(startY / spacing) * spacing;
 
             ctx.beginPath();
@@ -193,6 +260,8 @@ class CanvasSettings {
             }
             ctx.stroke();
         }
+
+        ctx.restore();
     }
 
     getSizeLabel() {

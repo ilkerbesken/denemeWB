@@ -9,109 +9,65 @@
 </head>
 
 <body>
+    <!-- Icons are now loaded as individual SVG files for better maintainability -->
+
     <div id="app">
         <div class="toolbar">
             <div class="app-logo">WB</div>
             <div class="tool-group">
                 <button class="tool-btn" data-tool="select" title="Seç (V)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-mouse-pointer-icon lucide-mouse-pointer">
-                        <path d="M12.586 12.586 19 19" />
-                        <path
-                            d="M3.688 3.037a.497.497 0 0 0-.651.651l6.5 15.999a.501.501 0 0 0 .947-.062l1.569-6.083a2 2 0 0 1 1.448-1.479l6.124-1.579a.5.5 0 0 0 .063-.947z" />
-                    </svg>
+                    <img src="assets/icons/_select.svg" alt="select" class="icon">
                 </button>
                 <button class="tool-btn" data-tool="hand" title="El (H)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-hand-icon lucide-hand">
-                        <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
-                        <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" />
-                        <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" />
-                        <path
-                            d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
-                    </svg>
+                    <img src="assets/icons/_hand.svg" alt="hand" class="icon">
                 </button>
             </div>
 
             <div class="tool-group">
                 <button class="tool-btn active" data-tool="pen" title="Kalem (P)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-pencil-icon lucide-pencil">
-                        <path
-                            d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
-                        <path d="m15 5 4 4" />
-                    </svg>
+
+                    <img src="assets/icons/_pen.svg" alt="pen" class="icon">
+
                 </button>
                 <button class="tool-btn" data-tool="highlighter" title="Vurgulayıcı Pen (H)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-highlighter-icon lucide-highlighter">
-                        <path d="m9 11-6 6v3h9l3-3" />
-                        <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />
-                    </svg>
+
+                    <img src="assets/icons/_highlighter.svg" alt="highlighter" class="icon">
+
                 </button>
                 <button class="tool-btn" data-tool="eraser" title="Silgi (X)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-eraser-icon lucide-eraser">
-                        <path
-                            d="M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21" />
-                        <path d="m5.082 11.09 8.828 8.828" />
-                    </svg>
+
+                    <img src="assets/icons/_eraser.svg" alt="eraser" class="icon">
+
                 </button>
             </div>
 
             <div class="tool-group">
                 <button class="tool-btn" id="shapePickerBtn" data-tool="rectangle" title="Şekiller">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-rectangle-horizontal">
-                        <rect width="20" height="12" x="2" y="6" rx="2" />
-                    </svg>
+
+                    <img src="assets/icons/_rectangle.svg" alt="rectangle" class="icon">
+
                 </button>
                 <button class="tool-btn" data-tool="arrow" title="Ok (A)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-minus">
-                        <path d="M5 12h14" />
-                    </svg>
+
+                    <img src="assets/icons/_arrow.svg" alt="arrow" class="icon">
+
                 </button>
             </div>
 
             <div class="tool-group">
                 <button class="tool-btn" id="canvasSettingsBtn" title="Tuval Ayarları (C)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-sliders-horizontal-icon lucide-sliders-horizontal">
-                        <path d="M10 5H3" />
-                        <path d="M12 19H3" />
-                        <path d="M14 3v4" />
-                        <path d="M16 17v4" />
-                        <path d="M21 12h-9" />
-                        <path d="M21 19h-5" />
-                        <path d="M21 5h-7" />
-                        <path d="M8 10v4" />
-                        <path d="M8 12H3" />
-                    </svg>
+
+                    <img src="assets/icons/_canvas.svg" alt="canvas" class="icon">
+
                 </button>
             </div>
         </div>
 
         <!-- Mobile Only: Color Palette Toggle Button -->
         <button id="btnColorToggle" class="mobile-only floating-action-btn" title="Renk Paleti">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                class="lucide lucide-palette-icon lucide-palette">
-                <path
-                    d="M12 22a1 1 0 0 1 0-20 10 9 0 0 1 10 9 5 5 0 0 1-5 5h-2.25a1.75 1.75 0 0 0-1.4 2.8l.3.4a1.75 1.75 0 0 1-1.4 2.8z" />
-                <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" />
-                <circle cx="17.5" cy="10.5" r=".5" fill="currentColor" />
-                <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
-                <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
-            </svg>
+
+            <img src="assets/icons/_palette.svg" alt="palette" class="icon">
+
         </button>
 
         <!-- NEW: Properties Sidebar (Right of Color Palette) -->
@@ -119,15 +75,10 @@
             <!-- Brush Settings Group -->
             <div class="tool-group" id="toolGroupBrushSettings">
                 <button id="btnBrushSettingsTrigger" class="property-trigger-btn" title="Araç Seçenekleri">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-settings-2">
-                        <path d="M20 7h-9" />
-                        <path d="M14 17H5" />
-                        <circle cx="17" cy="17" r="3" />
-                        <circle cx="7" cy="7" r="3" />
-                    </svg>
-                    <span class="label" style="margin-left: 4px; font-size: 8px;"></span>
+
+                    <img src="assets/icons/_settings.svg" alt="settings" class="icon">
+
+                    <span class="label" style="font-size: 8px;"></span>
                 </button>
 
             </div>
@@ -139,160 +90,120 @@
 
             <div class="tool-group" id="shapeSettings" style="display: none;">
                 <button class="tool-btn active" data-tool="rectangle" title="Dikdörtgen">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-rectangle-horizontal">
-                        <rect width="20" height="12" x="2" y="6" rx="2" />
-                    </svg>
+
+                    <img src="assets/icons/_rectangle.svg" alt="rectangle" class="icon">
+
                 </button>
                 <button class="tool-btn" data-tool="ellipse" title="Elips">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-circle">
-                        <circle cx="12" cy="12" r="10" />
-                    </svg>
+
+                    <img src="assets/icons/_ellipse.svg" alt="ellipse" class="icon">
+
                 </button>
                 <button class="tool-btn" data-tool="triangle" title="Üçgen">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 3L2 21H22L12 3Z" />
-                    </svg>
+
+                    <img src="assets/icons/_triangle.svg" alt="triangle" class="icon">
+
                 </button>
                 <button class="tool-btn" data-tool="trapezoid" title="Yamuk">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M7 6L17 6L21 18L3 18L7 6Z" />
-                    </svg>
+
+                    <img src="assets/icons/_trapezoid.svg" alt="trapezoid" class="icon">
+
                 </button>
                 <button class="tool-btn" data-tool="star" title="Yıldız">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-star">
-                        <polygon
-                            points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                    </svg>
+
+                    <img src="assets/icons/_star.svg" alt="star" class="icon">
+
                 </button>
                 <button class="tool-btn" data-tool="diamond" title="Karo">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 2L22 12L12 22L2 12L12 2Z" />
-                    </svg>
+
+                    <img src="assets/icons/_diamond.svg" alt="diamond" class="icon">
+
                 </button>
                 <button class="tool-btn" data-tool="parallelogram" title="Paralel Kenar">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M7 6L21 6L17 18L3 18L7 6Z" />
-                    </svg>
+
+                    <img src="assets/icons/_parallelogram.svg" alt="parallelogram" class="icon">
+
                 </button>
                 <button class="tool-btn" data-tool="oval" title="Oval">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="2" y="6" width="20" height="12" rx="6" ry="6" />
-                    </svg>
+
+                    <img src="assets/icons/_oval.svg" alt="oval" class="icon">
+
                 </button>
                 <button class="tool-btn" data-tool="heart" title="Kalp">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path
-                            d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-                    </svg>
+
+                    <img src="assets/icons/_heart.svg" alt="heart" class="icon">
+
                 </button>
                 <button class="tool-btn" data-tool="cloud" title="Bulut">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path
-                            d="M17.5 19c2.5 0 4.5-2 4.5-4.5 0-2.3-1.6-4.2-3.8-4.5a7 7 0 1 0-13.4 2.5C2.7 13.2 1 15.1 1 17.5 1 20 3 22 5.5 22h12" />
-                    </svg>
+
+                    <img src="assets/icons/_cloud.svg" alt="cloud" class="icon">
+
                 </button>
             </div>
             <div class="tool-group" id="toolGroupLineStyles">
                 <button class="tool-btn active" data-linestyle="solid" title="Düz Çizgi">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4 12H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-                    </svg>
+                    <img src="assets/icons/_line-solid.svg" alt="line-solid" class="icon">
+
                 </button>
                 <button class="tool-btn" data-linestyle="dashed" title="Kesik Çizgi">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4 12L20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-dasharray="6 6" />
-                    </svg>
+                    <img src="assets/icons/_line-dashed.svg" alt="line-dashed" class="icon">
+
                 </button>
                 <button class="tool-btn" data-linestyle="dotted" title="Noktalı Çizgi">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-ellipsis-icon lucide-ellipsis">
-                        <circle cx="12" cy="12" r="1" />
-                        <circle cx="19" cy="12" r="1" />
-                        <circle cx="5" cy="12" r="1" />
-                    </svg>
+                    <img src="assets/icons/_line-dotted.svg" alt="line-dotted" class="icon">
+
                 </button>
                 <button class="tool-btn" data-linestyle="dash-dot" title="Kesik-Nokta Çizgi">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4 12L20 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-dasharray="9 6" />
-                    </svg>
+                    <img src="assets/icons/_line-dashdot.svg" alt="line-dashdot" class="icon">
+
                 </button>
                 <button class="tool-btn" data-linestyle="wavy" title="Dalgalı Çizgi">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 12Q6 7 9 12T15 12T21 12" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
+                    <img src="assets/icons/_wavy.svg" alt="wavy" class="icon">
+
                 </button>
             </div>
 
             <div class="tool-group" id="fillSettings" style="display: none;">
                 <button id="btnFillToggle" class="tool-btn" title="İçini Doldur">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-paint-bucket">
-                        <path d="m19 11-8-8-8.6 8.6a2 2 0 0 0 0 2.8l5.2 5.2c.8.8 2 .8 2.8 0L19 11Z" />
-                        <path d="m5 2 5 5" />
-                        <path d="M2 13h15" />
-                        <path d="M22 20a2 2 0 1 1-4 0c0-1.6 1.7-2.4 2-4 .3 1.6 2 2.4 2 4Z" />
-                    </svg>
+
+                    <img src="assets/icons/_fill.svg" alt="fill" class="icon">
+
                 </button>
             </div>
 
             <div class="tool-group">
                 <button class="tool-btn active" id="pressureBtn" title="Basınç Hassasiyeti">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-line-squiggle-icon lucide-line-squiggle">
-                        <path d="M7 3.5c5-2 7 2.5 3 4C1.5 10 2 15 5 16c5 2 9-10 14-7s.5 13.5-4 12c-5-2.5.5-11 6-2" />
-                    </svg>
+
+                    <img src="assets/icons/_pressure.svg" alt="pressure" class="icon">
+
                 </button>
             </div>
 
             <div class="tool-group" id="eraserSettings" style="display: none;">
                 <label class="label">Silgi</label>
                 <button class="tool-btn active" data-eraser-mode="object" title="Nesne Silgisi">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="5" y="5" width="14" height="14" rx="2" stroke="currentColor" stroke-width="2" />
-                        <line x1="16" y1="8" x2="8" y2="16" stroke="currentColor" stroke-width="2" />
-                    </svg>
+
+                    <img src="assets/icons/_eraser-object.svg" alt="eraser-object" class="icon">
+
                 </button>
                 <button class="tool-btn" data-eraser-mode="partial" title="Kısmi Silgi (Piksel)">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4 12H20" stroke="currentColor" stroke-width="6" stroke-linecap="round"
-                            stroke-opacity="0.3" />
-                        <rect x="10" y="8" width="4" height="8" fill="white" stroke="currentColor" stroke-width="2" />
-                    </svg>
+
+                    <img src="assets/icons/_eraser-partial.svg" alt="eraser-partial" class="icon">
+
                 </button>
             </div>
 
             <div class="tool-group" id="highlighterSettings" style="display: none;">
                 <label class="label">Uç</label>
                 <button class="tool-btn active" data-highlighter-cap="round" title="Yuvarlak Uç">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <line x1="12" y1="4" x2="12" y2="20" stroke="currentColor" stroke-width="8"
-                            stroke-linecap="round" />
-                    </svg>
+
+                    <img src="assets/icons/_cap-round.svg" alt="cap-round" class="icon">
+
                 </button>
                 <button class="tool-btn" data-highlighter-cap="butt" title="Düz Uç">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <line x1="12" y1="4" x2="12" y2="20" stroke="currentColor" stroke-width="8"
-                            stroke-linecap="butt" />
-                    </svg>
+
+                    <img src="assets/icons/_cap-butt.svg" alt="cap-butt" class="icon">
+
                 </button>
             </div>
 
@@ -300,21 +211,15 @@
                 <!-- Start Style Wrap -->
                 <div style="position: relative;">
                     <button id="btnArrowStartTrigger" class="property-trigger-btn" title="Başlangıç Ucu">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
-                            style="width: 20px; height: 20px;">
-                            <path d="M18 12H6M6 12L10 8M6 12L10 16" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
+                        <img src="assets/icons/_arrow-trigger-start.svg" alt="arrow-trigger-start" class="icon">
+
                     </button>
                 </div>
                 <!-- End Style Wrap -->
                 <div style="position: relative;">
                     <button id="btnArrowEndTrigger" class="property-trigger-btn" title="Bitiş Ucu">
-                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
-                            style="width: 20px; height: 20px;">
-                            <path d="M6 12H18M18 12L14 8M18 12L14 16" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round" />
-                        </svg>
+                        <img src="assets/icons/_arrow-trigger-end.svg" alt="arrow-trigger-end" class="icon">
+
                     </button>
                 </div>
             </div>
@@ -324,14 +229,12 @@
             <div class="tool-group" id="arrowPathSettings" style="display: none;">
                 <label class="label">Şekil</label>
                 <button class="tool-btn" data-arrow-path="curved" title="Eğri">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4 20 Q 8 12, 12 12 T 20 4" stroke="currentColor" stroke-width="2" fill="none" />
-                    </svg>
+                    <img src="assets/icons/_arrow-curved.svg" alt="arrow-curved" class="icon">
+
                 </button>
                 <button class="tool-btn" data-arrow-path="elbow" title="Dirsek">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M4 20 L 12 20 L 12 4 L 20 4" stroke="currentColor" stroke-width="2" fill="none" />
-                    </svg>
+                    <img src="assets/icons/_arrow-elbow.svg" alt="arrow-elbow" class="icon">
+
                 </button>
             </div>
         </div>
@@ -380,17 +283,66 @@
                             title="Mavi"></button>
                         <button class="color-option-small" data-color="green" style="background: #e8f5e9;"
                             title="Yeşil"></button>
+                        <button class="color-option-small" id="btnCustomBackground" title="Özel Renk"
+                            style="background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #666;">
+                            +
+                        </button>
                     </div>
                 </div>
 
                 <div class="setting-item">
                     <label>Desen:</label>
                     <div class="pattern-options">
-                        <button class="pattern-btn active" data-pattern="none" title="Düz">⬜</button>
-                        <button class="pattern-btn" data-pattern="dots" title="Noktalı">⣿</button>
-                        <button class="pattern-btn" data-pattern="grid" title="Kareli">▦</button>
-                        <button class="pattern-btn" data-pattern="lines" title="Çizgili">☰</button>
+                        <button class="pattern-btn active" data-pattern="none" title="Düz">
+                            <img src="assets/icons/_pattern-plain.svg" alt="pattern-plain" class="icon">
+
+                        </button>
+                        <button class="pattern-btn" data-pattern="dots" title="Noktalı">
+                            <img src="assets/icons/_pattern-dots.svg" alt="pattern-dots" class="icon">
+
+                        </button>
+                        <button class="pattern-btn" data-pattern="grid" title="Kareli">
+                            <img src="assets/icons/_pattern-grid.svg" alt="pattern-grid" class="icon">
+
+                        </button>
+                        <button class="pattern-btn" data-pattern="lines" title="Çizgili">
+                            <img src="assets/icons/_pattern-lines.svg" alt="pattern-lines" class="icon">
+
+                        </button>
                     </div>
+                </div>
+
+                <div class="setting-item" id="patternColorSetting">
+                    <label>Desen Rengi:</label>
+                    <div class="color-options">
+                        <button class="color-option-small active" data-pattern-color="rgba(0,0,0,0.15)"
+                            style="background: rgba(0,0,0,0.15); border: 1px solid #ddd;"
+                            title="Gri (Varsayılan)"></button>
+                        <button class="color-option-small" data-pattern-color="rgba(0,0,255,0.1)"
+                            style="background: rgba(0,0,255,0.1); border: 1px solid #ddd;" title="Mavi"></button>
+                        <button class="color-option-small" data-pattern-color="rgba(255,0,0,0.1)"
+                            style="background: rgba(255,0,0,0.1); border: 1px solid #ddd;" title="Kırmızı"></button>
+                        <button class="color-option-small" id="btnCustomPatternColor" title="Özel Renk"
+                            style="background: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 14px; color: #666;">
+                            +
+                        </button>
+                    </div>
+                </div>
+
+                <div class="setting-item" id="patternSpacingSetting">
+                    <label style="display: flex; justify-content: space-between;">
+                        Desen Aralığı: <span id="patternSpacingVal">20px</span>
+                    </label>
+                    <input type="range" id="patternSpacingSlider" min="10" max="100" value="20" step="5"
+                        style="width: 100%;">
+                </div>
+
+                <div class="setting-item" id="patternThicknessSetting">
+                    <label style="display: flex; justify-content: space-between;">
+                        Desen Kalınlığı: <span id="patternThicknessVal">1px</span>
+                    </label>
+                    <input type="range" id="patternThicknessSlider" min="0.5" max="10" value="1" step="0.5"
+                        style="width: 100%;">
                 </div>
 
                 <button class="btn btn-primary btn-sm" id="applySettingsBtn">Uygula</button>
@@ -400,28 +352,43 @@
         <!-- Context Menu -->
         <div id="contextMenu" class="context-menu">
             <div class="context-menu-item" data-action="cut">
-                <span class="menu-icon">✂️</span>
+                <span class="menu-icon">
+                    <img src="assets/icons/_cut.svg" alt="cut" class="icon">
+
+                </span>
                 <span>Kes</span>
                 <span class="menu-shortcut">Ctrl+X</span>
             </div>
             <div class="context-menu-item" data-action="copy">
-                <span class="menu-icon">📄</span>
+                <span class="menu-icon">
+                    <img src="assets/icons/_copy.svg" alt="copy" class="icon">
+
+                </span>
                 <span>Kopyala</span>
                 <span class="menu-shortcut">Ctrl+C</span>
             </div>
             <div class="context-menu-item" data-action="paste">
-                <span class="menu-icon">📋</span>
+                <span class="menu-icon">
+                    <img src="assets/icons/_paste.svg" alt="paste" class="icon">
+
+                </span>
                 <span>Yapıştır</span>
                 <span class="menu-shortcut">Ctrl+V</span>
             </div>
             <div class="context-menu-separator"></div>
             <div class="context-menu-item" data-action="duplicate">
-                <span class="menu-icon">📑</span>
+                <span class="menu-icon">
+                    <img src="assets/icons/_duplicate.svg" alt="duplicate" class="icon">
+
+                </span>
                 <span>Çoğalt</span>
                 <span class="menu-shortcut">Ctrl+D</span>
             </div>
             <div class="context-menu-item" data-action="delete">
-                <span class="menu-icon">🗑️</span>
+                <span class="menu-icon">
+                    <img src="assets/icons/_trash.svg" alt="trash" class="icon">
+
+                </span>
                 <span>Sil</span>
                 <span class="menu-shortcut">Del</span>
             </div>
@@ -436,37 +403,61 @@
             </div>-->
             <div class="context-menu-separator"></div>
             <div class="context-menu-item" data-action="flipHorizontal">
-                <span class="menu-icon">↔️</span>
+                <span class="menu-icon">
+                    <img src="assets/icons/_flip-h.svg" alt="flip-h" class="icon">
+
+                </span>
                 <span>Yatay Döndür</span>
             </div>
             <div class="context-menu-item" data-action="flipVertical">
-                <span class="menu-icon">↕️</span>
+                <span class="menu-icon">
+                    <img src="assets/icons/_flip-v.svg" alt="flip-v" class="icon">
+
+                </span>
                 <span>Dikey Döndür</span>
             </div>
             <div class="context-menu-separator"></div>
             <div class="context-menu-item" data-action="bringToFront">
-                <span class="menu-icon">⏫</span>
+                <span class="menu-icon">
+                    <img src="assets/icons/_bring-front.svg" alt="bring-front" class="icon">
+
+                </span>
                 <span>En Öne Getir</span>
             </div>
             <div class="context-menu-item" data-action="bringForward">
-                <span class="menu-icon">⬆️</span>
+                <span class="menu-icon">
+                    <img src="assets/icons/_bring-forward.svg" alt="bring-forward" class="icon">
+
+                </span>
                 <span>Bir Öne Getir</span>
             </div>
             <div class="context-menu-item" data-action="sendBackward">
-                <span class="menu-icon">⬇️</span>
+                <span class="menu-icon">
+                    <img src="assets/icons/_send-backward.svg" alt="send-backward" class="icon">
+
+                </span>
                 <span>Bir Arkaya Gönder</span>
             </div>
             <div class="context-menu-item" data-action="sendToBack">
-                <span class="menu-icon">⏬</span>
+                <span class="menu-icon">
+                    <img src="assets/icons/_send-back.svg" alt="send-back" class="icon">
+
+                </span>
                 <span>En Arkaya Gönder</span>
             </div>
             <div class="context-menu-separator"></div>
             <div class="context-menu-item" data-action="group">
-                <span class="menu-icon">🔗</span>
+                <span class="menu-icon">
+                    <img src="assets/icons/_group.svg" alt="group" class="icon">
+
+                </span>
                 <span>Grupla</span>
             </div>
             <div class="context-menu-item" data-action="ungroup">
-                <span class="menu-icon">🔓</span>
+                <span class="menu-icon">
+                    <img src="assets/icons/_ungroup.svg" alt="ungroup" class="icon">
+
+                </span>
                 <span>Grubu Çöz</span>
             </div>
         </div>
@@ -487,48 +478,34 @@
             </div>
             <div class="status-actions">
                 <button class="tool-btn" id="undoBtn" title="Geri Al (Ctrl+Z)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-undo2-icon lucide-undo-2">
-                        <path d="M9 14 4 9l5-5" />
-                        <path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" />
-                    </svg>
+
+                    <img src="assets/icons/_undo.svg" alt="undo" class="icon">
+
                 </button>
                 <button class="tool-btn" id="redoBtn" title="İleri Al (Ctrl+Y)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-redo2-icon lucide-redo-2">
-                        <path d="m15 14 5-5-5-5" />
-                        <path d="M20 9H9.5A5.5 5.5 0 0 0 4 14.5A5.5 5.5 0 0 0 9.5 20H13" />
-                    </svg>
+
+                    <img src="assets/icons/_redo.svg" alt="redo" class="icon">
+
                 </button>
                 <button class="tool-btn" id="clearBtn" title="Temizle">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        class="lucide lucide-trash-icon lucide-trash">
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-                        <path d="M3 6h18" />
-                        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </svg>
+
+                    <img src="assets/icons/_trash.svg" alt="trash" class="icon">
+
                 </button>
             </div>
             <div class="zoom-controls">
                 <button class="zoom-btn" id="zoomOutBtn" title="Uzaklaş (-)">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" />
-                    </svg>
+
+                    <img src="assets/icons/_zoom-out.svg" alt="zoom-out" class="icon">
+
                 </button>
                 <button class="zoom-btn zoom-level" id="zoomResetBtn" title="Sıfırla">
                     <span id="zoomLevelDisplay">100%</span>
                 </button>
                 <button class="zoom-btn" id="zoomInBtn" title="Yakınlaş (+)">
-                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" />
-                        <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" />
-                    </svg>
+
+                    <img src="assets/icons/_zoom-in.svg" alt="zoom-in" class="icon">
+
                 </button>
             </div>
         </div>
@@ -538,13 +515,17 @@
     <div id="popupBrushSettings" class="property-popup brush-settings-popup">
         <div class="brush-setting-item">
             <div class="brush-setting-header">
+                <img src="assets/icons/_width.svg" alt="width" class="icon">
+
                 <span class="label">Kalınlık</span>
-                <span class="slider-val-left" id="strokeWidthVal">4</span>
+                <span class="slider-val-left" id="strokeWidthVal">4px</span>
             </div>
             <input type="range" class="stroke-width-slider" id="strokeWidth" min="1" max="20" value="4">
         </div>
         <div class="brush-setting-item">
             <div class="brush-setting-header">
+                <img src="assets/icons/_opacity.svg" alt="opacity" class="icon">
+
                 <span class="label">Opaklık</span>
                 <span class="slider-val-left" id="opacityVal">100%</span>
             </div>
@@ -552,15 +533,19 @@
         </div>
         <div class="brush-setting-item">
             <div class="brush-setting-header">
+                <img src="assets/icons/_stabilization.svg" alt="stabilization" class="icon">
+
                 <span class="label">Stabilizasyon</span>
-                <span class="slider-val-left" id="stabilizationVal">50</span>
+                <span class="slider-val-left" id="stabilizationVal">50%</span>
             </div>
             <input type="range" class="stabilization-slider" id="stabilizationSlider" min="0" max="100" value="50">
         </div>
         <div class="brush-setting-item">
             <div class="brush-setting-header">
+                <img src="assets/icons/_decimation.svg" alt="decimation" class="icon">
+
                 <span class="label">Örnekleme</span>
-                <span class="slider-val-left" id="decimationVal">10</span>
+                <span class="slider-val-left" id="decimationVal">10%</span>
             </div>
             <input type="range" class="decimation-slider" id="decimationSlider" min="0" max="50" value="10">
         </div>
@@ -568,81 +553,55 @@
 
     <div id="popupArrowStart" class="property-popup">
         <button class="tool-btn active" data-arrow-start="none" title="Uç Yok">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-            </svg>
+            <img src="assets/icons/_arrow-none.svg" alt="arrow-none" class="icon">
+
         </button>
         <button class="tool-btn" data-arrow-start="triangle" title="Dolu ok">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="8" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-                <path d="M8 12 L4 9 L4 15 Z" fill="currentColor" />
-            </svg>
+            <img src="assets/icons/_arrow-triangle-left.svg" alt="arrow-triangle-left" class="icon">
+
         </button>
         <button class="tool-btn" data-arrow-start="line" title="Ok">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="8" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-                <line x1="4" y1="8" x2="4" y2="16" stroke="currentColor" stroke-width="2" />
-                <line x1="4" y1="10" x2="8" y2="12" stroke="currentColor" stroke-width="2" />
-                <line x1="4" y1="14" x2="8" y2="12" stroke="currentColor" stroke-width="2" />
-            </svg>
+            <img src="assets/icons/_arrow-line-left.svg" alt="arrow-line-left" class="icon">
+
         </button>
         <button class="tool-btn" data-arrow-start="circle" title="Yuvarlak">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="8" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-                <circle cx="4" cy="12" r="3" fill="currentColor" />
-            </svg>
+            <img src="assets/icons/_arrow-circle-start.svg" alt="arrow-circle-start" class="icon">
+
         </button>
         <button class="tool-btn" data-arrow-start="square" title="Kare">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="8" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-                <rect x="1" y="9" width="6" height="6" fill="currentColor" />
-            </svg>
+            <img src="assets/icons/_arrow-square-start.svg" alt="arrow-square-start" class="icon">
+
         </button>
         <button class="tool-btn" data-arrow-start="bar" title="Dikey Çizgi">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="6" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-                <line x1="4" y1="8" x2="4" y2="16" stroke="currentColor" stroke-width="3" />
-            </svg>
+            <img src="assets/icons/_arrow-bar-start.svg" alt="arrow-bar-start" class="icon">
+
         </button>
     </div>
 
     <div id="popupArrowEnd" class="property-popup">
         <button class="tool-btn" data-arrow-end="none" title="Uç Yok">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="4" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-            </svg>
+            <img src="assets/icons/_arrow-none.svg" alt="arrow-none" class="icon">
+
         </button>
         <button class="tool-btn active" data-arrow-end="triangle" title="Dolu ok">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="4" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" />
-                <path d="M16 12 L20 9 L20 15 Z" fill="currentColor" />
-            </svg>
+            <img src="assets/icons/_arrow-triangle-right.svg" alt="arrow-triangle-right" class="icon">
+
         </button>
         <button class="tool-btn" data-arrow-end="line" title="Ok">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="4" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" />
-                <line x1="20" y1="8" x2="20" y2="16" stroke="currentColor" stroke-width="2" />
-                <line x1="16" y1="10" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-                <line x1="16" y1="14" x2="20" y2="12" stroke="currentColor" stroke-width="2" />
-            </svg>
+            <img src="assets/icons/_arrow-line-right.svg" alt="arrow-line-right" class="icon">
+
         </button>
         <button class="tool-btn" data-arrow-end="circle" title="Yuvarlak">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="4" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" />
-                <circle cx="20" cy="12" r="3" fill="currentColor" />
-            </svg>
+            <img src="assets/icons/_arrow-circle-end.svg" alt="arrow-circle-end" class="icon">
+
         </button>
         <button class="tool-btn" data-arrow-end="square" title="Kare">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="4" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="2" />
-                <rect x="17" y="9" width="6" height="6" fill="currentColor" />
-            </svg>
+            <img src="assets/icons/_arrow-square-end.svg" alt="arrow-square-end" class="icon">
+
         </button>
         <button class="tool-btn" data-arrow-end="bar" title="Dikey Çizgi">
-            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <line x1="4" y1="12" x2="18" y2="12" stroke="currentColor" stroke-width="2" />
-                <line x1="20" y1="8" x2="20" y2="16" stroke="currentColor" stroke-width="3" />
-            </svg>
+            <img src="assets/icons/_arrow-bar-end.svg" alt="arrow-bar-end" class="icon">
+
         </button>
     </div>
 

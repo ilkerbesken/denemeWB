@@ -34,7 +34,7 @@ body {
     display: flex;
     justify-content: center;
     position: relative;
-    gap: 6px;
+    /*gap: 6px;*/
     align-items: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     z-index: 100;
@@ -81,10 +81,13 @@ body {
     transition: all 0.2s;
 }
 
-.tool-btn svg {
-    width: 16px;
+.tool-btn img.icon {
+    width: auto;
     height: 16px;
+    max-width: 24px;
     transition: all 0.2s;
+    /* SVG color control via filter */
+    filter: brightness(0) saturate(100%) invert(40%) sepia(10%) saturate(1000%) hue-rotate(180deg);
 }
 
 .tool-btn:hover {
@@ -92,13 +95,18 @@ body {
     border-color: #d0d0d0;
 }
 
+.tool-btn:hover img.icon {
+    filter: brightness(0) saturate(100%) invert(20%) sepia(100%) saturate(500%) hue-rotate(200deg);
+}
+
 .tool-btn.active {
     background: #e3f2fd;
     border-color: #2196f3;
 }
 
-.tool-btn.active svg {
-    stroke: #2196f3;
+.tool-btn.active img.icon {
+    filter: brightness(0) saturate(100%) invert(47%) sepia(96%) saturate(1234%) hue-rotate(187deg) brightness(98%) contrast(92%);
+    /* Blue color for active state */
 }
 
 
@@ -215,13 +223,25 @@ input[type="range"] {
     display: flex;
     gap: 15px;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+    padding-bottom: 2px;
+    /* Prevent clipping */
+}
+
+.settings-content::-webkit-scrollbar {
+    display: none;
 }
 
 .setting-item {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
 }
 
 .setting-item label {
@@ -295,12 +315,12 @@ input[type="range"] {
 
 .pattern-options {
     display: flex;
-    gap: 3px;
+    gap: 8px;
 }
 
 .pattern-btn {
-    width: 24px;
-    height: 24px;
+    width: 21px;
+    height: 21px;
     border: 2px solid #e0e0e0;
     background: white;
     border-radius: 4px;
@@ -310,6 +330,20 @@ input[type="range"] {
     align-items: center;
     justify-content: center;
     transition: all 0.2s;
+    padding: 0;
+}
+
+.pattern-btn .icon {
+    width: 18px;
+    height: 18px;
+    /* Slightly smaller than 21px to account for borders/padding if any, though flex centering handles it. */
+    /* If user wants 'tam sığsın' (fully fit), we can go up to 21px or 100%, but icons usually have some whitespace. 
+       Let's try 100% or close to it. Since buttons have borders, inner content is smaller. 
+       Box-sizing is border-box, so 2x2 border = 4px total border width. 
+       Available content area = 21 - 4 = 17px. So 17px or 18px is max. */
+    width: 17px;
+    height: 17px;
+    filter: invert(1) brightness(0.15);
 }
 
 .pattern-btn:hover {
@@ -317,10 +351,19 @@ input[type="range"] {
     background: #f5f5f5;
 }
 
+.pattern-btn:hover .icon {
+    filter: invert(1) brightness(0.15);
+    /* Keep dark on hover or make darker/lighter? Keeping consistent #262626 or slightly different? Usually hover doesn't change color drastically unless active. */
+}
+
 .pattern-btn.active {
     border-color: #2196f3;
     background: #e3f2fd;
-    color: #2196f3;
+}
+
+.pattern-btn.active .icon {
+    /* Blue filter for active state */
+    filter: brightness(0) saturate(100%) invert(47%) sepia(96%) saturate(1234%) hue-rotate(187deg) brightness(98%) contrast(92%);
 }
 
 .btn {
@@ -443,6 +486,7 @@ input[type="range"] {
     gap: 4px;
     transition: background-color 0.2s;
     user-select: none;
+    color: #262626;
 }
 
 .context-menu-item:hover {
@@ -455,8 +499,16 @@ input[type="range"] {
 
 .context-menu-item .menu-icon {
     font-size: 14px;
-    width: 18px;
-    text-align: center;
+    width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.context-menu-item .menu-icon .icon {
+    width: 12px;
+    height: 12px;
+    filter: invert(1) brightness(0.15);
 }
 
 .context-menu-item span:nth-child(2) {
@@ -518,12 +570,21 @@ input[type="range"] {
     padding: 0 8px;
     height: 100%;
     align-items: center;
-    gap: 6px;
+    /*gap: 6px;*/
 }
 
 .properties-sidebar .tool-group:last-child {
     border-bottom: none;
     padding-bottom: 0;
+}
+
+.properties-sidebar .tool-btn .icon,
+.properties-sidebar .property-trigger-btn .icon {
+    width: 16px;
+    height: 16px;
+    max-width: none;
+    /* Override any previous max-width */
+    object-fit: contain;
 }
 
 /* Vertical Slider Rotation (Optional - keeping horizontal for now as it maps better to "Slider") */
@@ -557,21 +618,6 @@ input[type="range"] {
 
 
 /* Custom Color Picker Popover */
-.custom-color-picker {
-    position: absolute;
-    background: white;
-    background: white;
-    border: 1px solid #e0e0e0;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    border-radius: 12px;
-    padding: 12px;
-    width: 170px;
-    /* 220 * 0.77 roughly */
-    z-index: 1000;
-    position: fixed;
-    animation: fadeIn 0.15s ease-out;
-}
-
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -582,6 +628,55 @@ input[type="range"] {
         opacity: 1;
         transform: scale(1);
     }
+}
+
+.custom-color-picker {
+    position: absolute;
+    background: white;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    padding: 12px;
+    width: 300px;
+    z-index: 1000;
+    position: fixed;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.hsl-slider {
+    width: 100%;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #e0e0e0;
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+}
+
+.hsl-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Specific gradients */
+#hueSlider {
+    background: linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%);
+}
+
+#satSlider {
+    background: linear-gradient(to right, #808080, #ff0000);
+    /* Simple visual cue */
+}
+
+#lightSlider {
+    background: linear-gradient(to right, #000000, #ffffff);
 }
 
 .picker-header {
@@ -688,6 +783,11 @@ input[type="range"] {
     box-shadow: 0 0 0 1px white, 0 0 0 3px #2196f3;
 }
 
+.color-btn.rainbow-btn {
+    background: linear-gradient(135deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
 /* Light border for light colors to be visible on white bg */
 .color-btn[style*='background-color: #ffffff'],
 .color-btn[style*='background-color: white'],
@@ -760,6 +860,12 @@ input[type="range"] {
     width: max-content;
 }
 
+.property-popup .tool-btn .icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+}
+
 /* Brush Settings Specific Popup */
 .brush-settings-popup {
     flex-direction: column;
@@ -814,10 +920,10 @@ input[type="range"] {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    padding-left: 4px;
     height: 27px;
     background: #f8f9fa;
-    border: 1px solid #dee2e6;
+    border: 0 solid #dee2e6;
     border-radius: 4px;
     cursor: pointer;
     font-size: 10px;
@@ -833,6 +939,13 @@ input[type="range"] {
     background: #e7f5ff;
     border-color: #339af0;
     color: #1971c2;
+}
+
+.property-trigger-btn .icon {
+    height: 16px;
+    width: auto;
+    color: #262626;
+    /* Optional: filter to match other icons if needed, but they seem to be colored #262626 by default */
 }
 
 /* Zoom Controls */

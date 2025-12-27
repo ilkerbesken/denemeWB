@@ -217,22 +217,52 @@ class PenTool {
         ctx.save();
         ctx.globalAlpha = object.opacity !== undefined ? object.opacity : 1.0;
         const style = object.lineStyle || 'solid';
-        if (style === 'solid' || object.isHighlighter) this.drawSolid(ctx, object);
+        if (style === 'solid') this.drawSolid(ctx, object);
         else if (style === 'wavy') this.drawWavy(ctx, object);
         else this.drawDashed(ctx, object);
         ctx.restore();
+    }
+
+    getRainbowGradient(ctx, points) {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const p of points) {
+            if (p.x < minX) minX = p.x;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
+        }
+
+        // Default to a small size if single point
+        if (maxX - minX < 1) maxX = minX + 10;
+        if (maxY - minY < 1) maxY = minY + 10;
+
+        const gradient = ctx.createLinearGradient(minX, minY, maxX, maxY);
+        gradient.addColorStop(0, "red");
+        gradient.addColorStop(0.17, "yellow");
+        gradient.addColorStop(0.33, "green");
+        gradient.addColorStop(0.5, "cyan");
+        gradient.addColorStop(0.66, "blue");
+        gradient.addColorStop(0.83, "magenta");
+        gradient.addColorStop(1, "red");
+        return gradient;
     }
 
     drawSolid(ctx, object) {
         let pts = object.points;
         const len = pts.length;
         if (len < 1) return;
-        ctx.fillStyle = object.color;
+
+        let color = object.color;
+        if (color === 'rainbow') {
+            color = this.getRainbowGradient(ctx, pts);
+        }
+
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color; // Pre-set for highlighter/seam sealer
 
         if (object.isHighlighter) {
             ctx.lineWidth = object.width;
-            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-            ctx.strokeStyle = object.color;
+            ctx.lineCap = object.cap || 'round'; ctx.lineJoin = 'round';
             ctx.beginPath();
             ctx.moveTo(pts[0].x, pts[0].y);
             for (let i = 1; i < len; i++) ctx.lineTo(pts[i].x, pts[i].y);
@@ -250,8 +280,6 @@ class PenTool {
         let lastNx = 0, lastNy = 0;
 
         // ADAPTIVE SMOOTHING WINDOW
-        // Thicker strokes need a wider gaze to prevent "forking" at joints.
-        // Also adjusted for point density (Chaikin 3 adds more points).
         const look = Math.max(10, Math.floor(object.width * 0.8));
 
         for (let i = 0; i < len; i++) {
@@ -269,12 +297,11 @@ class PenTool {
             let nx = -dy / dist, ny = dx / dist;
 
             // WIDTH-ADAPTIVE NORMAL BLENDING
-            // If the width is high, we must be much stricter about normal flips to avoid bow-ties.
             if (i > 0) {
                 const dot = nx * lastNx + ny * lastNy;
                 const blendThreshold = object.width > 8 ? 0.995 : 0.98;
                 if (dot < blendThreshold) {
-                    const lerpFactor = object.width > 12 ? 0.2 : 0.5; // Slower transition for thick lines
+                    const lerpFactor = object.width > 12 ? 0.2 : 0.5;
                     nx = lastNx + (nx - lastNx) * lerpFactor;
                     ny = lastNy + (ny - lastNy) * lerpFactor;
                     const d2 = Math.sqrt(nx * nx + ny * ny) || 1; nx /= d2; ny /= d2;
@@ -287,7 +314,7 @@ class PenTool {
 
         ctx.beginPath();
         const s = envelope[0];
-        // Start Cap (Higher Resolution for smoothness)
+        // Start Cap
         for (let a = 0; a <= 180; a += 5) {
             const rad = (s.angle + Math.PI / 2) + (a * Math.PI / 180);
             ctx.lineTo(s.x + Math.cos(rad) * s.r, s.y + Math.sin(rad) * s.r);
@@ -296,7 +323,7 @@ class PenTool {
         for (let i = 1; i < len - 1; i++) {
             ctx.lineTo(envelope[i].x - envelope[i].nx * envelope[i].r, envelope[i].y - envelope[i].ny * envelope[i].r);
         }
-        // End Cap (Higher Resolution for smoothness)
+        // End Cap
         const endE = envelope[len - 1];
         if (endE) {
             for (let a = 0; a <= 180; a += 5) {
@@ -311,9 +338,9 @@ class PenTool {
         ctx.closePath();
         ctx.fill();
 
-        // Sub-pixel seam sealer for high-res displays
+        // Sub-pixel seam sealer
         if (object.opacity > 0.95) {
-            ctx.lineWidth = 0.3; ctx.strokeStyle = object.color; ctx.lineJoin = 'round'; ctx.stroke();
+            ctx.lineWidth = 0.3; ctx.lineJoin = 'round'; ctx.stroke();
         }
     }
 
@@ -321,10 +348,14 @@ class PenTool {
     drawDashed(ctx, object) {
         const pts = this.flattenPath(object);
         const w = object.width;
+        let color = object.color;
+        if (color === 'rainbow') color = this.getRainbowGradient(ctx, pts);
+
         let pattern = [w * 3, w * 3];
         if (object.lineStyle === 'dotted') pattern = [w * 0.1, w * 4];
         else if (object.lineStyle === 'dash-dot') pattern = [w * 4, w * 2, w * 0.1, w * 2];
-        ctx.lineWidth = w; ctx.strokeStyle = object.color; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+
+        ctx.lineWidth = w; ctx.strokeStyle = color; ctx.lineCap = object.cap || 'round'; ctx.lineJoin = 'round';
         ctx.beginPath();
         let dist = 0, pIdx = 0, isDash = true;
         ctx.moveTo(pts[0].x, pts[0].y);
@@ -345,25 +376,13 @@ class PenTool {
         ctx.stroke();
     }
 
-    flattenPath(object) {
-        if (object.points.length < 2) return object.points;
-        let res = [object.points[0]];
-        for (let i = 0; i < object.points.length - 1; i++) {
-            const p1 = object.points[i], p2 = object.points[i + 1];
-            const d = Utils.distance(p1, p2);
-            const steps = Math.max(1, Math.ceil(d / 2));
-            for (let s = 1; s <= steps; s++) {
-                const t = s / steps;
-                res.push({ x: p1.x + (p2.x - p1.x) * t, y: p1.y + (p2.y - p1.y) * t });
-            }
-        }
-        return res;
-    }
-
     drawWavy(ctx, object) {
         const pts = this.flattenPath(object);
+        let color = object.color;
+        if (color === 'rainbow') color = this.getRainbowGradient(ctx, pts);
+
         const amp = object.width * 1.2, freq = (Math.PI * 2) / (15 + object.width * 2);
-        ctx.lineWidth = object.width; ctx.strokeStyle = object.color; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.lineWidth = object.width; ctx.strokeStyle = color; ctx.lineCap = object.cap || 'round'; ctx.lineJoin = 'round';
         ctx.beginPath();
         let total = 0;
         for (let i = 0; i < pts.length - 1; i++) {

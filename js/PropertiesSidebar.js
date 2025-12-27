@@ -54,7 +54,7 @@ class PropertiesSidebar {
                 }
 
                 this.app.state.strokeWidth = val;
-                if (widthVal) widthVal.textContent = val;
+                if (widthVal) widthVal.textContent = val + 'px';
                 // Sync all width sliders
                 widthSliders.forEach(s => { if (s !== e.target) s.value = val; });
 
@@ -76,7 +76,7 @@ class PropertiesSidebar {
             slider.addEventListener('input', (e) => {
                 const val = parseInt(e.target.value);
                 this.app.state.stabilization = val / 100;
-                if (stabVal) stabVal.textContent = val;
+                if (stabVal) stabVal.textContent = val + '%';
                 // Sync all stabilization sliders
                 stabSliders.forEach(s => { if (s !== e.target) s.value = val; });
             });
@@ -89,7 +89,7 @@ class PropertiesSidebar {
             slider.addEventListener('input', (e) => {
                 const val = parseInt(e.target.value);
                 this.app.state.decimation = val / 100;
-                if (decVal) decVal.textContent = val;
+                if (decVal) decVal.textContent = val + '%';
                 // Sync all decimation sliders
                 decSliders.forEach(s => { if (s !== e.target) s.value = val; });
             });
@@ -430,7 +430,7 @@ class PropertiesSidebar {
                         if (window.updateRangeProgress) window.updateRangeProgress(s);
                     });
                     const thicknessVal = document.getElementById('strokeWidthVal');
-                    if (thicknessVal) thicknessVal.textContent = this.app.state.strokeWidth;
+                    if (thicknessVal) thicknessVal.textContent = this.app.state.strokeWidth + 'px';
 
                     const opacitySliders = document.querySelectorAll('.opacity-slider');
                     opacitySliders.forEach(s => {
@@ -459,19 +459,61 @@ class PropertiesSidebar {
         // benefits from it (like highlighter), but we shouldn't reset it every time 
         // if the user is just switching between similar tools.
         if (tool === 'highlighter') {
-            // Only force 70% if it was fully opaque, to allow user to customize highlighter too
-            if (this.app.state.opacity === 1.0) {
-                this.app.state.opacity = 0.7;
-                document.getElementById('opacitySlider').value = 70;
-                const opacityVal = document.getElementById('opacityVal');
-                if (opacityVal) opacityVal.textContent = '70%';
-            }
+            // Default Opacity: 50%
+            this.app.state.opacity = 0.5;
+            document.getElementById('opacitySlider').value = 50;
+            const opacityVal = document.getElementById('opacityVal');
+            if (opacityVal) opacityVal.textContent = '50%';
+
+            // Default Thickness: 14
+            this.app.state.strokeWidth = 14;
+            const thicknessSliders = document.querySelectorAll('.stroke-width-slider');
+            thicknessSliders.forEach(s => {
+                s.value = 14;
+                if (window.updateRangeProgress) window.updateRangeProgress(s);
+            });
+            const thicknessVal = document.getElementById('strokeWidthVal');
+            if (thicknessVal) thicknessVal.textContent = '14px';
+
+            // Default Tip: Flat (butt)
+            this.app.state.highlighterCap = 'butt';
+            document.querySelectorAll('.tool-btn[data-highlighter-cap]').forEach(b => {
+                b.classList.toggle('active', b.dataset.highlighterCap === 'butt');
+            });
+        } else if (tool === 'pen') {
+            // Reset Pen Defaults
+            // Opacity: 100%
+            this.app.state.opacity = 1.0;
+            document.getElementById('opacitySlider').value = 100;
+            const opacityVal = document.getElementById('opacityVal');
+            if (opacityVal) opacityVal.textContent = '100%';
+
+            // Thickness: 3
+            this.app.state.strokeWidth = 3;
+            const thicknessSliders = document.querySelectorAll('.stroke-width-slider');
+            thicknessSliders.forEach(s => {
+                s.value = 3;
+                if (window.updateRangeProgress) window.updateRangeProgress(s);
+            });
+            const thicknessVal = document.getElementById('strokeWidthVal');
+            if (thicknessVal) thicknessVal.textContent = '3px';
+
+            // Decimation (Sampling): 0
+            this.app.state.decimation = 0;
+            const decimationSliders = document.querySelectorAll('.decimation-slider');
+            decimationSliders.forEach(s => {
+                s.value = 0;
+                if (window.updateRangeProgress) window.updateRangeProgress(s);
+            });
+            const decVal = document.getElementById('decimationVal');
+            if (decVal) decVal.textContent = '0%';
         }
         // We removed the forced reset to 1.0 for pen/shapes to allow persistent user choice.
 
         // Pressure Logic
         const pressureBtn = document.getElementById('pressureBtn');
-        if (tool === 'pen' || tool === 'highlighter') {
+        if (tool === 'pen') {
+
             pressureBtn.style.display = 'flex';
             pressureBtn.classList.toggle('active', this.app.state.pressureEnabled);
         } else if (['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'line'].includes(tool)) {
@@ -601,7 +643,7 @@ class PropertiesSidebar {
                         }
                     }
                 }
-            } else if (['pen', 'highlighter', ...shapes].includes(tool)) {
+            } else if (['pen', ...shapes].includes(tool)) {
                 // Show for pen tools and shapes to allow live toggle
                 showFill = true;
                 isFilled = this.app.state.fillEnabled;

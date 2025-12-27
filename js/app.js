@@ -14,7 +14,7 @@ class WhiteboardApp {
         this.state = {
             currentTool: 'pen',
             strokeColor: '#000000',
-            strokeWidth: 4,
+            strokeWidth: 3,
             lineStyle: 'solid',
             opacity: 1.0,
             pressureEnabled: true, // Default: Active for pen tool
@@ -24,7 +24,7 @@ class WhiteboardApp {
             arrowPathType: 'straight', // 'straight', 'curved', 'elbow'
             eraserMode: 'object', // 'object', 'partial'
             stabilization: 0.5, // 0.0 to 1.0 (corresponds to 0-100% slider)
-            decimation: 0.10, // Default 10% of width
+            decimation: 0, // Default 0
             fillEnabled: false, // Live fill toggle
             objects: []
         };
@@ -189,11 +189,19 @@ class WhiteboardApp {
         // Ayarları uygula
         applyBtn.addEventListener('click', () => {
             // Ayarları kaydet
+            const activeBgBtn = document.querySelector('.color-option-small[data-color].active') || document.getElementById('btnCustomBackground');
+            const activePatternColorBtn = document.querySelector('.color-option-small[data-pattern-color].active') || document.getElementById('btnCustomPatternColor');
+            const spacingSlider = document.getElementById('patternSpacingSlider');
+            const thicknessSlider = document.getElementById('patternThicknessSlider');
+
             this.canvasSettings.settings = {
                 size: document.getElementById('canvasSizeSelect').value,
                 orientation: document.querySelector('input[name="orientation"]:checked').value,
-                backgroundColor: document.querySelector('.color-option-small.active').dataset.color,
-                pattern: document.querySelector('.pattern-btn.active').dataset.pattern
+                backgroundColor: activeBgBtn ? (activeBgBtn.dataset.color || '#ffffff') : '#ffffff',
+                pattern: document.querySelector('.pattern-btn.active').dataset.pattern,
+                patternColor: activePatternColorBtn ? (activePatternColorBtn.dataset.patternColor || 'rgba(0,0,0,0.15)') : 'rgba(0,0,0,0.15)',
+                patternSpacing: spacingSlider ? parseInt(spacingSlider.value) : 20,
+                patternThickness: thicknessSlider ? parseFloat(thicknessSlider.value) : 1
             };
 
             // Yeni ayarları uygula
@@ -208,18 +216,44 @@ class WhiteboardApp {
 
             // Panel'i kapat
             this.canvasSettings.togglePanel();
-
             // Durum güncelle
             this.updateStatus();
         });
 
-        // Renk seçimi
-        document.querySelectorAll('.color-option-small').forEach(btn => {
+        // Arkaplan Rengi Seçimi (Sadece data-color olanlar)
+        const bgBtnsSelector = '.color-option-small[data-color]';
+        const customBgBtnSelector = '#btnCustomBackground';
+
+        document.querySelectorAll(bgBtnsSelector).forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.color-option-small').forEach(b => b.classList.remove('active'));
+                // Clear active from all background buttons
+                document.querySelectorAll(bgBtnsSelector).forEach(b => b.classList.remove('active'));
+                const customBtn = document.querySelector(customBgBtnSelector);
+                if (customBtn) customBtn.classList.remove('active');
+
                 btn.classList.add('active');
             });
         });
+
+        // Özel Arkaplan Rengi
+        const btnCustomBg = document.querySelector(customBgBtnSelector);
+        if (btnCustomBg) {
+            btnCustomBg.addEventListener('click', (e) => {
+                const currentColor = btnCustomBg.dataset.color || '#ffffff';
+
+                this.colorPalette.showColorPicker(currentColor, (color) => {
+                    if (color === 'rainbow') return;
+
+                    btnCustomBg.style.backgroundColor = color;
+                    btnCustomBg.dataset.color = color;
+                    btnCustomBg.innerHTML = '';
+
+                    // Clear active from all background buttons
+                    document.querySelectorAll(bgBtnsSelector).forEach(b => b.classList.remove('active'));
+                    btnCustomBg.classList.add('active');
+                });
+            });
+        }
 
         // Desen seçimi
         document.querySelectorAll('.pattern-btn').forEach(btn => {
@@ -228,6 +262,56 @@ class WhiteboardApp {
                 btn.classList.add('active');
             });
         });
+
+        // Desen Rengi Seçimi
+        document.querySelectorAll('.color-option-small[data-pattern-color]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.color-option-small[data-pattern-color]').forEach(b => b.classList.remove('active'));
+                // Disable custom btn active state if exists
+                const customBtn = document.getElementById('btnCustomPatternColor');
+                if (customBtn) {
+                    customBtn.classList.remove('active');
+                    customBtn.style.backgroundColor = 'white';
+                    customBtn.innerHTML = '+';
+                }
+                btn.classList.add('active');
+            });
+        });
+
+        // Özel Desen Rengi
+        const btnCustomPattern = document.getElementById('btnCustomPatternColor');
+        if (btnCustomPattern) {
+            btnCustomPattern.addEventListener('click', () => {
+                const currentColor = btnCustomPattern.dataset.patternColor || 'rgba(0,0,0,0.15)';
+                this.colorPalette.showColorPicker(currentColor, (color) => {
+                    if (color === 'rainbow') return;
+                    btnCustomPattern.style.backgroundColor = color;
+                    btnCustomPattern.dataset.patternColor = color;
+                    btnCustomPattern.innerHTML = '';
+
+                    document.querySelectorAll('.color-option-small[data-pattern-color]').forEach(b => b.classList.remove('active'));
+                    btnCustomPattern.classList.add('active');
+                });
+            });
+        }
+
+        // Desen Aralığı Slider
+        const spacingSlider = document.getElementById('patternSpacingSlider');
+        const spacingVal = document.getElementById('patternSpacingVal');
+        if (spacingSlider && spacingVal) {
+            spacingSlider.addEventListener('input', (e) => {
+                spacingVal.textContent = e.target.value + 'px';
+            });
+        }
+
+        // Desen Kalınlığı Slider
+        const thicknessSlider = document.getElementById('patternThicknessSlider');
+        const thicknessVal = document.getElementById('patternThicknessVal');
+        if (thicknessSlider && thicknessVal) {
+            thicknessSlider.addEventListener('input', (e) => {
+                thicknessVal.textContent = e.target.value + 'px';
+            });
+        }
     }
 
     setupEventListeners() {
@@ -709,7 +793,13 @@ class WhiteboardApp {
 
     redrawOffscreen() {
         // Redraw offscreen cache with High-DPI support, synced to main canvas
-        this.canvasSettings.applySettings(this.offscreenCanvas, this.offscreenCtx, this.canvas);
+        // Pass current zoom/pan to ensure background pattern is transformed correctly
+        this.canvasSettings.applySettings(
+            this.offscreenCanvas,
+            this.offscreenCtx,
+            this.canvas,
+            { zoom: this.zoomManager.zoom, pan: this.zoomManager.pan }
+        );
 
         // Render all permanent objects to the offscreen canvas
         this.offscreenCtx.save();
