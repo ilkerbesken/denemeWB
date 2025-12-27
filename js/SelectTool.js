@@ -950,89 +950,33 @@ class SelectTool {
     bringToFront(state) {
         if (this.selectedObjects.length === 0) return false;
 
-        // Sort indices to handle removal correctly
-        const sortedIndices = [...this.selectedObjects].sort((a, b) => a - b);
-        const objectsToMove = [];
+        const selectedIndex = this.selectedObjects[0];
+        const obj = state.objects[selectedIndex];
 
-        // Extract objects in order
-        sortedIndices.forEach(index => {
-            objectsToMove.push(state.objects[index]);
-        });
-
-        // Remove from state (reverse order to keep indices valid)
-        for (let i = sortedIndices.length - 1; i >= 0; i--) {
-            state.objects.splice(sortedIndices[i], 1);
+        if (obj && selectedIndex < state.objects.length - 1) {
+            // Nesneyi diziden çıkar
+            state.objects.splice(selectedIndex, 1);
+            // En sona ekle
+            state.objects.push(obj);
+            // Yeni indeksi seç
+            this.selectedObjects = [state.objects.length - 1];
+            return true;
         }
-
-        // Add to end
-        state.objects.push(...objectsToMove);
-
-        // Update selection indices to the end
-        this.selectedObjects = [];
-        const startNewIndex = state.objects.length - objectsToMove.length;
-        for (let i = 0; i < objectsToMove.length; i++) {
-            this.selectedObjects.push(startNewIndex + i);
-        }
-
-        return true;
+        return false;
     }
 
     bringForward(state) {
         if (this.selectedObjects.length === 0) return false;
 
-        // Sort descending to move top-most items first
-        const sortedIndices = [...this.selectedObjects].sort((a, b) => b - a);
-        const newSelection = [];
-        let moved = false;
+        const selectedIndex = this.selectedObjects[0];
+        const obj = state.objects[selectedIndex];
 
-        sortedIndices.forEach((currentIndex) => {
-            // Can we move up?
-            if (currentIndex < state.objects.length - 1) {
-                // If the next item is NOT selected, swap.
-                // If it IS selected, it means it has already moved (or tried to), 
-                // so we can follow it into the hole it left?
-                // Actually, if we just swap with next, provided next is not part of THIS operation's locked group?
-                // But "next" changes dynamically.
-
-                // Better approach for multi-move:
-                // Shift logic: bubble up if the slot above is not occupied by a selected member that hasn't moved yet?
-                // Since we iterate descending, larger indices move first.
-                // If 3 is selected, moves to 4.
-                // If 2 is selected, moves to 3 (which is now empty/swappable).
-
-                // Check if next index is currently selected? 
-                // No, simply swap object at i with i+1.
-                // We must update the indices in this.selectedObjects list too to keep track for next iteration?
-                // No need, just local update.
-
-                // Wait, if 2 and 3 are selected. 3 moves to 4. 2 moves to 3.
-                // They stay together.
-
-                // What if 2(Sel) and 4(Sel)? (Item 3 is unselected)
-                // 4 moves to 5.
-                // 2 moves to 3.
-                // Gap remains. Correct.
-
-                // What if max index?
-                // If 4 matches length-1, it stays.
-
-                const nextIndex = currentIndex + 1;
-
-                // Swap logic
-                const temp = state.objects[nextIndex];
-                state.objects[nextIndex] = state.objects[currentIndex];
-                state.objects[currentIndex] = temp;
-
-                // Update selection tracking
-                newSelection.push(nextIndex);
-                moved = true;
-            } else {
-                newSelection.push(currentIndex); // Stayed at top
-            }
-        });
-
-        if (moved) {
-            this.selectedObjects = newSelection;
+        if (obj && selectedIndex < state.objects.length - 1) {
+            // Bir adım öne getir (index + 1)
+            state.objects.splice(selectedIndex, 1);
+            state.objects.splice(selectedIndex + 1, 0, obj);
+            // Yeni indeksi seç
+            this.selectedObjects = [selectedIndex + 1];
             return true;
         }
         return false;
@@ -1041,29 +985,15 @@ class SelectTool {
     sendBackward(state) {
         if (this.selectedObjects.length === 0) return false;
 
-        // Sort ascending to move bottom-most items first
-        const sortedIndices = [...this.selectedObjects].sort((a, b) => a - b);
-        const newSelection = [];
-        let moved = false;
+        const selectedIndex = this.selectedObjects[0];
+        const obj = state.objects[selectedIndex];
 
-        sortedIndices.forEach((currentIndex) => {
-            if (currentIndex > 0) {
-                const prevIndex = currentIndex - 1;
-
-                // Swap
-                const temp = state.objects[prevIndex];
-                state.objects[prevIndex] = state.objects[currentIndex];
-                state.objects[currentIndex] = temp;
-
-                newSelection.push(prevIndex);
-                moved = true;
-            } else {
-                newSelection.push(currentIndex); // Stayed at bottom
-            }
-        });
-
-        if (moved) {
-            this.selectedObjects = newSelection;
+        if (obj && selectedIndex > 0) {
+            // Bir adım arkaya gönder (index - 1)
+            state.objects.splice(selectedIndex, 1);
+            state.objects.splice(selectedIndex - 1, 0, obj);
+            // Yeni indeksi seç
+            this.selectedObjects = [selectedIndex - 1];
             return true;
         }
         return false;
@@ -1072,30 +1002,19 @@ class SelectTool {
     sendToBack(state) {
         if (this.selectedObjects.length === 0) return false;
 
-        // Sort indices to handle removal correctly
-        const sortedIndices = [...this.selectedObjects].sort((a, b) => a - b);
-        const objectsToMove = [];
+        const selectedIndex = this.selectedObjects[0];
+        const obj = state.objects[selectedIndex];
 
-        // Extract objects
-        sortedIndices.forEach(index => {
-            objectsToMove.push(state.objects[index]);
-        });
-
-        // Remove from state (reverse order)
-        for (let i = sortedIndices.length - 1; i >= 0; i--) {
-            state.objects.splice(sortedIndices[i], 1);
+        if (obj && selectedIndex > 0) {
+            // Nesneyi diziden çıkar
+            state.objects.splice(selectedIndex, 1);
+            // En başa ekle
+            state.objects.unshift(obj);
+            // Yeni indeksi seç
+            this.selectedObjects = [0];
+            return true;
         }
-
-        // Add to beginning
-        state.objects.unshift(...objectsToMove);
-
-        // Update selection indices to the beginning
-        this.selectedObjects = [];
-        for (let i = 0; i < objectsToMove.length; i++) {
-            this.selectedObjects.push(i);
-        }
-
-        return true;
+        return false;
     }
 
     handleContextMenu(e, canvas, state) {

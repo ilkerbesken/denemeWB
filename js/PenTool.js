@@ -376,6 +376,21 @@ class PenTool {
         ctx.stroke();
     }
 
+    flattenPath(object) {
+        if (object.points.length < 2) return object.points;
+        let res = [object.points[0]];
+        for (let i = 0; i < object.points.length - 1; i++) {
+            const p1 = object.points[i], p2 = object.points[i + 1];
+            const d = Utils.distance(p1, p2);
+            const steps = Math.max(1, Math.ceil(d / 2));
+            for (let s = 1; s <= steps; s++) {
+                const t = s / steps;
+                res.push({ x: p1.x + (p2.x - p1.x) * t, y: p1.y + (p2.y - p1.y) * t });
+            }
+        }
+        return res;
+    }
+
     drawWavy(ctx, object) {
         const pts = this.flattenPath(object);
         let color = object.color;

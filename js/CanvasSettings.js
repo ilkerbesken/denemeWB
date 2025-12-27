@@ -112,7 +112,7 @@ class CanvasSettings {
         }
     }
 
-    applySettings(canvas, ctx, syncFromCanvas = null, transform = { zoom: 1, pan: { x: 0, y: 0 } }) {
+    applySettings(canvas, ctx, syncFromCanvas = null) {
         const dpr = window.devicePixelRatio || 1;
         let cssWidth, cssHeight;
 
@@ -167,10 +167,10 @@ class CanvasSettings {
         ctx.scale(dpr, dpr);
 
         // Render background
-        this.drawBackground(canvas, ctx, null, cssWidth, cssHeight, transform);
+        this.drawBackground(canvas, ctx, null, cssWidth, cssHeight, 1);
     }
 
-    drawBackground(canvas, ctx, visibleBounds, explicitW = null, explicitH = null, transform = { zoom: 1, pan: { x: 0, y: 0 } }) {
+    drawBackground(canvas, ctx, visibleBounds, explicitW = null, explicitH = null, zoom = 1) {
         let logicalW = explicitW || canvas.clientWidth || parseInt(canvas.style.width);
         let logicalH = explicitH || canvas.clientHeight || parseInt(canvas.style.height);
 
@@ -192,33 +192,30 @@ class CanvasSettings {
         ctx.fillRect(x, y, w, h);
 
         // Desen çiz
-        this.drawPattern(canvas, ctx, { x, y, w, h }, transform);
+        this.drawPattern(canvas, ctx, { x, y, w, h }, zoom);
     }
 
-    drawPattern(canvas, ctx, bounds, transform) {
+    drawPattern(canvas, ctx, bounds, zoom = 1) {
         const pattern = this.settings.pattern;
+
         if (pattern === 'none') return;
 
-        const { zoom, pan } = transform;
         const color = this.settings.patternColor || 'rgba(0,0,0,0.15)';
-        const spacing = parseInt(this.settings.patternSpacing) || 20;
-        const thickness = parseFloat(this.settings.patternThickness) || 1;
+        const baseSpacing = parseInt(this.settings.patternSpacing) || 20;
+        const baseThickness = parseFloat(this.settings.patternThickness) || 1;
 
-        ctx.save();
-        ctx.translate(pan.x, pan.y);
-        ctx.scale(zoom, zoom);
+        // Scale by zoom
+        const spacing = baseSpacing * zoom;
+        const thickness = baseThickness * zoom;
 
         ctx.strokeStyle = color;
         ctx.fillStyle = color; // For dots
-        ctx.lineWidth = thickness; // Scaled by zoom
+        ctx.lineWidth = thickness;
 
-        // Calculate visible world bounds to optimize loops
-        // Screen = World * Zoom + Pan
-        // World = (Screen - Pan) / Zoom
-        const startX = (bounds.x - pan.x) / zoom;
-        const startY = (bounds.y - pan.y) / zoom;
-        const endX = (bounds.x + bounds.w - pan.x) / zoom;
-        const endY = (bounds.y + bounds.h - pan.y) / zoom;
+        const startX = bounds.x;
+        const startY = bounds.y;
+        const endX = bounds.x + bounds.w;
+        const endY = bounds.y + bounds.h;
 
         if (pattern === 'dots') {
             // Noktalı desen
@@ -229,8 +226,7 @@ class CanvasSettings {
             for (let x = firstX; x < endX; x += spacing) {
                 for (let y = firstY; y < endY; y += spacing) {
                     ctx.beginPath();
-                    // Base size 0.5 + thickness. Scaled by zoom automatically.
-                    ctx.arc(x, y, 0.5 + thickness, 0, Math.PI * 2);
+                    ctx.arc(x, y, thickness * 1.5, 0, Math.PI * 2);
                     ctx.fill();
                 }
             }
@@ -260,8 +256,6 @@ class CanvasSettings {
             }
             ctx.stroke();
         }
-
-        ctx.restore();
     }
 
     getSizeLabel() {

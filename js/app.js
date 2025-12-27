@@ -216,40 +216,49 @@ class WhiteboardApp {
 
             // Panel'i kapat
             this.canvasSettings.togglePanel();
+
             // Durum güncelle
             this.updateStatus();
         });
 
-        // Arkaplan Rengi Seçimi (Sadece data-color olanlar)
-        const bgBtnsSelector = '.color-option-small[data-color]';
-        const customBgBtnSelector = '#btnCustomBackground';
-
-        document.querySelectorAll(bgBtnsSelector).forEach(btn => {
+        // Renk seçimi
+        document.querySelectorAll('.color-option-small').forEach(btn => {
             btn.addEventListener('click', () => {
-                // Clear active from all background buttons
-                document.querySelectorAll(bgBtnsSelector).forEach(b => b.classList.remove('active'));
-                const customBtn = document.querySelector(customBgBtnSelector);
-                if (customBtn) customBtn.classList.remove('active');
-
+                document.querySelectorAll('.color-option-small').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
             });
         });
 
         // Özel Arkaplan Rengi
-        const btnCustomBg = document.querySelector(customBgBtnSelector);
+        const btnCustomBg = document.getElementById('btnCustomBackground');
         if (btnCustomBg) {
             btnCustomBg.addEventListener('click', (e) => {
+                // Prevent bubbling if needed, but here we want the active class logic to run too.
+                // However, we probably want to open the picker immediately.
+
+                // Get current color or default to white
+                // We reuse ColorPalette.showColorPicker but we need to supply a callback
+                // Note: showColorPicker might expect to set strokeColor by default if we don't pass a callback?
+                // Checking ColorPalette.js showColorPicker(initialColor, onSelectCallback) signature:
+                // It was: showColorPicker(currentColor, onSelect) { ... }
+                // So we pass current color and a callback.
+
                 const currentColor = btnCustomBg.dataset.color || '#ffffff';
 
+                // We need to position user intent - maybe show picker at mouse pos or center?
+                // ColorPalette usually shows it near the palette button or centralized.
+                // In the refactored ColorPalette, it creates a popup 'customColorPickerOverlay'.
+                // Let's rely on that behavior.
+
                 this.colorPalette.showColorPicker(currentColor, (color) => {
-                    if (color === 'rainbow') return;
+                    if (color === 'rainbow') return; // Background shouldn't be rainbow
 
                     btnCustomBg.style.backgroundColor = color;
                     btnCustomBg.dataset.color = color;
-                    btnCustomBg.innerHTML = '';
+                    btnCustomBg.innerHTML = ''; // Remove '+' symbol logic if we want to show color nicely
 
-                    // Clear active from all background buttons
-                    document.querySelectorAll(bgBtnsSelector).forEach(b => b.classList.remove('active'));
+                    // Auto-select this option (in case the generic listener didn't fire or we want to be sure)
+                    document.querySelectorAll('.color-option-small').forEach(b => b.classList.remove('active'));
                     btnCustomBg.classList.add('active');
                 });
             });
@@ -793,21 +802,41 @@ class WhiteboardApp {
 
     redrawOffscreen() {
         // Redraw offscreen cache with High-DPI support, synced to main canvas
-        // Pass current zoom/pan to ensure background pattern is transformed correctly
-        this.canvasSettings.applySettings(
-            this.offscreenCanvas,
-            this.offscreenCtx,
-            this.canvas,
-            { zoom: this.zoomManager.zoom, pan: this.zoomManager.pan }
-        );
+        // First sync dimensions
+        const dpr = window.devicePixelRatio || 1;
+        const cssWidth = this.canvas.clientWidth;
+        const cssHeight = this.canvas.clientHeight;
 
-        // Render all permanent objects to the offscreen canvas
+        this.offscreenCanvas.style.width = cssWidth + 'px';
+        this.offscreenCanvas.style.height = cssHeight + 'px';
+        this.offscreenCanvas.width = Math.floor(cssWidth * dpr);
+        this.offscreenCanvas.height = Math.floor(cssHeight * dpr);
+
+        this.offscreenCtx.setTransform(1, 0, 0, 1, 0, 0);
+        this.offscreenCtx.scale(dpr, dpr);
+
+        // Draw background color (without zoom)
+        const bgColor = this.canvasSettings.colors[this.canvasSettings.settings.backgroundColor] ||
+            this.canvasSettings.settings.backgroundColor || '#ffffff';
+        this.offscreenCtx.fillStyle = bgColor;
+        this.offscreenCtx.fillRect(0, 0, cssWidth, cssHeight);
+
+        // Apply zoom transformation
         this.offscreenCtx.save();
-
-        // Transformation (Relative to logical coordinate system)
         this.offscreenCtx.translate(this.zoomManager.pan.x, this.zoomManager.pan.y);
         this.offscreenCtx.scale(this.zoomManager.zoom, this.zoomManager.zoom);
 
+        // Draw pattern inside zoom transform (so it scales with objects)
+        // Calculate world bounds visible on screen
+        const worldBounds = {
+            x: -this.zoomManager.pan.x / this.zoomManager.zoom,
+            y: -this.zoomManager.pan.y / this.zoomManager.zoom,
+            w: cssWidth / this.zoomManager.zoom,
+            h: cssHeight / this.zoomManager.zoom
+        };
+        this.canvasSettings.drawPattern(this.offscreenCanvas, this.offscreenCtx, worldBounds, 1);
+
+        // Render all permanent objects
         this.state.objects.forEach(obj => {
             this.drawObject(this.offscreenCtx, obj);
         });
