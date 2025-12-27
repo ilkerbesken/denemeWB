@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="21.992001"
+   height="22"
+   viewBox="0 0 21.992001 22"
+   version="1.1"
+   id="svg1172"
+   xml:space="preserve"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><defs
+     id="defs820"><style
+       id="style818">
+      .icon-stroke {
+        fill: none;
+        stroke: #262626;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .icon-fill {
+        fill: #262626;
+        stroke: none;
+      }
+      .label {
+        fill: #999;
+        stroke: none;
+        font-family: Arial, sans-serif;
+        font-size: 10px;
+        text-anchor: middle;
+      }
+    </style></defs><g
+     transform="translate(-0.99404,-1.08891)"
+     id="g920"><path
+       id="path5566"
+       style="fill:none;fill-opacity:1;stroke:#262626;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:fill markers stroke"
+       transform="translate(-50.6276,-131.20443)"
+       d="m 62.62164,133.29334 c -5.5,0 -10,4.5 -10,10 0,5.5 4.5,10 10,10 0.926,0 1.648,-0.74601 1.648,-1.68801 0,-0.43699 -0.18,-0.83499 -0.437,-1.125 -0.29,-0.28899 -0.438,-0.65199 -0.438,-1.125 a 1.64,1.64 0 0 1 1.668,-1.66799 h 1.996 c 3.051,0 5.555,-2.50301 5.555,-5.554 -0.027,-4.828 -4.531,-8.84 -9.992,-8.84 z m -4.99999,10.5 a 0.5,0.5 0 0 1 -0.5,0.5 0.5,0.5 0 0 1 -0.5,-0.5 0.5,0.5 0 0 1 0.5,-0.5 0.5,0.5 0 0 1 0.5,0.5 z m 2,-5 a 0.5,0.5 0 0 1 -0.5,0.5 0.5,0.5 0 0 1 -0.5,-0.5 0.5,0.5 0 0 1 0.5,-0.5 0.5,0.5 0 0 1 0.5,0.5 z m 9,3 a 0.5,0.5 0 0 1 -0.5,0.5 0.5,0.5 0 0 1 -0.5,-0.5 0.5,0.5 0 0 1 0.5,-0.5 0.5,0.5 0 0 1 0.5,0.5 z m -4,-4 a 0.5,0.5 0 0 1 -0.5,0.5 0.5,0.5 0 0 1 -0.5,-0.5 0.5,0.5 0 0 1 0.5,-0.5 0.5,0.5 0 0 1 0.5,0.5 z" /></g></svg>
