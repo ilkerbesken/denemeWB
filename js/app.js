@@ -53,8 +53,12 @@ class WhiteboardApp {
 
             eraser: new EraserTool(),
             hand: new HandTool(this.zoomManager),
-            select: new SelectTool()
+            select: new SelectTool(),
+            sticker: null // Will be initialized after this is available
         };
+
+        // Initialize sticker tool after this is available
+        this.tools.sticker = new StickerTool(this.canvas, this.ctx, this);
 
         this.colorPalette = new ColorPalette(this);
         this.propertiesSidebar = new PropertiesSidebar(this);
@@ -148,6 +152,17 @@ class WhiteboardApp {
         // --- Context & Sidebar Sync ---
         if (this.propertiesSidebar) {
             this.propertiesSidebar.updateUIForTool(tool);
+        }
+
+        // --- Special tool activation ---
+        if (tool === 'sticker' && this.tools.sticker) {
+            this.tools.sticker.activate();
+            // Open sidebar for stickers
+            if (this.propertiesSidebar && this.propertiesSidebar.container.style.display === 'none') {
+                this.propertiesSidebar.toggle();
+            }
+        } else if (this.tools.sticker) {
+            this.tools.sticker.deactivate();
         }
 
         // --- Cursor Sync ---
@@ -512,6 +527,18 @@ class WhiteboardApp {
                     case 'ungroup':
                         selectTool.ungroupSelected(this.state);
                         break;
+                    case 'saveAsSticker':
+                        // Save selected objects as sticker
+                        if (selectTool.selectedObjects && selectTool.selectedObjects.length > 0) {
+                            const selectedObjs = selectTool.selectedObjects.map(idx => this.state.objects[idx]);
+                            if (selectedObjs.length === 1) {
+                                this.tools.sticker.createStickerFromObject(selectedObjs[0]);
+                            } else {
+                                // For multiple objects, create from selection
+                                this.tools.sticker.createStickerFromSelection();
+                            }
+                        }
+                        break;
                 }
 
                 // Menüyü kapat
@@ -755,6 +782,7 @@ class WhiteboardApp {
             'e': 'ellipse',
             'x': 'eraser',
             'v': 'select',
+            's': 'sticker',
             'c': 'settings'
         };
 
@@ -947,7 +975,8 @@ class WhiteboardApp {
             eraser: 'Silgi',
             hand: 'El',
             select: 'Seç',
-            highlighter: 'Vurgulayıcı'
+            highlighter: 'Vurgulayıcı',
+            sticker: 'Sticker'
         };
 
         document.getElementById('toolInfo').textContent =

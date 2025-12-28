@@ -603,6 +603,20 @@ class PropertiesSidebar {
             document.getElementById('eraserSettings').style.display = 'none';
         }
 
+        // Toggle Sticker Settings visibility
+        const stickerSettings = document.getElementById('stickerSettings');
+        if (stickerSettings) {
+            if (tool === 'sticker') {
+                stickerSettings.style.display = 'flex';
+                if (this.app.tools.sticker) {
+                    this.app.tools.sticker.renderStickersToSidebar();
+                }
+            } else {
+                stickerSettings.style.display = 'none';
+            }
+        }
+
+
         // Toggle Shape Settings visibility
         const shapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
         const shapeSettings = document.getElementById('shapeSettings');

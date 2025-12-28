@@ -1226,3 +1226,261 @@ input[type="range"] {
         /* Above status bar and other elements */
     }
 }
+
+/* Sticker Popup Styles */
+.sticker-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+    padding: 12px;
+    width: 85%;
+    max-width: 300px;
+    max-height: 50vh;
+    z-index: 1001;
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sticker-popup.active {
+    display: flex;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.sticker-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.sticker-popup-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+}
+
+.close-btn {
+    background: transparent;
+    border: none;
+    font-size: 28px;
+    color: #999;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+    line-height: 1;
+    padding: 0;
+}
+
+.close-btn:hover {
+    background: #f5f5f5;
+    color: #333;
+}
+
+.sticker-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+    gap: 4px;
+    overflow-y: auto;
+    max-height: 50vh;
+    padding: 4px;
+}
+
+.sticker-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sticker-grid::-webkit-scrollbar-track {
+    background: #f5f5f5;
+    border-radius: 4px;
+}
+
+.sticker-grid::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 4px;
+}
+
+.sticker-grid::-webkit-scrollbar-thumb:hover {
+    background: #ccc;
+}
+
+.sticker-item {
+    position: relative;
+    background: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.sticker-item:hover {
+    border-color: #2196f3;
+    background: #f5f9ff;
+    transform: scale(1.05);
+}
+
+.sticker-item canvas {
+    max-width: 100%;
+    max-height: 100%;
+    pointer-events: none;
+}
+
+.sticker-delete-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #e0e0e0;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+    color: #666;
+    opacity: 0;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.sticker-item:hover .sticker-delete-btn {
+    opacity: 1;
+}
+
+.sticker-delete-btn:hover {
+    background: #ff4444;
+    color: white;
+    border-color: #ff4444;
+}
+
+.no-stickers {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #999;
+    font-size: 11px;
+    padding: 20px 10px;
+    line-height: 1.5;
+}
+
+.add-sticker-btn {
+    width: 100%;
+    padding: 12px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+/* Sticker Message Notification */
+.sticker-message {
+    position: fixed;
+    top: 60px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: rgba(33, 150, 243, 0.95);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1002;
+    opacity: 0;
+    transition: all 0.3s ease-out;
+    pointer-events: none;
+}
+
+.sticker-message.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+.sticker-sidebar-list {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    width: 100%;
+    overflow-x: auto;
+    padding: 4px 2px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.sticker-sidebar-list::-webkit-scrollbar {
+    display: none;
+}
+
+.sticker-sidebar-item {
+    flex: 0 0 24px;
+    height: 24px;
+    background: white;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.1);
+    padding: 1px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+}
+
+.sticker-sidebar-item:hover {
+    border-color: #2196f3;
+    background: #f5f9ff;
+    transform: scale(1.1);
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
+}
+
+.sticker-sidebar-item canvas {
+    max-width: 100%;
+    max-height: 100%;
+    pointer-events: none;
+}
+
+.no-stickers-sidebar {
+    color: #bbb;
+    font-size: 11px;
+    white-space: nowrap;
+    padding: 8px 0;
+}
+
+
+/* Responsive adjustments for sticker popup */
+@media (max-width: 768px) {
+    .sticker-popup {
+        width: 90%;
+        max-width: 280px;
+        padding: 10px;
+    }
+
+    .sticker-grid {
+        grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+        gap: 4px;
+    }
+
+    .sticker-popup-header h3 {
+        font-size: 14px;
+    }
+}
