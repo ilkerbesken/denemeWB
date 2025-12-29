@@ -259,14 +259,14 @@
                 style="display: none; align-items: center; gap: 8px; flex-wrap: nowrap;">
                 <!-- Mod Grubu -->
                 <div class="mode-options" style="display: flex; gap: 4px;">
-                    <button class="tool-btn active" data-tape-mode="freehand" title="Serbest Bant">
-                        <img src="assets/icons/pen.svg" alt="freehand" class="icon">
+                    <button class="tool-btn active" data-tape-mode="line" title="Düz Bant Çizgisi">
+                        <img src="assets/icons/tape-line.svg" alt="line" class="icon">
                     </button>
-                    <button class="tool-btn" data-tape-mode="line" title="Düz Bant Çizgisi">
-                        <img src="assets/icons/arrow.svg" alt="line" class="icon">
+                    <button class="tool-btn" data-tape-mode="freehand" title="Serbest Bant">
+                        <img src="assets/icons/tape-freehand.svg" alt="freehand" class="icon">
                     </button>
                     <button class="tool-btn" data-tape-mode="rectangle" title="Dikdörtgen Bant">
-                        <img src="assets/icons/rectangle.svg" alt="rectangle" class="icon">
+                        <img src="assets/icons/tape-rectangle.svg" alt="rectangle" class="icon">
                     </button>
                 </div>
 
@@ -274,7 +274,7 @@
 
                 <!-- Desen Grubu -->
                 <div class="pattern-options" style="display: flex; gap: 4px; align-items: center;">
-                    <button class="pattern-btn active" data-tape-pattern="solid" title="Düz Renk">
+                    <button class="pattern-btn" data-tape-pattern="solid" title="Düz Renk">
                         <div class="icon color-sync"
                             style="width: 18px; height: 18px; border: 1px solid rgba(0,0,0,0.1); border-radius: 3px;">
                         </div>
@@ -289,7 +289,7 @@
                             style="-webkit-mask-image: url('assets/icons/pattern-grid.svg'); mask-image: url('assets/icons/pattern-grid.svg');">
                         </div>
                     </button>
-                    <button class="pattern-btn" data-tape-pattern="stripes" title="Çizgili">
+                    <button class="pattern-btn active" data-tape-pattern="stripes" title="Çizgili">
                         <div class="icon color-sync"
                             style="-webkit-mask-image: url('assets/icons/pattern-lines.svg'); mask-image: url('assets/icons/pattern-lines.svg');">
                         </div>
@@ -463,6 +463,13 @@
                 </span>
                 <span>Çoğalt</span>
                 <span class="menu-shortcut">Ctrl+D</span>
+            </div>
+            <div class="context-menu-item" data-action="lock">
+                <span class="menu-icon">
+                    <img src="assets/icons/lock.svg" alt="lock" class="icon">
+                </span>
+                <span id="txtLock">Kilitle</span>
+                <span class="menu-shortcut">Ctrl+L</span>
             </div>
             <div class="context-menu-item" data-action="delete">
                 <span class="menu-icon">

@@ -16,8 +16,8 @@ class TapeTool {
         // Default settings
         this.settings = {
             thickness: 20,
-            mode: 'freehand', // 'freehand', 'line', 'rectangle'
-            pattern: 'solid', // 'solid', 'dots', 'grid', 'stripes', 'custom'
+            mode: 'line', // 'freehand', 'line', 'rectangle'
+            pattern: 'stripes', // 'solid', 'dots', 'grid', 'stripes', 'custom'
             customImage: null,
             customMask: null
         };
@@ -378,99 +378,4 @@ class TapeTool {
         this.draw(ctx, obj);
     }
 
-    /**
-     * Context Menu for Tape Tool
-     */
-    handleContextMenu(e, obj, index) {
-        e.preventDefault();
-        const menu = document.getElementById('contextMenu');
-        if (!menu) return;
-
-        // Hide all select items, show only tape specific if we want, 
-        // OR just use existing ones but we need a simplified menu maybe.
-        // For simplicity, let's just trigger a custom event or show the menu with selected items.
-
-        // Let's create a custom context menu for tape if it doesn't exist
-        let tapeMenu = document.getElementById('tapeContextMenu');
-        if (!tapeMenu) {
-            tapeMenu = document.createElement('div');
-            tapeMenu.id = 'tapeContextMenu';
-            tapeMenu.className = 'context-menu';
-            tapeMenu.innerHTML = `
-                <div class="context-menu-item" id="ctxTapeDuplicate">
-                    <span class="menu-icon"><img src="assets/icons/select.svg" class="icon"></span>
-                    <span>Çoğalt</span>
-                </div>
-                <div class="context-menu-item" id="ctxTapeDelete">
-                    <span class="menu-icon"><img src="assets/icons/eraser.svg" class="icon"></span>
-                    <span>Sil</span>
-                </div>
-            `;
-            document.body.appendChild(tapeMenu);
-
-            // Event listeners for tape menu
-            tapeMenu.addEventListener('click', (ev) => {
-                const target = ev.target.closest('.context-menu-item');
-                if (!target) return;
-
-                const action = target.id;
-                if (this.currentTarget) {
-                    if (action === 'ctxTapeDelete') {
-                        this.deleteTape(this.currentTargetIndex);
-                    } else if (action === 'ctxTapeDuplicate') {
-                        this.duplicateTape(this.currentTarget);
-                    }
-                }
-                tapeMenu.classList.remove('show');
-            });
-
-            // Close menu on click outside
-            document.addEventListener('click', (ev) => {
-                if (!tapeMenu.contains(ev.target)) {
-                    tapeMenu.classList.remove('show');
-                }
-            });
-        }
-
-        this.currentTarget = obj;
-        this.currentTargetIndex = index;
-
-        tapeMenu.style.left = e.clientX + 'px';
-        tapeMenu.style.top = e.clientY + 'px';
-        tapeMenu.classList.add('show');
-    }
-
-    deleteTape(index) {
-        if (typeof index !== 'number') return;
-        // We need access to the app's state. objects
-        // In this architecture, it's better if app handles this, but we can do it via a hack or by passing app reference.
-        // TapeTool doesn't have app ref, but renderCallback usually belongs to app.
-        // Let's assume window.app is available or find a way.
-        if (window.app) {
-            window.app.history.saveState(window.app.state.objects);
-            window.app.state.objects.splice(index, 1);
-            window.app.redrawOffscreen();
-            window.app.render();
-        }
-    }
-
-    duplicateTape(obj) {
-        if (!obj) return;
-        const copy = JSON.parse(JSON.stringify(obj));
-        copy.id = 'tape_' + Date.now() + Math.random();
-
-        // Offset
-        if (copy.mode === 'rectangle') {
-            copy.x += 20; copy.y += 20;
-        } else {
-            copy.points.forEach(p => { p.x += 20; p.y += 20; });
-        }
-
-        if (window.app) {
-            window.app.history.saveState(window.app.state.objects);
-            window.app.state.objects.push(copy);
-            window.app.redrawOffscreen();
-            window.app.render();
-        }
-    }
 }

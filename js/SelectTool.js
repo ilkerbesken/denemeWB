@@ -75,7 +75,10 @@ class SelectTool {
                     }
                 }
 
-                const handle = this.getHandleAtPoint(clickPoint, unrotatedBounds, selectedObj);
+                let handle = null;
+                if (!selectedObj.isLocked) {
+                    handle = this.getHandleAtPoint(clickPoint, unrotatedBounds, selectedObj);
+                }
 
                 if (handle) {
                     // Handle yakalandı
@@ -141,11 +144,23 @@ class SelectTool {
 
         // Seçili nesne üzerinde değiliz
         if (clickedIndex !== -1) {
-            // Yeni bir nesneye tıkladık -> Seç ve sürüklemeyi başlat
-            this.selectedObjects = [clickedIndex];
-            this.isDragging = true;
-            this.dragStartPoint = clickPoint;
-            this.dragCurrentPoint = clickPoint;
+            // Tape objects are special: they are selected via marquee ONLY (requested by user)
+            // unless already selected.
+            const obj = state.objects[clickedIndex];
+            if (obj.type === 'tape') {
+                // If it's a tape and not already selected, we don't select it on single click
+                // This allows falling through to marquee selection start if it's a drag
+                this.selectedObjects = [];
+                this.isDragSelecting = true;
+                this.dragSelectStart = clickPoint;
+                this.dragCurrentPoint = clickPoint;
+            } else {
+                // Yeni bir nesneye tıkladık -> Seç ve sürüklemeyi başlat
+                this.selectedObjects = [clickedIndex];
+                this.isDragging = true;
+                this.dragStartPoint = clickPoint;
+                this.dragCurrentPoint = clickPoint;
+            }
         } else {
             // Boş alana tıkladık -> Drag Select Başlat
             this.selectedObjects = []; // Mevcut seçimi temizle
@@ -337,6 +352,8 @@ class SelectTool {
     }
 
     moveObject(obj, deltaX, deltaY) {
+        if (obj.isLocked) return;
+
         if (obj.type === 'group') {
             obj.children.forEach(child => this.moveObject(child, deltaX, deltaY));
             return;
@@ -379,6 +396,8 @@ class SelectTool {
             case 'oval':
             case 'heart':
             case 'cloud':
+            case 'sticker':
+            case 'tape':
                 // Support both start/end (OLD) and x/y (NEW) formats
                 if (obj.x !== undefined) {
                     obj.x += deltaX;
@@ -395,6 +414,12 @@ class SelectTool {
                 if (obj.center) {
                     obj.center.x += deltaX;
                     obj.center.y += deltaY;
+                }
+                if (obj.points) {
+                    obj.points.forEach(p => {
+                        p.x += deltaX;
+                        p.y += deltaY;
+                    });
                 }
                 break;
         }
@@ -464,6 +489,13 @@ class SelectTool {
                 }
                 return false;
 
+            case 'tape':
+                const tTool = (window.app && window.app.tools) ? window.app.tools.tape : null;
+                if (tTool && tTool.isPointInside) {
+                    return tTool.isPointInside(obj, point);
+                }
+                return false;
+
             default:
                 return false;
         }
@@ -496,13 +528,20 @@ class SelectTool {
             });
             // Children bounds already include their padding
             return { minX, minY, maxX, maxY };
-        } else if (obj.type === 'pen' || obj.type === 'highlighter') {
-            obj.points.forEach(p => {
-                minX = Math.min(minX, p.x);
-                minY = Math.min(minY, p.y);
-                maxX = Math.max(maxX, p.x);
-                maxY = Math.max(maxY, p.y);
-            });
+        } else if (obj.type === 'pen' || obj.type === 'highlighter' || obj.type === 'tape') {
+            if (obj.mode === 'rectangle') {
+                minX = obj.x;
+                minY = obj.y;
+                maxX = obj.x + obj.width;
+                maxY = obj.y + obj.height;
+            } else {
+                obj.points.forEach(p => {
+                    minX = Math.min(minX, p.x);
+                    minY = Math.min(minY, p.y);
+                    maxX = Math.max(maxX, p.x);
+                    maxY = Math.max(maxY, p.y);
+                });
+            }
         } else if (obj.type === 'line' || obj.type === 'arrow') {
             minX = Math.min(obj.start.x, obj.end.x);
             minY = Math.min(obj.start.y, obj.end.y);
@@ -893,8 +932,9 @@ class SelectTool {
         const deletedObjects = [];
 
         indices.forEach(index => {
-            if (state.objects[index]) {
-                deletedObjects.push(state.objects[index]);
+            const obj = state.objects[index];
+            if (obj && !obj.isLocked) {
+                deletedObjects.push(obj);
                 state.objects.splice(index, 1);
             }
         });
@@ -919,12 +959,46 @@ class SelectTool {
         });
 
         if (copies.length > 0) {
+            // Separate tapes from other objects
+            const tapes = copies.filter(obj => obj.type === 'tape');
+            const others = copies.filter(obj => obj.type !== 'tape');
+
             // Yeni selection indices
             const newSelection = [];
-            copies.forEach(copy => {
+
+            // Add non-tape objects first (insert before existing tapes)
+            const firstTapeIndex = state.objects.findIndex(obj => obj.type === 'tape');
+
+            others.forEach(copy => {
+                if (firstTapeIndex !== -1) {
+                    // Insert at firstTapeIndex (and increment it as we insert)
+                    // But easier: splice at firstTapeIndex
+                    // NOTE: This shifts indices, so we need to be careful with newSelection
+                    // But we can just push to array? No, splice modifies in place.
+
+                    // Actually, let's find the current index of the FIRST tape dynamically or just
+                    // find it once. Since we are adding multiple, better to splice them all at once if possible 
+                    // or one by one. But splicing one by one changes the index of the first tape if we insert BEFORE it.
+                    // Wait, if we insert BEFORE, the index of the first tape INCREASES. 
+
+                    // Simpler approach:
+                    const currentFirstTapeIndex = state.objects.findIndex(obj => obj.type === 'tape');
+                    const insertIndex = currentFirstTapeIndex !== -1 ? currentFirstTapeIndex : state.objects.length;
+
+                    state.objects.splice(insertIndex, 0, copy);
+                    newSelection.push(insertIndex);
+                } else {
+                    state.objects.push(copy);
+                    newSelection.push(state.objects.length - 1);
+                }
+            });
+
+            // Add tape objects at the end (top layer)
+            tapes.forEach(copy => {
                 state.objects.push(copy);
                 newSelection.push(state.objects.length - 1);
             });
+
             this.selectedObjects = newSelection;
             // Return array instead of single object if multiple? Or last one?
             // App.js usually pushes single object to history but handling array might need app.js change?
@@ -957,6 +1031,21 @@ class SelectTool {
             return copies;
         }
         return null;
+    }
+
+    toggleLockSelected(state) {
+        if (this.selectedObjects.length === 0) return;
+
+        // Check if all selected are locked, if so unlock, else lock all
+        const allLocked = this.selectedObjects.every(index => state.objects[index].isLocked);
+        const newState = !allLocked;
+
+        this.selectedObjects.forEach(index => {
+            const obj = state.objects[index];
+            if (obj) {
+                obj.isLocked = newState;
+            }
+        });
     }
 
     bringToFront(state) {
@@ -1091,6 +1180,64 @@ class SelectTool {
         } else {
             menu.style.right = 'auto';
             menu.style.left = e.clientX + 'px';
+        }
+
+        // Update Lock Text
+        // Update Lock Text and Icon
+        const lockItem = menu.querySelector('[data-action="lock"]');
+        if (lockItem) {
+            const txtLock = lockItem.querySelector('span:nth-child(2)'); // or id txtLock
+            const iconImg = lockItem.querySelector('img');
+
+            const allLocked = this.selectedObjects.every(index => state.objects[index] && state.objects[index].isLocked);
+
+            if (txtLock) txtLock.textContent = allLocked ? 'Kilidi Aç' : 'Kilitle';
+            if (iconImg) iconImg.src = allLocked ? 'assets/icons/unlock.svg' : 'assets/icons/lock.svg';
+        }
+
+        // Check if any selected object is a tape
+        const hasTape = this.selectedObjects.some(index => {
+            const obj = state.objects[index];
+            return obj && obj.type === 'tape';
+        });
+
+        // If tape is selected, hide all options except basic ones
+        if (hasTape) {
+            // Hide flip options
+            const flipItems = menu.querySelectorAll('[data-action="flipHorizontal"], [data-action="flipVertical"]');
+            flipItems.forEach(item => item.style.display = 'none');
+
+            // Hide layering options
+            const layerItems = menu.querySelectorAll('[data-action="bringToFront"], [data-action="bringForward"], [data-action="sendBackward"], [data-action="sendToBack"]');
+            layerItems.forEach(item => item.style.display = 'none');
+
+            // Hide grouping options
+            const groupItems = menu.querySelectorAll('[data-action="group"], [data-action="ungroup"]');
+            groupItems.forEach(item => item.style.display = 'none');
+
+            // Hide save as sticker
+            const stickerItem = menu.querySelector('[data-action="saveAsSticker"]');
+            if (stickerItem) stickerItem.style.display = 'none';
+
+            // Hide separators that would be orphaned
+            const separators = menu.querySelectorAll('.context-menu-separator');
+            separators.forEach(sep => sep.style.display = 'none');
+        } else {
+            // Show all options for non-tape objects
+            const flipItems = menu.querySelectorAll('[data-action="flipHorizontal"], [data-action="flipVertical"]');
+            flipItems.forEach(item => item.style.display = 'flex');
+
+            const layerItems = menu.querySelectorAll('[data-action="bringToFront"], [data-action="bringForward"], [data-action="sendBackward"], [data-action="sendToBack"]');
+            layerItems.forEach(item => item.style.display = 'flex');
+
+            const groupItems = menu.querySelectorAll('[data-action="group"], [data-action="ungroup"]');
+            groupItems.forEach(item => item.style.display = 'flex');
+
+            const stickerItem = menu.querySelector('[data-action="saveAsSticker"]');
+            if (stickerItem) stickerItem.style.display = 'flex';
+
+            const separators = menu.querySelectorAll('.context-menu-separator');
+            separators.forEach(sep => sep.style.display = 'block');
         }
 
         // Show/Hide "Change Border Color" only for shapes

@@ -736,6 +736,25 @@ class PropertiesSidebar {
             });
             const thicknessVal = document.getElementById('strokeWidthVal');
             if (thicknessVal) thicknessVal.textContent = '20px';
+
+            // Set specific defaults requested by user: Line mode, Stripes pattern, #5c9bfe color
+            if (this.app.tools.tape) {
+                this.app.tools.tape.updateSettings({
+                    mode: 'line',
+                    pattern: 'stripes'
+                });
+            }
+            this.app.state.strokeColor = '#5c9bfe';
+
+            // Sync UI active states for tape
+            document.querySelectorAll('.tool-btn[data-tape-mode]').forEach(b =>
+                b.classList.toggle('active', b.dataset.tapeMode === 'line')
+            );
+            document.querySelectorAll('.pattern-btn[data-tape-pattern]').forEach(b =>
+                b.classList.toggle('active', b.dataset.tapePattern === 'stripes')
+            );
+
+            if (this.app.colorPalette) this.app.colorPalette.renderColors();
         }
         // We removed the forced reset to 1.0 for pen/shapes to allow persistent user choice.
 

@@ -384,16 +384,6 @@ class WhiteboardApp {
 
             if (this.state.currentTool === 'select') {
                 this.tools.select.handleContextMenu(e, this.canvas, this.state);
-            } else {
-                // Bantlar için global sağ tık kontrolü
-                const worldPos = this.zoomManager.getPointerWorldPos(e);
-                for (let i = this.state.objects.length - 1; i >= 0; i--) {
-                    const obj = this.state.objects[i];
-                    if (obj.type === 'tape' && this.tools.tape.isPointInside(obj, worldPos)) {
-                        this.tools.tape.handleContextMenu(e, obj, i);
-                        break;
-                    }
-                }
             }
         });
 
@@ -489,14 +479,41 @@ class WhiteboardApp {
                         result = selectTool.paste(this.state);
                         if (result) {
                             if (Array.isArray(result)) {
-                                this.state.objects.push(...result);
+                                // Separate tapes from other objects
+                                const tapes = result.filter(obj => obj.type === 'tape');
+                                const others = result.filter(obj => obj.type !== 'tape');
+
+                                // Insert non-tape objects before existing tapes
+                                const firstTapeIndex = this.state.objects.findIndex(obj => obj.type === 'tape');
+                                if (firstTapeIndex !== -1 && others.length > 0) {
+                                    this.state.objects.splice(firstTapeIndex, 0, ...others);
+                                } else {
+                                    this.state.objects.push(...others);
+                                }
+
+                                // Add new tapes at the end (top layer)
+                                this.state.objects.push(...tapes);
                             } else {
-                                this.state.objects.push(result);
+                                // Single object
+                                if (result.type === 'tape') {
+                                    this.state.objects.push(result);
+                                } else {
+                                    // Insert non-tape object before existing tapes
+                                    const firstTapeIndex = this.state.objects.findIndex(obj => obj.type === 'tape');
+                                    if (firstTapeIndex !== -1) {
+                                        this.state.objects.splice(firstTapeIndex, 0, result);
+                                    } else {
+                                        this.state.objects.push(result);
+                                    }
+                                }
                             }
                         }
                         break;
                     case 'delete':
                         result = selectTool.deleteSelected(this.state);
+                        break;
+                    case 'lock':
+                        selectTool.toggleLockSelected(this.state);
                         break;
                     case 'applyColor':
                         selectTool.updateSelectedObjectsStyle(this.state, {
@@ -652,14 +669,18 @@ class WhiteboardApp {
             }
         }
 
-        // --- Global Tape Interaction (Visibility Toggle & Context Menu) ---
+        // --- Global Tape Interaction (Visibility Toggle) ---
         for (let i = this.state.objects.length - 1; i >= 0; i--) {
             const obj = this.state.objects[i];
             if (obj.type === 'tape') {
                 if (this.tools.tape.isPointInside(obj, worldPos)) {
-                    // Sağ tık menüsü artık 'contextmenu' event listener'ında yönetiliyor.
-                    // Burada sadece sol tık ile görünürlük değiştirme işlemini yapıyoruz.
                     if (e.button === 2) return;
+
+                    // Eğer tape seçili DEĞİLSE görünürlüğü değiştir.
+                    // Eğer seçiliyse harekete izin vermek için burayı geçiyoruz.
+                    if (this.state.currentTool === 'select' && this.tools.select.selectedObjects.includes(i)) {
+                        continue;
+                    }
 
                     // Left click to toggle visibility
                     this.tools.tape.toggleVisibility(obj);
@@ -761,10 +782,21 @@ class WhiteboardApp {
             }
 
             // 3. ADD THE FINAL OBJECT TO REAL STATE
-            if (completedObject.isHighlighter) {
+            // Tapes always stay on top - insert non-tapes before tapes
+            if (completedObject.type === 'tape') {
+                // Tapes go to the end (top layer)
+                this.state.objects.push(completedObject);
+            } else if (completedObject.isHighlighter) {
+                // Highlighters go to the beginning (bottom layer)
                 this.state.objects.unshift(completedObject);
             } else {
-                this.state.objects.push(completedObject);
+                // Other objects: insert before the first tape
+                const firstTapeIndex = this.state.objects.findIndex(obj => obj.type === 'tape');
+                if (firstTapeIndex !== -1) {
+                    this.state.objects.splice(firstTapeIndex, 0, completedObject);
+                } else {
+                    this.state.objects.push(completedObject);
+                }
             }
 
             this.redrawOffscreen();
@@ -807,9 +839,33 @@ class WhiteboardApp {
                 if (pastedResult) {
                     this.history.saveState(this.state.objects);
                     if (Array.isArray(pastedResult)) {
-                        this.state.objects.push(...pastedResult);
+                        // Separate tapes from other objects
+                        const tapes = pastedResult.filter(obj => obj.type === 'tape');
+                        const others = pastedResult.filter(obj => obj.type !== 'tape');
+
+                        // Insert non-tape objects before existing tapes
+                        const firstTapeIndex = this.state.objects.findIndex(obj => obj.type === 'tape');
+                        if (firstTapeIndex !== -1 && others.length > 0) {
+                            this.state.objects.splice(firstTapeIndex, 0, ...others);
+                        } else {
+                            this.state.objects.push(...others);
+                        }
+
+                        // Add new tapes at the end (top layer)
+                        this.state.objects.push(...tapes);
                     } else {
-                        this.state.objects.push(pastedResult);
+                        // Single object
+                        if (pastedResult.type === 'tape') {
+                            this.state.objects.push(pastedResult);
+                        } else {
+                            // Insert non-tape object before existing tapes
+                            const firstTapeIndex = this.state.objects.findIndex(obj => obj.type === 'tape');
+                            if (firstTapeIndex !== -1) {
+                                this.state.objects.splice(firstTapeIndex, 0, pastedResult);
+                            } else {
+                                this.state.objects.push(pastedResult);
+                            }
+                        }
                     }
                     this.redrawOffscreen();
                     this.render();
@@ -847,6 +903,15 @@ class WhiteboardApp {
                 selectTool.deleteSelected(this.state);
                 this.redrawOffscreen();
                 this.render();
+                return;
+            }
+
+            // Ctrl+L - Kilitle/Kilidi Aç
+            if (e.ctrlKey && e.key === 'l') {
+                e.preventDefault();
+                this.history.saveState(this.state.objects);
+                selectTool.toggleLockSelected(this.state);
+                this.render(); // Redraw handles
                 return;
             }
         }
