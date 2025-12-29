@@ -115,6 +115,11 @@ class ColorPalette {
             // History kaydet
             this.app.history.saveState(this.app.state.objects);
         }
+
+        // Properties Sidebar'ı güncelle (Bant desen ikon renkleri vb. için)
+        if (this.app.propertiesSidebar) {
+            this.app.propertiesSidebar.updateUIForTool(this.app.state.currentTool);
+        }
     }
 
     addColor() {

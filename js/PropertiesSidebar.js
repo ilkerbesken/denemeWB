@@ -1,6 +1,8 @@
 class PropertiesSidebar {
     constructor(app) {
         this.app = app;
+        this.customTapePatterns = []; // List of custom masks/images for tape
+        this.loadCustomTapePatterns(); // Load from localStorage
         this.init();
     }
 
@@ -228,23 +230,7 @@ class PropertiesSidebar {
         const btnColorToggle = document.getElementById('btnColorToggle');
         const colorSidebar = document.getElementById('colorSidebar');
 
-        const closeAllPopups = () => {
-            if (popupStart) popupStart.style.display = 'none';
-            if (popupEnd) popupEnd.style.display = 'none';
-            if (btnStartTrigger) btnStartTrigger.classList.remove('active');
-            if (btnEndTrigger) btnEndTrigger.classList.remove('active');
-
-            if (popupBrushSettings) popupBrushSettings.style.display = 'none';
-            if (btnBrushSettingsTrigger) btnBrushSettingsTrigger.classList.remove('active');
-
-            // Close mobile popups
-            ['Thickness', 'Opacity', 'Stabilization', 'Decimation'].forEach(name => {
-                const popup = document.getElementById(`popup${name}`);
-                const btn = document.getElementById(`btn${name}Trigger`);
-                if (popup) popup.classList.remove('show');
-                if (btn) btn.classList.remove('active');
-            });
-        };
+        const closeAllPopups = () => this.closeAllPopups();
 
         // Close popups when clicking outside
         document.addEventListener('click', (e) => {
@@ -380,12 +366,247 @@ class PropertiesSidebar {
             });
         }
 
+        // Tape Tool Mode Settings
+        document.querySelectorAll('.tool-btn[data-tape-mode]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.tapeMode;
+                if (this.app.tools.tape) {
+                    this.app.tools.tape.updateSettings({ mode: mode });
+                }
+                document.querySelectorAll('.tool-btn[data-tape-mode]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // Tape Tool Pattern Settings
+        document.querySelectorAll('.pattern-btn[data-tape-pattern]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const pattern = btn.dataset.tapePattern;
+                if (this.app.tools.tape) {
+                    this.app.tools.tape.updateSettings({ pattern: pattern });
+                }
+                document.querySelectorAll('.pattern-btn[data-tape-pattern]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
+        // Tape Image Upload
+        const tapeImageInput = document.getElementById('tapeImageInput');
+        const btnTapeImageUpload = document.getElementById('btnTapeImageUpload');
+        if (btnTapeImageUpload && tapeImageInput) {
+            btnTapeImageUpload.addEventListener('click', () => {
+                tapeImageInput.click();
+            });
+
+            tapeImageInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            if (this.app.tools.tape) {
+                                this.app.tools.tape.updateSettings({ pattern: 'custom', customImage: img });
+
+                                // Save to custom patterns list
+                                this.addCustomTapePattern(img, 'custom');
+                            }
+                            // UI Update: highlight upload btn
+                            document.querySelectorAll('.pattern-btn[data-tape-pattern]').forEach(b => b.classList.remove('active'));
+                            btnTapeImageUpload.classList.add('active');
+                        };
+                        img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Tape Pick Shape
+        const btnTapePickShape = document.getElementById('btnTapePickShape');
+        if (btnTapePickShape) {
+            btnTapePickShape.addEventListener('click', () => {
+                // Enter pick shape mode
+                this.app.state.pickShapeMode = !this.app.state.pickShapeMode;
+                btnTapePickShape.classList.toggle('active', this.app.state.pickShapeMode);
+                if (this.app.state.pickShapeMode) {
+                    this.app.canvas.style.cursor = 'crosshair';
+                } else {
+                    this.app.canvas.style.cursor = (this.app.state.currentTool === 'tape') ? 'crosshair' : 'default';
+                }
+            });
+        }
+
+        // Custom Patterns Popup Toggle
+        const btnTapeCustomPatterns = document.getElementById('btnTapeCustomPatterns');
+        const popupTapeCustomPatterns = document.getElementById('popupTapeCustomPatterns');
+        if (btnTapeCustomPatterns && popupTapeCustomPatterns) {
+            btnTapeCustomPatterns.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isVisible = popupTapeCustomPatterns.classList.contains('show');
+                closeAllPopups();
+                if (!isVisible) {
+                    popupTapeCustomPatterns.classList.add('show');
+                    this.positionPopup(btnTapeCustomPatterns, popupTapeCustomPatterns);
+                    this.renderCustomTapePatterns();
+                } else {
+                    popupTapeCustomPatterns.classList.remove('show');
+                }
+            });
+        }
+
         // Close popups on sidebar scroll
         if (this.container) {
             this.container.addEventListener('scroll', () => {
                 closeAllPopups();
             }, { passive: true });
         }
+    }
+
+    addCustomTapePattern(canvas, type = 'mask') {
+        // Create a thumbnail/copy of the canvas to store
+        const patternCanvas = document.createElement('canvas');
+        patternCanvas.width = canvas.width;
+        patternCanvas.height = canvas.height;
+        const pCtx = patternCanvas.getContext('2d');
+        pCtx.drawImage(canvas, 0, 0);
+
+        this.customTapePatterns.push({
+            id: Date.now(),
+            canvas: patternCanvas,
+            type: type
+        });
+
+        // Show feedback (optional)
+        const btn = document.getElementById('btnTapeCustomPatterns');
+        if (btn) {
+            btn.style.background = '#e3f2fd';
+            setTimeout(() => btn.style.background = '', 500);
+        }
+
+        this.saveCustomTapePatterns();
+    }
+
+    saveCustomTapePatterns() {
+        const patternsToSave = this.customTapePatterns.map(p => ({
+            id: p.id,
+            type: p.type,
+            dataUrl: p.canvas.toDataURL()
+        }));
+        localStorage.setItem('whiteboard_custom_tapes', JSON.stringify(patternsToSave));
+    }
+
+    loadCustomTapePatterns() {
+        try {
+            const saved = localStorage.getItem('whiteboard_custom_tapes');
+            if (saved) {
+                const patterns = JSON.parse(saved);
+                this.customTapePatterns = patterns.map(p => {
+                    const canvas = document.createElement('canvas');
+                    const img = new Image();
+                    img.onload = () => {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+                    };
+                    img.src = p.dataUrl;
+                    return {
+                        id: p.id,
+                        type: p.type,
+                        canvas: canvas
+                    };
+                });
+            }
+        } catch (e) {
+            console.error('Error loading custom tape patterns:', e);
+            this.customTapePatterns = [];
+        }
+    }
+
+    renderCustomTapePatterns() {
+        const list = document.getElementById('tapeCustomPatternsList');
+        if (!list) return;
+
+        if (this.customTapePatterns.length === 0) {
+            list.innerHTML = '<div style="padding: 10px; color: #999; font-size: 11px; text-align: center; width: 100%;">Henüz desen eklenmedi</div>';
+            return;
+        }
+
+        list.innerHTML = '';
+        this.customTapePatterns.forEach(pattern => {
+            const item = document.createElement('div');
+            item.className = 'tape-pattern-item';
+
+            // Create a preview canvas
+            const preview = document.createElement('canvas');
+            preview.width = 40;
+            preview.height = 40;
+            const ctx = preview.getContext('2d');
+            ctx.drawImage(pattern.canvas, 0, 0, 40, 40);
+
+            item.appendChild(preview);
+
+            // Delete button
+            const delBtn = document.createElement('button');
+            delBtn.className = 'delete-btn';
+            delBtn.innerHTML = '×';
+            delBtn.title = 'Sil';
+            delBtn.onclick = (e) => {
+                e.stopPropagation();
+                this.deleteCustomPattern(pattern.id);
+            };
+            item.appendChild(delBtn);
+
+            item.onclick = () => {
+                if (this.app.tools.tape) {
+                    if (pattern.type === 'mask') {
+                        this.app.tools.tape.updateSettings({ pattern: 'mask', customMask: pattern.canvas });
+                    } else if (pattern.type === 'custom') {
+                        this.app.tools.tape.updateSettings({ pattern: 'custom', customImage: pattern.canvas });
+                    }
+                }
+                // Update UI: Deactivate built-in patterns
+                document.querySelectorAll('.pattern-btn[data-tape-pattern]').forEach(b => b.classList.remove('active'));
+                this.closeAllPopups();
+            };
+
+            list.appendChild(item);
+        });
+    }
+
+    deleteCustomPattern(id) {
+        this.customTapePatterns = this.customTapePatterns.filter(p => p.id !== id);
+        this.saveCustomTapePatterns();
+        this.renderCustomTapePatterns();
+    }
+
+    closeAllPopups() {
+        const popupStart = document.getElementById('popupArrowStart');
+        const popupEnd = document.getElementById('popupArrowEnd');
+        const btnStartTrigger = document.getElementById('btnArrowStartTrigger');
+        const btnEndTrigger = document.getElementById('btnArrowEndTrigger');
+        const popupBrushSettings = document.getElementById('popupBrushSettings');
+        const btnBrushSettingsTrigger = document.getElementById('btnBrushSettingsTrigger');
+        const popupTapeCustomPatterns = document.getElementById('popupTapeCustomPatterns');
+
+        if (popupStart) popupStart.style.display = 'none';
+        if (popupEnd) popupEnd.style.display = 'none';
+        if (btnStartTrigger) btnStartTrigger.classList.remove('active');
+        if (btnEndTrigger) btnEndTrigger.classList.remove('active');
+
+        if (popupBrushSettings) popupBrushSettings.style.display = 'none';
+        if (btnBrushSettingsTrigger) btnBrushSettingsTrigger.classList.remove('active');
+
+        if (popupTapeCustomPatterns) popupTapeCustomPatterns.classList.remove('show');
+
+        // Close mobile popups
+        ['Thickness', 'Opacity', 'Stabilization', 'Decimation'].forEach(name => {
+            const popup = document.getElementById(`popup${name}`);
+            const btn = document.getElementById(`btn${name}Trigger`);
+            if (popup) popup.classList.remove('show');
+            if (btn) btn.classList.remove('active');
+        });
     }
 
     positionPopup(trigger, popup) {
@@ -498,15 +719,23 @@ class PropertiesSidebar {
             const thicknessVal = document.getElementById('strokeWidthVal');
             if (thicknessVal) thicknessVal.textContent = '3px';
 
-            // Decimation (Sampling): 0
-            this.app.state.decimation = 0;
-            const decimationSliders = document.querySelectorAll('.decimation-slider');
-            decimationSliders.forEach(s => {
-                s.value = 0;
-                if (window.updateRangeProgress) window.updateRangeProgress(s);
-            });
             const decVal = document.getElementById('decimationVal');
             if (decVal) decVal.textContent = '0%';
+        } else if (tool === 'tape') {
+            // Tape defaults
+            this.app.state.opacity = 1.0;
+            document.getElementById('opacitySlider').value = 100;
+            const opacityVal = document.getElementById('opacityVal');
+            if (opacityVal) opacityVal.textContent = '100%';
+
+            this.app.state.strokeWidth = 20;
+            const thicknessSliders = document.querySelectorAll('.stroke-width-slider');
+            thicknessSliders.forEach(s => {
+                s.value = 20;
+                if (window.updateRangeProgress) window.updateRangeProgress(s);
+            });
+            const thicknessVal = document.getElementById('strokeWidthVal');
+            if (thicknessVal) thicknessVal.textContent = '20px';
         }
         // We removed the forced reset to 1.0 for pen/shapes to allow persistent user choice.
 
@@ -524,8 +753,8 @@ class PropertiesSidebar {
         }
 
         // Brush Settings Visibility Logic
-        const isFreehand = (tool === 'pen' || tool === 'highlighter');
-        const showBrushSettings = ['pen', 'highlighter', 'rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'line', 'arrow', 'select'].includes(tool);
+        const isFreehand = (tool === 'pen' || tool === 'highlighter' || tool === 'tape');
+        const showBrushSettings = ['pen', 'highlighter', 'rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'line', 'arrow', 'select', 'tape'].includes(tool);
 
         const brushSettingsGroup = document.getElementById('toolGroupBrushSettings');
         const lineStylesGroup = document.getElementById('toolGroupLineStyles');
@@ -534,7 +763,9 @@ class PropertiesSidebar {
             brushSettingsGroup.style.display = showBrushSettings ? 'flex' : 'none';
         }
         if (lineStylesGroup) {
-            lineStylesGroup.style.display = showBrushSettings ? 'flex' : 'none';
+            // Hide line styles for tape tool as requested
+            const showLineStyles = showBrushSettings && tool !== 'tape';
+            lineStylesGroup.style.display = showLineStyles ? 'flex' : 'none';
         }
 
         if (brushSettingsGroup) {
@@ -603,6 +834,12 @@ class PropertiesSidebar {
             document.getElementById('eraserSettings').style.display = 'none';
         }
 
+        // Toggle Tape Settings visibility
+        const tapeSettings = document.getElementById('tapeSettings');
+        if (tapeSettings) {
+            tapeSettings.style.display = (tool === 'tape') ? 'flex' : 'none';
+        }
+
         // Toggle Sticker Settings visibility
         const stickerSettings = document.getElementById('stickerSettings');
         if (stickerSettings) {
@@ -669,6 +906,17 @@ class PropertiesSidebar {
                 fillBtn.classList.toggle('active', isFilled);
             }
         }
+
+        // Tape Pattern Color Sync
+        const patternButtons = document.querySelectorAll('.pattern-btn');
+        const currentColor = this.app.state.strokeColor === 'rainbow' ? '#262626' : this.app.state.strokeColor;
+        patternButtons.forEach(btn => {
+            btn.style.color = currentColor;
+            const colorSyncDiv = btn.querySelector('.color-sync');
+            if (colorSyncDiv) {
+                colorSyncDiv.style.backgroundColor = currentColor;
+            }
+        });
     }
 
     hide() {

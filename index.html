@@ -35,9 +35,10 @@
 
                 </button>
                 <button class="tool-btn" data-tool="eraser" title="Silgi (X)">
-
                     <img src="assets/icons/eraser.svg" alt="eraser" class="icon">
-
+                </button>
+                <button class="tool-btn" data-tool="tape" title="Bant Aracı (T)">
+                    <img src="assets/icons/tape.svg" alt="tape" class="icon">
                 </button>
             </div>
 
@@ -252,6 +253,69 @@
                 <button id="btnStickerMore" class="tool-btn" title="Yönet" style="margin-left: auto; flex-shrink: 0;">
                     <img src="assets/icons/settings.svg" alt="settings" class="icon" style="width: 16px; height: 16px;">
                 </button>
+            </div>
+
+            <div class="tool-group" id="tapeSettings"
+                style="display: none; align-items: center; gap: 8px; flex-wrap: nowrap;">
+                <!-- Mod Grubu -->
+                <div class="mode-options" style="display: flex; gap: 4px;">
+                    <button class="tool-btn active" data-tape-mode="freehand" title="Serbest Bant">
+                        <img src="assets/icons/pen.svg" alt="freehand" class="icon">
+                    </button>
+                    <button class="tool-btn" data-tape-mode="line" title="Düz Bant Çizgisi">
+                        <img src="assets/icons/arrow.svg" alt="line" class="icon">
+                    </button>
+                    <button class="tool-btn" data-tape-mode="rectangle" title="Dikdörtgen Bant">
+                        <img src="assets/icons/rectangle.svg" alt="rectangle" class="icon">
+                    </button>
+                </div>
+
+                <div style="width: 1px; height: 20px; background: #e0e0e0; margin: 0 4px;"></div>
+
+                <!-- Desen Grubu -->
+                <div class="pattern-options" style="display: flex; gap: 4px; align-items: center;">
+                    <button class="pattern-btn active" data-tape-pattern="solid" title="Düz Renk">
+                        <div class="icon color-sync"
+                            style="width: 18px; height: 18px; border: 1px solid rgba(0,0,0,0.1); border-radius: 3px;">
+                        </div>
+                    </button>
+                    <button class="pattern-btn" data-tape-pattern="dots" title="Noktalı">
+                        <div class="icon color-sync"
+                            style="-webkit-mask-image: url('assets/icons/pattern-dots.svg'); mask-image: url('assets/icons/pattern-dots.svg');">
+                        </div>
+                    </button>
+                    <button class="pattern-btn" data-tape-pattern="grid" title="Kareli">
+                        <div class="icon color-sync"
+                            style="-webkit-mask-image: url('assets/icons/pattern-grid.svg'); mask-image: url('assets/icons/pattern-grid.svg');">
+                        </div>
+                    </button>
+                    <button class="pattern-btn" data-tape-pattern="stripes" title="Çizgili">
+                        <div class="icon color-sync"
+                            style="-webkit-mask-image: url('assets/icons/pattern-lines.svg'); mask-image: url('assets/icons/pattern-lines.svg');">
+                        </div>
+                    </button>
+
+                    <!-- Özel Desenler Listesi Tetikleyici -->
+                    <button class="tool-btn" id="btnTapeCustomPatterns" title="Özel Desenlerim"
+                        style="padding: 2px; width: 24px; height: 24px;">
+                        <img src="assets/icons/arrow-tape.svg" alt="more" class="icon"
+                            style="width: 12px; height: 12px;">
+                    </button>
+                </div>
+
+                <div style="width: 1px; height: 20px; background: #e0e0e0; margin: 0 4px;"></div>
+
+                <!-- Özel Seçenekler -->
+                <div style="display: flex; gap: 4px;">
+                    <button class="tool-btn" id="btnTapeImageUpload" title="Resimden Bant Yap">
+                        <img src="assets/icons/picture-to-tape.svg" alt="image" class="icon">
+                    </button>
+                    <button class="tool-btn" id="btnTapePickShape" title="Şekilden Bant Yap">
+                        <img src="assets/icons/draw-to-tape.svg" alt="pick" class="icon">
+                    </button>
+                </div>
+
+                <input type="file" id="tapeImageInput" accept="image/*" style="display: none;">
             </div>
         </div>
 
@@ -543,7 +607,7 @@
                 <span class="label">Kalınlık</span>
                 <span class="slider-val-left" id="strokeWidthVal">4px</span>
             </div>
-            <input type="range" class="stroke-width-slider" id="strokeWidth" min="1" max="20" value="4">
+            <input type="range" class="stroke-width-slider" id="strokeWidth" min="1" max="80" value="4">
         </div>
         <div class="brush-setting-item">
             <div class="brush-setting-header">
@@ -618,6 +682,10 @@
             <img src="assets/icons/arrow-circle-end.svg" alt="arrow-circle-end" class="icon">
 
         </button>
+        <button class="tool-btn" data-arrow-end="open" title="Açık ok">
+            <img src="assets/icons/arrow-line-right.svg" alt="arrow-line-right" class="icon">
+
+        </button>
         <button class="tool-btn" data-arrow-end="square" title="Kare">
             <img src="assets/icons/arrow-square-end.svg" alt="arrow-square-end" class="icon">
 
@@ -626,6 +694,14 @@
             <img src="assets/icons/arrow-bar-end.svg" alt="arrow-bar-end" class="icon">
 
         </button>
+    </div>
+
+    <div id="popupTapeCustomPatterns" class="property-popup tape-patterns-popup">
+        <div class="tape-patterns-grid" id="tapeCustomPatternsList">
+            <!-- Dinamik olarak doldurulacak -->
+            <div style="padding: 10px; color: #999; font-size: 11px; text-align: center; width: 100%;">Henüz desen
+                eklenmedi</div>
+        </div>
     </div>
 
 
@@ -644,6 +720,7 @@
     <script src="./js/PropertiesSidebar.js?v=0.7.1"></script>
     <script src="./js/HistoryManager.js?v=0.7.1"></script>
     <script src="./js/StickerTool.js?v=0.7.1"></script>
+    <script src="./js/TapeTool.js?v=0.7.1"></script>
     <script src="./js/app.js?v=0.7.1"></script>
 </body>
 

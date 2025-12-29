@@ -59,6 +59,7 @@ class WhiteboardApp {
 
         // Initialize sticker tool after this is available
         this.tools.sticker = new StickerTool(this.canvas, this.ctx, this);
+        this.tools.tape = new TapeTool(() => this.render());
 
         this.colorPalette = new ColorPalette(this);
         this.propertiesSidebar = new PropertiesSidebar(this);
@@ -172,6 +173,8 @@ class WhiteboardApp {
             this.canvas.style.cursor = 'grab';
         } else if (tool === 'select') {
             this.canvas.style.cursor = 'default';
+        } else if (tool === 'tape') {
+            this.canvas.style.cursor = 'crosshair';
         } else {
             this.canvas.style.cursor = 'crosshair';
         }
@@ -375,12 +378,21 @@ class WhiteboardApp {
         // Mouse pozisyonunu takip et (App.js handles pointermove, but we can update state here if needed)
         // Redundant mousemove removed to unify in pointermove
 
-        // Context menu (sağ tık)
+        // Context menu (sağ tık) engelleme ve yönetme
         this.canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault(); // Tarayıcı menüsünü tamamen engelle
+
             if (this.state.currentTool === 'select') {
-                const handled = this.tools.select.handleContextMenu(e, this.canvas, this.state);
-                if (handled) {
-                    e.preventDefault();
+                this.tools.select.handleContextMenu(e, this.canvas, this.state);
+            } else {
+                // Bantlar için global sağ tık kontrolü
+                const worldPos = this.zoomManager.getPointerWorldPos(e);
+                for (let i = this.state.objects.length - 1; i >= 0; i--) {
+                    const obj = this.state.objects[i];
+                    if (obj.type === 'tape' && this.tools.tape.isPointInside(obj, worldPos)) {
+                        this.tools.tape.handleContextMenu(e, obj, i);
+                        break;
+                    }
                 }
             }
         });
@@ -563,6 +575,69 @@ class WhiteboardApp {
 
         const worldPos = this.zoomManager.getPointerWorldPos(e);
 
+        // --- Pick Shape Mode for Tape Tool ---
+        if (this.state.pickShapeMode) {
+            for (let i = this.state.objects.length - 1; i >= 0; i--) {
+                const obj = this.state.objects[i];
+                let hit = this.tools.select.isNearObject(obj, worldPos);
+
+                if (hit) {
+                    // We found the object to use as mask
+                    // Calculate bounds to center it properly
+                    const bounds = this.tools.select.getBoundingBox(obj);
+                    const bWidth = Math.max(bounds.maxX - bounds.minX, 1);
+                    const bHeight = Math.max(bounds.maxY - bounds.minY, 1);
+
+                    const targetPatternHeight = 60; // Base height for pattern
+                    const padding = 1; // Small gap between repetitions
+                    const scale = (targetPatternHeight - padding * 1) / bHeight;
+
+                    const maskCanvas = document.createElement('canvas');
+                    maskCanvas.width = bWidth * scale + (padding * 2);
+                    maskCanvas.height = targetPatternHeight;
+                    const mCtx = maskCanvas.getContext('2d');
+
+                    // Fill with solid white background
+                    mCtx.fillStyle = '#ffffff';
+                    mCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
+
+                    mCtx.save();
+                    mCtx.translate(maskCanvas.width / 2, maskCanvas.height / 2);
+                    mCtx.scale(scale, scale);
+                    mCtx.translate(-(bounds.minX + bWidth / 2), -(bounds.minY + bHeight / 2));
+
+                    // Draw the object
+                    this.drawObject(mCtx, obj);
+                    mCtx.restore();
+
+                    if (this.tools.tape) {
+                        this.tools.tape.updateSettings({ pattern: 'mask', customMask: maskCanvas });
+
+                        // Save to custom patterns list
+                        if (this.propertiesSidebar) {
+                            this.propertiesSidebar.addCustomTapePattern(maskCanvas, 'mask');
+                        }
+
+                        // UI: Deactivate other patterns
+                        document.querySelectorAll('.pattern-btn[data-tape-pattern]').forEach(b => b.classList.remove('active'));
+                    }
+
+                    // Exit pick mode
+                    this.state.pickShapeMode = false;
+                    const btn = document.getElementById('btnTapePickShape');
+                    if (btn) btn.classList.remove('active');
+                    this.setTool('tape');
+                    return;
+                }
+            }
+            // If we clicked empty space, cancel pick mode?
+            this.state.pickShapeMode = false;
+            const btn = document.getElementById('btnTapePickShape');
+            if (btn) btn.classList.remove('active');
+            this.canvas.style.cursor = 'crosshair';
+            return;
+        }
+
         // Save state for tools that modify state.objects immediately or via move (Eraser/Select)
         if (this.state.currentTool === 'eraser') {
             this.history.saveState(this.state.objects);
@@ -574,6 +649,24 @@ class WhiteboardApp {
             if (selectedObj && tool.isNearObject(selectedObj, clickPoint)) {
                 // Sürükleme başlayacak, history kaydet
                 this.history.saveState(this.state.objects);
+            }
+        }
+
+        // --- Global Tape Interaction (Visibility Toggle & Context Menu) ---
+        for (let i = this.state.objects.length - 1; i >= 0; i--) {
+            const obj = this.state.objects[i];
+            if (obj.type === 'tape') {
+                if (this.tools.tape.isPointInside(obj, worldPos)) {
+                    // Sağ tık menüsü artık 'contextmenu' event listener'ında yönetiliyor.
+                    // Burada sadece sol tık ile görünürlük değiştirme işlemini yapıyoruz.
+                    if (e.button === 2) return;
+
+                    // Left click to toggle visibility
+                    this.tools.tape.toggleVisibility(obj);
+                    this.redrawOffscreen();
+                    this.render();
+                    return;
+                }
             }
         }
 
@@ -737,14 +830,10 @@ class WhiteboardApp {
             // Ctrl+D - Çoğalt
             if (e.ctrlKey && e.key === 'd') {
                 e.preventDefault();
+                // Save state BEFORE modification
+                this.history.saveState(this.state.objects);
                 const duplicateResult = selectTool.duplicateSelected(this.state);
                 if (duplicateResult) {
-                    this.history.saveState(this.state.objects);
-                    if (Array.isArray(duplicateResult)) {
-                        this.state.objects.push(...duplicateResult);
-                    } else {
-                        this.state.objects.push(duplicateResult);
-                    }
                     this.redrawOffscreen();
                     this.render();
                 }
@@ -783,6 +872,7 @@ class WhiteboardApp {
             'x': 'eraser',
             'v': 'select',
             's': 'sticker',
+            't': 'tape',
             'c': 'settings'
         };
 
@@ -897,12 +987,13 @@ class WhiteboardApp {
         const currentTool = this.tools[this.state.currentTool];
         let needsNextFrame = false;
 
-        if (currentTool.isDrawing && currentTool.currentPath) {
+        if (currentTool.isDrawing && (currentTool.currentPath || currentTool.currentTape)) {
             // Live Fill Rendering
-            if (currentTool.currentPath.filled && this.fillManager) {
+            if (currentTool.currentPath && currentTool.currentPath.filled && this.fillManager) {
                 this.fillManager.drawFill(this.ctx, currentTool.currentPath);
             }
-            currentTool.drawPreview(this.ctx, currentTool.currentPath);
+            // Support preview for both pen path and tape object
+            currentTool.drawPreview(this.ctx, currentTool.currentPath || currentTool.currentTape);
         } else if (currentTool.isDrawing && currentTool.currentLine) {
             currentTool.drawPreview(this.ctx, currentTool.currentLine);
         } else if (currentTool.isDrawing && currentTool.currentShape) {
@@ -994,4 +1085,4 @@ class WhiteboardApp {
 }
 
 // Uygulamayı başlat
-const app = new WhiteboardApp();
+window.app = new WhiteboardApp();

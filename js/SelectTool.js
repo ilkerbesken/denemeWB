@@ -412,11 +412,22 @@ class SelectTool {
         switch (obj.type) {
             case 'highlighter':
             case 'pen':
-                // Check if point is near spine, accounting for stroke width
+                // 1. Check if point is near spine, accounting for stroke width
                 const hitThreshold = threshold + (obj.width || 2) / 2;
-                return obj.points.some(p =>
+                const isNearSpine = obj.points.some(p =>
                     Utils.distance(p, point) < hitThreshold
                 );
+                if (isNearSpine) return true;
+
+                // 2. If it is filled, check if point is inside any of its loops
+                if (obj.filled && obj.points.length > 2 && window.app && window.app.fillManager) {
+                    const loops = window.app.fillManager.findLoops(obj.points);
+                    const shapeTool = window.app.tools.shape;
+                    if (shapeTool && shapeTool.isPointInPolygon) {
+                        return loops.some(loop => shapeTool.isPointInPolygon(point, loop));
+                    }
+                }
+                return false;
 
             case 'line':
             case 'arrow':
@@ -437,18 +448,19 @@ class SelectTool {
             case 'heart':
             case 'cloud':
                 // Use ShapeTool's generic hit detection
-                const shapeTool = app.tools.shape || app.tools.rectangle;
-                if (shapeTool && shapeTool.isPointInside) {
-                    if (shapeTool.isPointInside(obj, point)) return true;
+                const sTool = (window.app && window.app.tools) ? (window.app.tools.shape || window.app.tools.rectangle) : null;
+                if (sTool && sTool.isPointInside) {
+                    if (sTool.isPointInside(obj, point)) return true;
                 }
 
                 // If not inside, check if near border (optional but good for non-filled shapes)
+                // Also acts as a fallback for filled areas of all shape types
                 const bounds = this.getBoundingBox(obj);
                 if (point.x >= bounds.minX - threshold && point.x <= bounds.maxX + threshold &&
                     point.y >= bounds.minY - threshold && point.y <= bounds.maxY + threshold) {
-                    // For rectangles, BBox check IS the inside check. 
-                    // For other shapes, it's a rough fallback if shapeTool fails.
-                    if (obj.type === 'rectangle' || obj.type === 'rect') return true;
+
+                    const shapeTypes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
+                    if (shapeTypes.includes(obj.type)) return true;
                 }
                 return false;
 
@@ -950,71 +962,106 @@ class SelectTool {
     bringToFront(state) {
         if (this.selectedObjects.length === 0) return false;
 
-        const selectedIndex = this.selectedObjects[0];
-        const obj = state.objects[selectedIndex];
+        // Seçili nesneleri mevcut sıralarıyla topla
+        const selectedIndices = [...this.selectedObjects].sort((a, b) => a - b);
+        const selectedObjs = selectedIndices.map(idx => state.objects[idx]);
 
-        if (obj && selectedIndex < state.objects.length - 1) {
-            // Nesneyi diziden çıkar
-            state.objects.splice(selectedIndex, 1);
-            // En sona ekle
-            state.objects.push(obj);
-            // Yeni indeksi seç
-            this.selectedObjects = [state.objects.length - 1];
-            return true;
+        // Nesneleri diziden çıkar (indeks kaymasını önlemek için sondan başla)
+        for (let i = selectedIndices.length - 1; i >= 0; i--) {
+            state.objects.splice(selectedIndices[i], 1);
         }
-        return false;
+
+        // En sona ekle
+        state.objects.push(...selectedObjs);
+
+        // Yeni indeksleri seç
+        this.selectedObjects = [];
+        for (let i = 0; i < selectedObjs.length; i++) {
+            this.selectedObjects.push(state.objects.length - selectedObjs.length + i);
+        }
+        return true;
     }
 
     bringForward(state) {
         if (this.selectedObjects.length === 0) return false;
 
-        const selectedIndex = this.selectedObjects[0];
-        const obj = state.objects[selectedIndex];
+        const selectedIndices = [...this.selectedObjects].sort((a, b) => a - b);
+        const maxIdx = selectedIndices[selectedIndices.length - 1];
 
-        if (obj && selectedIndex < state.objects.length - 1) {
-            // Bir adım öne getir (index + 1)
-            state.objects.splice(selectedIndex, 1);
-            state.objects.splice(selectedIndex + 1, 0, obj);
-            // Yeni indeksi seç
-            this.selectedObjects = [selectedIndex + 1];
-            return true;
+        // Eğer en üstteki nesne zaten en üstteyse, grubu daha öne getiremeyiz
+        if (maxIdx >= state.objects.length - 1) return false;
+
+        // Üzerinden atlayacağımız nesneyi bul
+        const targetElement = state.objects[maxIdx + 1];
+        const selectedObjs = selectedIndices.map(idx => state.objects[idx]);
+
+        // Seçili nesneleri çıkar
+        for (let i = selectedIndices.length - 1; i >= 0; i--) {
+            state.objects.splice(selectedIndices[i], 1);
         }
-        return false;
+
+        // Hedef nesnenin yeni yerini bul ve hemen sonrasına ekle
+        const newTargetIdx = state.objects.indexOf(targetElement);
+        state.objects.splice(newTargetIdx + 1, 0, ...selectedObjs);
+
+        // Seçimi güncelle
+        this.selectedObjects = [];
+        for (let i = 0; i < selectedObjs.length; i++) {
+            this.selectedObjects.push(newTargetIdx + 1 + i);
+        }
+        return true;
     }
 
     sendBackward(state) {
         if (this.selectedObjects.length === 0) return false;
 
-        const selectedIndex = this.selectedObjects[0];
-        const obj = state.objects[selectedIndex];
+        const selectedIndices = [...this.selectedObjects].sort((a, b) => a - b);
+        const minIdx = selectedIndices[0];
 
-        if (obj && selectedIndex > 0) {
-            // Bir adım arkaya gönder (index - 1)
-            state.objects.splice(selectedIndex, 1);
-            state.objects.splice(selectedIndex - 1, 0, obj);
-            // Yeni indeksi seç
-            this.selectedObjects = [selectedIndex - 1];
-            return true;
+        // Eğer en alttaki nesne zaten en alttaysa, daha arkaya gönderemeyiz
+        if (minIdx <= 0) return false;
+
+        // Altına gireceğimiz nesneyi bul
+        const targetElement = state.objects[minIdx - 1];
+        const selectedObjs = selectedIndices.map(idx => state.objects[idx]);
+
+        // Seçili nesneleri çıkar
+        for (let i = selectedIndices.length - 1; i >= 0; i--) {
+            state.objects.splice(selectedIndices[i], 1);
         }
-        return false;
+
+        // Hedef nesnenin yeni yerini bul ve hemen öncesine ekle
+        const newTargetIdx = state.objects.indexOf(targetElement);
+        state.objects.splice(newTargetIdx, 0, ...selectedObjs);
+
+        // Seçimi güncelle
+        this.selectedObjects = [];
+        for (let i = 0; i < selectedObjs.length; i++) {
+            this.selectedObjects.push(newTargetIdx + i);
+        }
+        return true;
     }
 
     sendToBack(state) {
         if (this.selectedObjects.length === 0) return false;
 
-        const selectedIndex = this.selectedObjects[0];
-        const obj = state.objects[selectedIndex];
+        const selectedIndices = [...this.selectedObjects].sort((a, b) => a - b);
+        const selectedObjs = selectedIndices.map(idx => state.objects[idx]);
 
-        if (obj && selectedIndex > 0) {
-            // Nesneyi diziden çıkar
-            state.objects.splice(selectedIndex, 1);
-            // En başa ekle
-            state.objects.unshift(obj);
-            // Yeni indeksi seç
-            this.selectedObjects = [0];
-            return true;
+        // Nesneleri diziden çıkar
+        for (let i = selectedIndices.length - 1; i >= 0; i--) {
+            state.objects.splice(selectedIndices[i], 1);
         }
-        return false;
+
+        // En başa ekle
+        state.objects.unshift(...selectedObjs);
+
+        // Yeni indeksleri seç
+        this.selectedObjects = [];
+        for (let i = 0; i < selectedObjs.length; i++) {
+            this.selectedObjects.push(i);
+        }
+        return true;
     }
 
     handleContextMenu(e, canvas, state) {

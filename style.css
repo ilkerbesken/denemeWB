@@ -616,6 +616,21 @@ input[type="range"] {
     font-size: 10px;
 }
 
+.tape-setting-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 2px 0;
+}
+
+.tape-setting-row .label {
+    font-weight: 600;
+    color: #444;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
 
 /* Custom Color Picker Popover */
 @keyframes fadeIn {
@@ -854,10 +869,12 @@ input[type="range"] {
     border-radius: 6px;
     padding: 6px;
     display: none;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 4px;
     z-index: 1000;
     width: max-content;
+}
+
+.property-popup.show {
+    display: grid;
 }
 
 .property-popup .tool-btn .icon {
@@ -872,6 +889,10 @@ input[type="range"] {
     min-width: 130px;
     padding: 12px;
     gap: 16px;
+}
+
+.brush-settings-popup.show {
+    display: flex;
 }
 
 .brush-setting-item {
@@ -913,6 +934,98 @@ input[type="range"] {
     min-width: 30px;
     text-align: center;
     display: inline-block;
+}
+
+.proper.tape-setting-row {
+    flex-direction: row !important;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Tape Custom Patterns Popup */
+.tape-patterns-popup {
+    min-width: 200px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+.tape-patterns-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.tape-pattern-item {
+    position: relative;
+    aspect-ratio: 1;
+    border: 1px solid #eee;
+    border-radius: 6px;
+    background: #f9f9f9;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tape-pattern-item:hover {
+    border-color: var(--primary-color);
+    background: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.tape-pattern-item canvas {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+}
+
+.tape-pattern-item .delete-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 16px;
+    height: 16px;
+    background: rgba(255, 59, 48, 0.1);
+    color: #ff3b30;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    border: none;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.tape-pattern-item:hover .delete-btn {
+    opacity: 1;
+}
+
+.tape-pattern-item .delete-btn:hover {
+    background: #ff3b30;
+    color: #fff;
+}
+
+/* Pattern Icon Color Sync */
+.pattern-btn .icon.color-sync {
+    background-color: currentColor;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    width: 18px;
+    height: 18px;
+    display: inline-block;
+    filter: none !important;
+    /* Disable existing icon filters */
 }
 
 .property-trigger-btn {
