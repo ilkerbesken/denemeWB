@@ -483,37 +483,16 @@ class WhiteboardApp {
                                 const tapes = result.filter(obj => obj.type === 'tape');
                                 const others = result.filter(obj => obj.type !== 'tape');
 
-                                // Insert non-tape objects before existing tapes
-                                const firstTapeIndex = this.state.objects.findIndex(obj => obj.type === 'tape');
-                                if (firstTapeIndex !== -1 && others.length > 0) {
-                                    this.state.objects.splice(firstTapeIndex, 0, ...others);
-                                } else {
-                                    this.state.objects.push(...others);
-                                }
-
-                                // Add new tapes at the end (top layer)
+                                // Add non-tape objects first, then tapes at the end (top layer)
+                                this.state.objects.push(...others);
                                 this.state.objects.push(...tapes);
                             } else {
-                                // Single object
-                                if (result.type === 'tape') {
-                                    this.state.objects.push(result);
-                                } else {
-                                    // Insert non-tape object before existing tapes
-                                    const firstTapeIndex = this.state.objects.findIndex(obj => obj.type === 'tape');
-                                    if (firstTapeIndex !== -1) {
-                                        this.state.objects.splice(firstTapeIndex, 0, result);
-                                    } else {
-                                        this.state.objects.push(result);
-                                    }
-                                }
+                                this.state.objects.push(result);
                             }
                         }
                         break;
                     case 'delete':
                         result = selectTool.deleteSelected(this.state);
-                        break;
-                    case 'lock':
-                        selectTool.toggleLockSelected(this.state);
                         break;
                     case 'applyColor':
                         selectTool.updateSelectedObjectsStyle(this.state, {
@@ -782,21 +761,13 @@ class WhiteboardApp {
             }
 
             // 3. ADD THE FINAL OBJECT TO REAL STATE
-            // Tapes always stay on top - insert non-tapes before tapes
+            // Tapes always go to the top layer (end of array)
             if (completedObject.type === 'tape') {
-                // Tapes go to the end (top layer)
                 this.state.objects.push(completedObject);
             } else if (completedObject.isHighlighter) {
-                // Highlighters go to the beginning (bottom layer)
                 this.state.objects.unshift(completedObject);
             } else {
-                // Other objects: insert before the first tape
-                const firstTapeIndex = this.state.objects.findIndex(obj => obj.type === 'tape');
-                if (firstTapeIndex !== -1) {
-                    this.state.objects.splice(firstTapeIndex, 0, completedObject);
-                } else {
-                    this.state.objects.push(completedObject);
-                }
+                this.state.objects.push(completedObject);
             }
 
             this.redrawOffscreen();
@@ -843,28 +814,15 @@ class WhiteboardApp {
                         const tapes = pastedResult.filter(obj => obj.type === 'tape');
                         const others = pastedResult.filter(obj => obj.type !== 'tape');
 
-                        // Insert non-tape objects before existing tapes
-                        const firstTapeIndex = this.state.objects.findIndex(obj => obj.type === 'tape');
-                        if (firstTapeIndex !== -1 && others.length > 0) {
-                            this.state.objects.splice(firstTapeIndex, 0, ...others);
-                        } else {
-                            this.state.objects.push(...others);
-                        }
-
-                        // Add new tapes at the end (top layer)
+                        // Add non-tape objects first, then tapes at the end (top layer)
+                        this.state.objects.push(...others);
                         this.state.objects.push(...tapes);
                     } else {
                         // Single object
                         if (pastedResult.type === 'tape') {
                             this.state.objects.push(pastedResult);
                         } else {
-                            // Insert non-tape object before existing tapes
-                            const firstTapeIndex = this.state.objects.findIndex(obj => obj.type === 'tape');
-                            if (firstTapeIndex !== -1) {
-                                this.state.objects.splice(firstTapeIndex, 0, pastedResult);
-                            } else {
-                                this.state.objects.push(pastedResult);
-                            }
+                            this.state.objects.push(pastedResult);
                         }
                     }
                     this.redrawOffscreen();
@@ -903,15 +861,6 @@ class WhiteboardApp {
                 selectTool.deleteSelected(this.state);
                 this.redrawOffscreen();
                 this.render();
-                return;
-            }
-
-            // Ctrl+L - Kilitle/Kilidi Aç
-            if (e.ctrlKey && e.key === 'l') {
-                e.preventDefault();
-                this.history.saveState(this.state.objects);
-                selectTool.toggleLockSelected(this.state);
-                this.render(); // Redraw handles
                 return;
             }
         }

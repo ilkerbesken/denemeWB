@@ -75,10 +75,7 @@ class SelectTool {
                     }
                 }
 
-                let handle = null;
-                if (!selectedObj.isLocked) {
-                    handle = this.getHandleAtPoint(clickPoint, unrotatedBounds, selectedObj);
-                }
+                const handle = this.getHandleAtPoint(clickPoint, unrotatedBounds, selectedObj);
 
                 if (handle) {
                     // Handle yakalandı
@@ -352,8 +349,6 @@ class SelectTool {
     }
 
     moveObject(obj, deltaX, deltaY) {
-        if (obj.isLocked) return;
-
         if (obj.type === 'group') {
             obj.children.forEach(child => this.moveObject(child, deltaX, deltaY));
             return;
@@ -932,9 +927,8 @@ class SelectTool {
         const deletedObjects = [];
 
         indices.forEach(index => {
-            const obj = state.objects[index];
-            if (obj && !obj.isLocked) {
-                deletedObjects.push(obj);
+            if (state.objects[index]) {
+                deletedObjects.push(state.objects[index]);
                 state.objects.splice(index, 1);
             }
         });
@@ -966,31 +960,10 @@ class SelectTool {
             // Yeni selection indices
             const newSelection = [];
 
-            // Add non-tape objects first (insert before existing tapes)
-            const firstTapeIndex = state.objects.findIndex(obj => obj.type === 'tape');
-
+            // Add non-tape objects first
             others.forEach(copy => {
-                if (firstTapeIndex !== -1) {
-                    // Insert at firstTapeIndex (and increment it as we insert)
-                    // But easier: splice at firstTapeIndex
-                    // NOTE: This shifts indices, so we need to be careful with newSelection
-                    // But we can just push to array? No, splice modifies in place.
-
-                    // Actually, let's find the current index of the FIRST tape dynamically or just
-                    // find it once. Since we are adding multiple, better to splice them all at once if possible 
-                    // or one by one. But splicing one by one changes the index of the first tape if we insert BEFORE it.
-                    // Wait, if we insert BEFORE, the index of the first tape INCREASES. 
-
-                    // Simpler approach:
-                    const currentFirstTapeIndex = state.objects.findIndex(obj => obj.type === 'tape');
-                    const insertIndex = currentFirstTapeIndex !== -1 ? currentFirstTapeIndex : state.objects.length;
-
-                    state.objects.splice(insertIndex, 0, copy);
-                    newSelection.push(insertIndex);
-                } else {
-                    state.objects.push(copy);
-                    newSelection.push(state.objects.length - 1);
-                }
+                state.objects.push(copy);
+                newSelection.push(state.objects.length - 1);
             });
 
             // Add tape objects at the end (top layer)
@@ -1031,21 +1004,6 @@ class SelectTool {
             return copies;
         }
         return null;
-    }
-
-    toggleLockSelected(state) {
-        if (this.selectedObjects.length === 0) return;
-
-        // Check if all selected are locked, if so unlock, else lock all
-        const allLocked = this.selectedObjects.every(index => state.objects[index].isLocked);
-        const newState = !allLocked;
-
-        this.selectedObjects.forEach(index => {
-            const obj = state.objects[index];
-            if (obj) {
-                obj.isLocked = newState;
-            }
-        });
     }
 
     bringToFront(state) {
@@ -1180,19 +1138,6 @@ class SelectTool {
         } else {
             menu.style.right = 'auto';
             menu.style.left = e.clientX + 'px';
-        }
-
-        // Update Lock Text
-        // Update Lock Text and Icon
-        const lockItem = menu.querySelector('[data-action="lock"]');
-        if (lockItem) {
-            const txtLock = lockItem.querySelector('span:nth-child(2)'); // or id txtLock
-            const iconImg = lockItem.querySelector('img');
-
-            const allLocked = this.selectedObjects.every(index => state.objects[index] && state.objects[index].isLocked);
-
-            if (txtLock) txtLock.textContent = allLocked ? 'Kilidi Aç' : 'Kilitle';
-            if (iconImg) iconImg.src = allLocked ? 'assets/icons/unlock.svg' : 'assets/icons/lock.svg';
         }
 
         // Check if any selected object is a tape
