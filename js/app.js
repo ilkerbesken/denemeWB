@@ -27,6 +27,7 @@ class WhiteboardApp {
             decimation: 0, // Default 0
             fillEnabled: false, // Live fill toggle
             fingerDrawingEnabled: true, // New: Toggle for drawing with finger
+            penDrawingEnabled: true, // New: Toggle for drawing with pen
             isPenArtist: false, // New: Detects if user primarily uses pen
             objects: []
         };
@@ -226,8 +227,14 @@ class WhiteboardApp {
                 pattern: document.querySelector('.pattern-btn.active').dataset.pattern,
                 patternColor: activePatternColorBtn ? (activePatternColorBtn.dataset.patternColor || 'rgba(0,0,0,0.15)') : 'rgba(0,0,0,0.15)',
                 patternSpacing: spacingSlider ? parseInt(spacingSlider.value) : 20,
-                patternThickness: thicknessSlider ? parseFloat(thicknessSlider.value) : 1
+                patternThickness: thicknessSlider ? parseFloat(thicknessSlider.value) : 1,
+                fingerDrawingEnabled: document.getElementById('chkFingerDrawing').checked,
+                penDrawingEnabled: document.getElementById('chkPenDrawing').checked
             };
+
+            // Sync app state
+            this.state.fingerDrawingEnabled = this.canvasSettings.settings.fingerDrawingEnabled;
+            this.state.penDrawingEnabled = this.canvasSettings.settings.penDrawingEnabled;
 
             // Yeni ayarları uygula
             this.canvasSettings.applySettings(this.canvas, this.ctx);
@@ -614,6 +621,8 @@ class WhiteboardApp {
             // If we reach here, single touch MIGHT draw, but skip if pen is alread touching (simultaneous)
             if (this.isPenDown) return;
         } else if (e.pointerType === 'pen') {
+            if (this.state.penDrawingEnabled === false) return; // Prevent pen drawing if disabled
+
             this.state.isPenArtist = true;
             this.lastPenTime = now;
             this.isPenDown = true;
