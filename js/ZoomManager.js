@@ -238,4 +238,47 @@ class ZoomManager {
         this.isPanning = false;
         // Cursor reset is handled by App based on key state or tool
     }
+
+    // --- Touch Specific Navigation ---
+
+    handlePinch(points) {
+        if (points.length < 2) return;
+
+        const p1 = points[0];
+        const p2 = points[1];
+
+        // Current distance and center
+        const dist = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+        const centerX = (p1.x + p2.x) / 2;
+        const centerY = (p1.y + p2.y) / 2;
+
+        if (!this.lastPinchDist) {
+            this.lastPinchDist = dist;
+            this.lastPinchCenter = { x: centerX, y: centerY };
+            return;
+        }
+
+        // Zoom factor
+        const factor = dist / this.lastPinchDist;
+        if (Math.abs(1 - factor) > 0.001) {
+            this.zoomAtPoint(centerX, centerY, factor);
+        }
+
+        // Pan movement
+        const dx = centerX - this.lastPinchCenter.x;
+        const dy = centerY - this.lastPinchCenter.y;
+        this.pan.x += dx;
+        this.pan.y += dy;
+
+        this.lastPinchDist = dist;
+        this.lastPinchCenter = { x: centerX, y: centerY };
+
+        this.app.redrawOffscreen();
+        this.app.render();
+    }
+
+    resetPinch() {
+        this.lastPinchDist = null;
+        this.lastPinchCenter = null;
+    }
 }

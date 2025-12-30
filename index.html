@@ -79,6 +79,16 @@
 
         <!-- NEW: Properties Sidebar (Right of Color Palette) -->
         <div id="propertiesSidebar" class="floating-sidebar properties-sidebar">
+            <!-- Select Tool Settings -->
+            <div class="tool-group" id="selectSettings" style="display: none;">
+                <button class="tool-btn active" data-select-mode="normal" title="Seç ve Taşı">
+                    <img src="assets/icons/select.svg" alt="select" class="icon">
+                </button>
+                <button class="tool-btn" data-select-mode="area" title="Bölge Seç">
+                    <img src="assets/icons/select-area.svg" alt="select-area" class="icon" style="color: currentColor;">
+                </button>
+            </div>
+
             <!-- Brush Settings Group -->
             <div class="tool-group" id="toolGroupBrushSettings">
                 <button id="btnBrushSettingsTrigger" class="property-trigger-btn" title="Araç Seçenekleri">
@@ -471,6 +481,19 @@
                 </span>
                 <span>Sil</span>
                 <span class="menu-shortcut">Del</span>
+            </div>
+            <div class="context-menu-separator"></div>
+            <div class="context-menu-item" data-action="lock">
+                <span class="menu-icon">
+                    <img src="assets/icons/lock.svg" alt="lock" class="icon">
+                </span>
+                <span>Kilitle</span>
+            </div>
+            <div class="context-menu-item" data-action="unlock">
+                <span class="menu-icon">
+                    <img src="assets/icons/unlock.svg" alt="unlock" class="icon">
+                </span>
+                <span>Kilidi Aç</span>
             </div>
             <div class="context-menu-separator"></div>
             <!--<div class="context-menu-item" data-action="applyColor">

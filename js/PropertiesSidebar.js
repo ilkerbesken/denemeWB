@@ -366,6 +366,19 @@ class PropertiesSidebar {
             });
         }
 
+        // Select Tool Mode Settings
+        document.querySelectorAll('.tool-btn[data-select-mode]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mode = btn.dataset.selectMode;
+                if (this.app.tools.select) {
+                    this.app.tools.select.selectionMode = mode;
+                    // Reset selection logic if needed, but keeping selection is fine.
+                }
+                document.querySelectorAll('.tool-btn[data-select-mode]').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
         // Tape Tool Mode Settings
         document.querySelectorAll('.tool-btn[data-tape-mode]').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -624,6 +637,14 @@ class PropertiesSidebar {
 
         // Sync UI with selection if in select tool
         if (tool === 'select') {
+            // Sync Select Mode Buttons
+            if (this.app.tools.select) {
+                const currentMode = this.app.tools.select.selectionMode || 'normal';
+                document.querySelectorAll('.tool-btn[data-select-mode]').forEach(b => {
+                    b.classList.toggle('active', b.dataset.selectMode === currentMode);
+                });
+            }
+
             const selectTool = this.app.tools.select;
             if (selectTool.selectedObjects.length === 1) {
                 const obj = this.app.state.objects[selectTool.selectedObjects[0]];
@@ -777,6 +798,19 @@ class PropertiesSidebar {
 
         const brushSettingsGroup = document.getElementById('toolGroupBrushSettings');
         const lineStylesGroup = document.getElementById('toolGroupLineStyles');
+        const selectSettingsGroup = document.getElementById('selectSettings');
+
+        if (selectSettingsGroup) {
+            selectSettingsGroup.style.display = (tool === 'select') ? 'flex' : 'none';
+        }
+
+        const selectTool = this.app.tools.select;
+        // If Select tool has NO selection, maybe hide brush settings? 
+        // Current logic shows brush settings for 'select' tool anyway, which might be intended (global context or previous selection?). 
+        // But usually, properties are only relevant if something is selected.
+        // The existing code at line ~628 processes 'select' tool selection. 
+        // If selection is empty, we might want to hide brush properties but show Select Mode.
+        // However, keeping it simple: Just add Select Settings group control.
 
         if (brushSettingsGroup) {
             brushSettingsGroup.style.display = showBrushSettings ? 'flex' : 'none';

@@ -68,6 +68,11 @@ class WhiteboardApp {
         this.currentMousePos = { x: 0, y: 0 };
         this.isSpacePressed = false;
 
+        // Hybrid Pen/Touch Tracking
+        this.lastPenTime = 0;
+        this.activePointers = new Map(); // Store active touch points for navigation
+        this.palmThreshold = 40; // Pixels width/height to ignore as palm
+
         this.init();
     }
 
@@ -462,13 +467,19 @@ class WhiteboardApp {
                 const selectTool = this.tools.select;
 
                 // History kaydet (değişiklik yapan işlemler için)
-                if (['delete', 'duplicate', 'cut', 'flipHorizontal', 'flipVertical', 'bringToFront', 'bringForward', 'sendBackward', 'sendToBack', 'group', 'ungroup'].includes(action)) {
+                if (['delete', 'duplicate', 'cut', 'flipHorizontal', 'flipVertical', 'bringToFront', 'bringForward', 'sendBackward', 'sendToBack', 'group', 'ungroup', 'lock', 'unlock'].includes(action)) {
                     this.history.saveState(this.state.objects);
                 }
 
                 let result = null;
 
                 switch (action) {
+                    case 'lock':
+                        selectTool.lockSelected(this.state);
+                        break;
+                    case 'unlock':
+                        selectTool.unlockSelected(this.state);
+                        break;
                     case 'cut':
                         selectTool.cutSelected(this.state);
                         break;
@@ -561,6 +572,40 @@ class WhiteboardApp {
 
 
     handlePointerDown(e) {
+        const now = performance.now();
+
+        // 1. PEN PRIMARY
+        if (e.pointerType === 'pen') {
+            this.lastPenTime = now;
+            // If we touch with pen, reset any ongoing touch navigation to prevent interference
+            if (this.activePointers.size > 0) {
+                this.activePointers.clear();
+                this.zoomManager.resetPinch();
+            }
+        }
+        // 2. TOUCH NAVIGATION & REJECTION
+        else if (e.pointerType === 'touch') {
+            // Reject if pen was used recently (500ms cooldown)
+            if (now - this.lastPenTime < 500) return;
+
+            // Palm Rejection: Large contact area filter
+            if (e.width > this.palmThreshold || e.height > this.palmThreshold) {
+                return;
+            }
+
+            // Track touch points for navigation (Pan/Zoom)
+            this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+            if (this.activePointers.size === 1) {
+                this.zoomManager.startPan(e);
+            } else if (this.activePointers.size === 2) {
+                this.zoomManager.endPan(); // Stop single finger pan
+                this.zoomManager.resetPinch();
+            }
+            return; // Touch is only for navigation
+        }
+
+        // 3. MOUSE OR KEYBOARD PAN
         if (this.isSpacePressed) {
             this.zoomManager.startPan(e);
             return;
@@ -681,6 +726,30 @@ class WhiteboardApp {
     }
 
     handlePointerMove(e) {
+        const now = performance.now();
+
+        // 1. PEN PRIMARY
+        if (e.pointerType === 'pen') {
+            this.lastPenTime = now;
+        }
+        // 2. TOUCH NAVIGATION
+        else if (e.pointerType === 'touch') {
+            if (now - this.lastPenTime < 500) return;
+
+            if (this.activePointers.has(e.pointerId)) {
+                this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+                if (this.activePointers.size === 1) {
+                    this.zoomManager.updatePan(e);
+                } else if (this.activePointers.size === 2) {
+                    const points = Array.from(this.activePointers.values());
+                    this.zoomManager.handlePinch(points);
+                }
+            }
+            return;
+        }
+
+        // 3. MOUSE OR KEYBOARD PAN
         if (this.zoomManager.isPanning) {
             this.zoomManager.updatePan(e);
             return;
@@ -719,6 +788,29 @@ class WhiteboardApp {
     }
 
     handlePointerUp(e) {
+        const now = performance.now();
+
+        // 1. PEN PRIMARY
+        if (e.pointerType === 'pen') {
+            this.lastPenTime = now;
+        }
+        // 2. TOUCH NAVIGATION
+        else if (e.pointerType === 'touch') {
+            if (this.activePointers.has(e.pointerId)) {
+                this.activePointers.delete(e.pointerId);
+
+                if (this.activePointers.size < 2) {
+                    this.zoomManager.resetPinch();
+                }
+
+                if (this.activePointers.size === 0) {
+                    this.zoomManager.endPan();
+                }
+            }
+            return;
+        }
+
+        // 3. MOUSE OR KEYBOARD PAN
         if (this.zoomManager.isPanning) {
             this.zoomManager.endPan();
             // Restore cursor based on space key and current tool
@@ -736,7 +828,7 @@ class WhiteboardApp {
         const worldPos = this.zoomManager.getPointerWorldPos(e);
         const completedObject = tool.handlePointerUp(e, worldPos, this.canvas, this.ctx, this.state);
 
-        if (completedObject) {
+        if (completedObject && typeof completedObject === 'object') {
             // 1. SAVE STATE BEFORE ADDING (to allow undo to previous state)
             this.history.saveState(this.state.objects);
 
@@ -1088,7 +1180,7 @@ class WhiteboardApp {
             `Aktif Araç: ${toolNames[this.state.currentTool]}`;
 
         document.getElementById('objectCount').textContent =
-            `Nesneler: ${this.state.objects.length}`;
+            `Öğe Sayısı: ${this.state.objects.length}`;
 
         document.getElementById('canvasSize').textContent =
             `Tuval: ${this.canvasSettings.getSizeLabel()}`;

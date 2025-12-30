@@ -14,6 +14,9 @@ class SelectTool {
         this.rotateCenter = null;
         this.handleSize = 8; // Tutamaç boyutu (px)
 
+        // Selection Mode: 'normal' (click-select/drag-box) or 'area' (force drag-box)
+        this.selectionMode = 'normal';
+
         // Long Press Logic for Touch Devices
         this.longPressTimer = null;
         this.longPressStartPos = null;
@@ -140,7 +143,8 @@ class SelectTool {
         }
 
         // Seçili nesne üzerinde değiliz
-        if (clickedIndex !== -1) {
+        // In Area mode, we skip single object selection to prioritize Lasso drawing
+        if (clickedIndex !== -1 && this.selectionMode !== 'area') {
             // Tape objects are special: they are selected via marquee ONLY (requested by user)
             // unless already selected.
             const obj = state.objects[clickedIndex];
@@ -159,11 +163,16 @@ class SelectTool {
                 this.dragCurrentPoint = clickPoint;
             }
         } else {
-            // Boş alana tıkladık -> Drag Select Başlat
+            // Boş alana tıkladık (veya Area modunda nesneye tıkladık) -> Drag Select Başlat
             this.selectedObjects = []; // Mevcut seçimi temizle
             this.isDragSelecting = true;
             this.dragSelectStart = clickPoint;
             this.dragCurrentPoint = clickPoint;
+
+            // Initialzie Lasso if in Area mode
+            if (this.selectionMode === 'area') {
+                this.lassoPoints = [clickPoint];
+            }
         }
 
         return true;
@@ -251,9 +260,19 @@ class SelectTool {
             }
         }
 
-        // Drag Select işlemi
         if (this.isDragSelecting) {
             this.dragCurrentPoint = currentPoint;
+
+            // Lasso Update
+            if (this.selectionMode === 'area') {
+                if (!this.lassoPoints) this.lassoPoints = [];
+                // Add point if distance is enough to avoid too many points
+                const lastPoint = this.lassoPoints[this.lassoPoints.length - 1];
+                if (!lastPoint || Utils.distance(lastPoint, currentPoint) > 2) {
+                    this.lassoPoints.push(currentPoint);
+                }
+            }
+
             return true; // Yeniden çiz
         }
 
@@ -298,7 +317,7 @@ class SelectTool {
             this.finishDragSelection(state);
             this.dragSelectStart = null;
             this.dragCurrentPoint = null;
-            return true;
+            return false;
         }
 
         if (this.isDragging) {
@@ -313,7 +332,25 @@ class SelectTool {
     finishDragSelection(state) {
         if (!this.dragSelectStart || !this.dragCurrentPoint) return;
 
-        // Seçim kutusu sınırları
+        // Lasso (Area) Selection Logic
+        if (this.selectionMode === 'area' && this.lassoPoints && this.lassoPoints.length > 2) {
+            // Close the loop
+            const polygon = [...this.lassoPoints];
+
+            // Check objects inside polygon
+            state.objects.forEach((obj, index) => {
+                if (this.checkLassoIntersectionV2(obj, polygon)) {
+                    if (!this.selectedObjects.includes(index)) {
+                        this.selectedObjects.push(index);
+                    }
+                }
+            });
+
+            this.lassoPoints = null; // Clear lasso
+            return;
+        }
+
+        // Standard Rect Selection Logic
         const startX = Math.min(this.dragSelectStart.x, this.dragCurrentPoint.x);
         const startY = Math.min(this.dragSelectStart.y, this.dragCurrentPoint.y);
         const endX = Math.max(this.dragSelectStart.x, this.dragCurrentPoint.x);
@@ -336,19 +373,304 @@ class SelectTool {
         });
     }
 
+    // Check if object is inside or intersecting the Lasso Polygon
+    checkLassoIntersection(obj, polygon) {
+        // 1. Check if Object Center is Inside Polygon
+        // This is the most intuitive "Area Select" behavior requested ("Mouse ucunun taradığı yerin içinde kalan")
+
+        let center = { x: 0, y: 0 };
+
+        if (obj.x !== undefined) {
+            center.x = obj.x + obj.width / 2;
+            center.y = obj.y + obj.height / 2;
+        } else if (obj.start && obj.end) {
+            center.x = (obj.start.x + obj.end.x) / 2;
+            center.y = (obj.start.y + obj.end.y) / 2;
+        } else if (obj.points) {
+            // Average of points
+            let sx = 0, sy = 0;
+            obj.points.forEach(p => { sx += p.x; sy += p.y; });
+            center.x = sx / obj.points.length;
+            center.y = sy / obj.points.length;
+        }
+
+        if (this.isPointInPolygon(center, polygon)) return true;
+
+        // 2. Optional: Check if ANY point of the object is inside (Sensitive selection)
+        // If the user wants "Inside" strictly, maybe only center. 
+        // If "Scanned area" implies touching, we should check points.
+        // Let's stick to Center first, or Corners.
+
+        // Let's use Bounding Box Corners for better feel
+        const bounds = this.getBoundingBox(obj);
+        const corners = [
+            { x: bounds.minX, y: bounds.minY },
+            { x: bounds.maxX, y: bounds.minY },
+            { x: bounds.maxX, y: bounds.maxY },
+            { x: bounds.minX, y: bounds.maxY }
+        ];
+
+        // If ANY corner is inside, select it? Or ALL?
+        // "İçinde kalan" usually implies FULLY inside. 
+        // But for usability, if I circle around half of it, I might expect selection.
+        // Let's allow if Center is inside.
+
+        return false;
+    }
+
+    isPointInPolygon(point, polygon) {
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const xi = polygon[i].x, yi = polygon[i].y;
+            const xj = polygon[j].x, yj = polygon[j].y;
+
+            const intersect = ((yi > point.y) !== (yj > point.y)) &&
+                (point.x < (xj - xi) * (point.y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    checkLassoIntersectionV2(obj, polygon) {
+        const objBounds = this.getBoundingBox(obj);
+
+        // 1. STEP: Fast AABB Filter
+        let polyMinX = Infinity, polyMinY = Infinity, polyMaxX = -Infinity, polyMaxY = -Infinity;
+        for (let p of polygon) {
+            if (p.x < polyMinX) polyMinX = p.x;
+            if (p.y < polyMinY) polyMinY = p.y;
+            if (p.x > polyMaxX) polyMaxX = p.x;
+            if (p.y > polyMaxY) polyMaxY = p.y;
+        }
+
+        if (objBounds.maxX < polyMinX || objBounds.minX > polyMaxX ||
+            objBounds.maxY < polyMinY || objBounds.minY > polyMaxY) {
+            return false;
+        }
+
+        // 2. STEP: Precise Check (Object Vertices vs Lasso)
+
+        // Define Object Polygons/Points
+        let objPoints = [];
+        let isClosedShape = false;
+
+        const simpleShapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'tape'];
+
+        if (simpleShapes.includes(obj.type)) {
+            objPoints = this.getRotatedCorners(obj);
+            if (objPoints.length === 0) { // Fallback if getRotatedCorners fails
+                objPoints = [
+                    { x: objBounds.minX, y: objBounds.minY },
+                    { x: objBounds.maxX, y: objBounds.minY },
+                    { x: objBounds.maxX, y: objBounds.maxY },
+                    { x: objBounds.minX, y: objBounds.maxY }
+                ];
+            }
+            isClosedShape = true;
+        } else if (obj.points) { // Pen, Highlighter
+            objPoints = obj.points;
+            // downsample for performance if too many points?
+            if (objPoints.length > 100) {
+                // Sample every Nth point to speed up
+                const sample = [];
+                const step = Math.ceil(objPoints.length / 50);
+                for (let i = 0; i < objPoints.length; i += step) sample.push(objPoints[i]);
+                // Ensure last point is included
+                if (sample[sample.length - 1] !== objPoints[objPoints.length - 1]) sample.push(objPoints[objPoints.length - 1]);
+                objPoints = sample;
+            }
+        } else if (obj.start && obj.end) { // Line, Arrow
+            objPoints = [obj.start, obj.end];
+            if (obj.curveControlPoint) objPoints.push(obj.curveControlPoint);
+        }
+
+        // A) Check if ANY Object Vertex is inside Lasso
+        for (let p of objPoints) {
+            if (this.isPointInPolygon(p, polygon)) return true;
+        }
+
+        // B) Check Edge Intersections (Lasso Edges vs Object Edges)
+        // Construct Object Segments
+        const objSegments = [];
+        for (let i = 0; i < objPoints.length - 1; i++) {
+            objSegments.push([objPoints[i], objPoints[i + 1]]);
+        }
+        if (isClosedShape && objPoints.length > 2) {
+            objSegments.push([objPoints[objPoints.length - 1], objPoints[0]]);
+        }
+
+        // Construct Lasso Segments
+        const lassoSegments = [];
+        for (let i = 0; i < polygon.length - 1; i++) {
+            lassoSegments.push([polygon[i], polygon[i + 1]]);
+        }
+        if (polygon.length > 2) {
+            lassoSegments.push([polygon[polygon.length - 1], polygon[0]]);
+        }
+
+        // Double Loop Intersection Check (O(N*M))
+        // N = Lasso segments (~10-100), M = Object segments (4 for rect, ~50 for pen)
+        for (let ls of lassoSegments) {
+            for (let os of objSegments) {
+                if (Utils.lineLineIntersect(ls[0].x, ls[0].y, ls[1].x, ls[1].y, os[0].x, os[0].y, os[1].x, os[1].y)) {
+                    return true;
+                }
+            }
+        }
+
+        // C) Check if Lasso is fully INSIDE Object (Inverse inclusion)
+        // Valid for shapes. Check if 1st Lasso point is in Object Polygon.
+        // For shapes like Circle/Triangle, getRotatedCorners returns Poly approximation.
+        if (isClosedShape && polygon.length > 0) {
+            // For standard shapes, we can check 1st point against Object Poly
+            if (this.isPointInPolygon(polygon[0], objPoints)) return true;
+        }
+
+        return false;
+    }
+
     checkIntersection(obj, box) {
         const objBounds = this.getBoundingBox(obj);
 
-        // Basit AABB kesişim testi (Temas eden veya içinde olan)
-        // !(obj.Left > box.Right || obj.Right < box.Left || obj.Top > box.Bottom || obj.Bottom < box.Top)
-
-        return !(objBounds.minX > box.x + box.width ||
+        // 1. Adım: İlk Filtreleme (AABB Check)
+        // Eğer kutular kesişmiyorsa, o nesneyi doğrudan ele.
+        const aabbOverlap = !(objBounds.minX > box.x + box.width ||
             objBounds.maxX < box.x ||
             objBounds.minY > box.y + box.height ||
             objBounds.maxY < box.y);
+
+        if (!aabbOverlap) return false;
+
+        // 2. Adım: Kesin Kontrol (Hassas Yöntem)
+        return this.checkIntersectionPrecise(obj, box);
+    }
+
+    checkIntersectionPrecise(obj, box) {
+        // Selection Box Vertices (Polygon)
+        const boxPoly = [
+            { x: box.x, y: box.y },
+            { x: box.x + box.width, y: box.y },
+            { x: box.x + box.width, y: box.y + box.height },
+            { x: box.x, y: box.y + box.height }
+        ];
+
+        // Handle Groups
+        if (obj.type === 'group') {
+            return obj.children.some(child => this.checkIntersectionPrecise(child, box));
+        }
+
+        const rotation = obj.rotation !== undefined ? obj.rotation : (obj.angle || 0);
+
+        // A) Karmaşık Şekiller & Çizgiler İçin: Nokta/Segment Kontrolü
+        // (Pen, Highlighter, Tape-Freehand, Line, Arrow)
+        if (['pen', 'highlighter', 'tape', 'line', 'arrow'].includes(obj.type)) {
+            let points = [];
+
+            if (obj.points) {
+                points = obj.points;
+            } else if (obj.start && obj.end) {
+                points = [obj.start, obj.end];
+                if (obj.curveControlPoint) points.push(obj.curveControlPoint); // Curve ise approximate et
+            }
+
+            // 1. Nokta İçeride mi? (Point-in-Rectangle)
+            // Kullanıcı isteği: "Eğer nesnenin en az bir noktası seçim dikdörtgeninin koordinatları içindeyse"
+            for (let p of points) {
+                if (p.x >= box.x && p.x <= box.x + box.width &&
+                    p.y >= box.y && p.y <= box.y + box.height) {
+                    return true;
+                }
+            }
+
+            // 2. Kenar Kesişimi (Segment Intersection)
+            // Sadece noktaların içeride olması bazı durumlarda yetmeyebilir (boydan boya geçen çizgi).
+            // AABB zaten geçtiği için, eğer çizgi selection box'ı kesiyorsa kesin olarak kesişim vardır.
+            // Fakat kullanıcı özellikle "Point-in-Polygon" mantığına vurgu yapmış (vertices inside).
+            // Yine de "pass-through" (içinden geçme) durumunu kaçırmamak için segment testi ekliyoruz.
+            for (let i = 0; i < points.length - 1; i++) {
+                if (Utils.lineRectIntersect(points[i], points[i + 1], box)) {
+                    return true;
+                }
+            }
+
+            // Eğer curve ise (Arrow curved) daha detaylı bakılabilir ama segment testi genellikle yeterlidir.
+            return false;
+        }
+
+        // B) Döndürülmüş Objeler İçin: "Separating Axis Theorem" (SAT)
+        // (Rectangle, Ellipse, Triangle, Star, vb.)
+        const shapeTypes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
+        if (shapeTypes.includes(obj.type)) {
+            // Eğer rotasyon yoksa ve basit dikdörtgense AABB yeterliydi ama hassas olması isteniyor.
+            // Elips vb için AABB bazen fazladan alan kaplar (köşeler).
+            // SAT kullanacağız.
+
+            let objPoly = [];
+            if (rotation !== 0 || obj.type !== 'rectangle') {
+                // Döndürülmüş veya kompleks şekil köşe noktalarını al
+                objPoly = this.getRotatedCorners(obj);
+                // Not: getRotatedCorners şu an sadece bounding rect corners veriyor olabilir. 
+                // Eğer Triangle, Star gibi şekillerin GERÇEK köşelerini döndürmüyorsa SAT yine bounding box üzerinde çalışır.
+                // Mevcut `getRotatedCorners` metodunu kontrol ettik, sadece rotated bounding box veriyor gibi.
+                // İdeal SAT için şeklin gerçek vertexlerine ihtiyacımız var. 
+                // Ancak "SelectTool.js" içinde karmaşık şekillerin vertex hesabı yok (ShapeTool draw içinde var).
+                // Bu yüzden şimdilik Rotated Bounding Box (OBB) üzerinden SAT yapacağız. 
+                // Bu AABB'den çok daha iyidir.
+            } else {
+                // Rotasyon yoksa AABB köşeleri
+                objPoly = [
+                    { x: obj.x, y: obj.y },
+                    { x: obj.x + obj.width, y: obj.y },
+                    { x: obj.x + obj.width, y: obj.y + obj.height },
+                    { x: obj.x, y: obj.y + obj.height }
+                ];
+            }
+
+            // SAT Testi: Box vs Object
+            return this.doSATCheck(boxPoly, objPoly);
+        }
+
+        // Diğer durumlar (fallback)
+        return true; // AABB geçtiyse kabul et
+    }
+
+    doSATCheck(poly1, poly2) {
+        const polygons = [poly1, poly2];
+
+        for (let i = 0; i < polygons.length; i++) {
+            const polygon = polygons[i];
+
+            for (let j = 0; j < polygon.length; j++) {
+                const p1 = polygon[j];
+                const p2 = polygon[(j + 1) % polygon.length];
+
+                const normal = { x: -(p2.y - p1.y), y: p2.x - p1.x };
+
+                let min1 = Infinity, max1 = -Infinity;
+                for (let k = 0; k < poly1.length; k++) {
+                    const q = (poly1[k].x * normal.x + poly1[k].y * normal.y);
+                    min1 = Math.min(min1, q);
+                    max1 = Math.max(max1, q);
+                }
+
+                let min2 = Infinity, max2 = -Infinity;
+                for (let k = 0; k < poly2.length; k++) {
+                    const q = (poly2[k].x * normal.x + poly2[k].y * normal.y);
+                    min2 = Math.min(min2, q);
+                    max2 = Math.max(max2, q);
+                }
+
+                if (!(max1 >= min2 && max2 >= min1)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     moveObject(obj, deltaX, deltaY) {
+        if (obj.locked) return;
+
         if (obj.type === 'group') {
             obj.children.forEach(child => this.moveObject(child, deltaX, deltaY));
             return;
@@ -694,6 +1016,32 @@ class SelectTool {
 
         // Drag Select kutusunu çiz
         if (this.isDragSelecting && this.dragSelectStart && this.dragCurrentPoint) {
+
+            // Lasso Drawing
+            if (this.selectionMode === 'area' && this.lassoPoints && this.lassoPoints.length > 0) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(this.lassoPoints[0].x, this.lassoPoints[0].y);
+                for (let i = 1; i < this.lassoPoints.length; i++) {
+                    ctx.lineTo(this.lassoPoints[i].x, this.lassoPoints[i].y);
+                }
+                // Close loop visually if needed, or just open line
+                // Usually Lasso is open while dragging, closed on release.
+
+                ctx.fillStyle = 'rgba(33, 150, 243, 0.1)';
+                ctx.strokeStyle = '#2196f3';
+                ctx.lineWidth = 1 * uiScale;
+                ctx.setLineDash([5 * uiScale, 5 * uiScale]);
+
+                ctx.stroke();
+                // Optionally fill to show "Area"
+                // ctx.fill(); // Filling an open path connects start/end automatically
+
+                ctx.restore();
+                return;
+            }
+
+            // Normal Rect Drawing
             const startX = Math.min(this.dragSelectStart.x, this.dragCurrentPoint.x);
             const startY = Math.min(this.dragSelectStart.y, this.dragCurrentPoint.y);
             const width = Math.abs(this.dragCurrentPoint.x - this.dragSelectStart.x);
@@ -728,10 +1076,10 @@ class SelectTool {
             if ((obj.type === 'pen' || obj.type === 'highlighter') && obj.points && obj.points.length > 1) {
                 ctx.save();
                 ctx.beginPath();
-                ctx.strokeStyle = '#2196f3'; // Blue selection color
+                ctx.strokeStyle = obj.locked ? '#f44336' : '#2196f3';
                 // Make spine more visible for highlighter as it's often wider/lighter
                 ctx.lineWidth = (obj.type === 'highlighter' ? 2 : 1) * uiScale;
-                ctx.globalAlpha = obj.type === 'highlighter' ? 0.8 : 0.6;
+                ctx.globalAlpha = obj.locked ? 0.8 : (obj.type === 'highlighter' ? 0.8 : 0.6);
                 ctx.setLineDash([]); // Solid line for spine
 
                 ctx.moveTo(obj.points[0].x, obj.points[0].y);
@@ -773,6 +1121,12 @@ class SelectTool {
             }
 
             // Seçim kutusu çiz (döndürülmüş olabilir)
+            ctx.save();
+            if (obj.locked) {
+                ctx.strokeStyle = '#f44336'; // Kilitli için kırmızı
+            } else {
+                ctx.strokeStyle = '#2196f3'; // Normal için mavi
+            }
             ctx.beginPath();
             ctx.moveTo(handles.nw.x, handles.nw.y);
             ctx.lineTo(handles.ne.x, handles.ne.y);
@@ -780,9 +1134,10 @@ class SelectTool {
             ctx.lineTo(handles.sw.x, handles.sw.y);
             ctx.closePath();
             ctx.stroke();
+            ctx.restore();
 
-            // Tutamaçları çiz (sadece tek seçimde)
-            if (this.selectedObjects.length === 1) {
+            // Tutamaçları çiz (sadece tek seçimde ve kilitli değilse)
+            if (this.selectedObjects.length === 1 && !obj.locked) {
                 ctx.fillStyle = 'white';
                 ctx.strokeStyle = '#2196F3';
                 ctx.lineWidth = 2 * uiScale;
@@ -927,8 +1282,9 @@ class SelectTool {
         const deletedObjects = [];
 
         indices.forEach(index => {
-            if (state.objects[index]) {
-                deletedObjects.push(state.objects[index]);
+            const obj = state.objects[index];
+            if (obj && !obj.locked) {
+                deletedObjects.push(obj);
                 state.objects.splice(index, 1);
             }
         });
@@ -1111,6 +1467,28 @@ class SelectTool {
         return true;
     }
 
+    lockSelected(state) {
+        if (this.selectedObjects.length === 0) return false;
+        this.selectedObjects.forEach(index => {
+            const obj = state.objects[index];
+            if (obj) {
+                obj.locked = true;
+            }
+        });
+        return true;
+    }
+
+    unlockSelected(state) {
+        if (this.selectedObjects.length === 0) return false;
+        this.selectedObjects.forEach(index => {
+            const obj = state.objects[index];
+            if (obj) {
+                obj.locked = false;
+            }
+        });
+        return true;
+    }
+
     handleContextMenu(e, canvas, state) {
         // Seçili nesne yoksa menüyü gösterme
         if (this.selectedObjects.length === 0) return;
@@ -1152,9 +1530,9 @@ class SelectTool {
             const flipItems = menu.querySelectorAll('[data-action="flipHorizontal"], [data-action="flipVertical"]');
             flipItems.forEach(item => item.style.display = 'none');
 
-            // Hide layering options
+            // Show layering options
             const layerItems = menu.querySelectorAll('[data-action="bringToFront"], [data-action="bringForward"], [data-action="sendBackward"], [data-action="sendToBack"]');
-            layerItems.forEach(item => item.style.display = 'none');
+            layerItems.forEach(item => item.style.display = 'flex');
 
             // Hide grouping options
             const groupItems = menu.querySelectorAll('[data-action="group"], [data-action="ungroup"]');
@@ -1164,9 +1542,16 @@ class SelectTool {
             const stickerItem = menu.querySelector('[data-action="saveAsSticker"]');
             if (stickerItem) stickerItem.style.display = 'none';
 
-            // Hide separators that would be orphaned
+            // Manage separators
             const separators = menu.querySelectorAll('.context-menu-separator');
-            separators.forEach(sep => sep.style.display = 'none');
+            separators.forEach((sep, index) => {
+                // Show separator after Paste (0), after Delete (1), and after Unlock (2)
+                if (index === 0 || index === 1 || index === 2) {
+                    sep.style.display = 'block';
+                } else {
+                    sep.style.display = 'none';
+                }
+            });
         } else {
             // Show all options for non-tape objects
             const flipItems = menu.querySelectorAll('[data-action="flipHorizontal"], [data-action="flipVertical"]');
@@ -1198,6 +1583,18 @@ class SelectTool {
             borderItem.style.display = isShape ? 'flex' : 'none';
         }
 
+        // Show/Hide Lock/Unlock
+        const lockItem = menu.querySelector('[data-action="lock"]');
+        const unlockItem = menu.querySelector('[data-action="unlock"]');
+
+        if (lockItem && unlockItem) {
+            const anyLocked = this.selectedObjects.some(index => state.objects[index] && state.objects[index].locked);
+            const anyUnlocked = this.selectedObjects.some(index => state.objects[index] && !state.objects[index].locked);
+
+            lockItem.style.display = anyUnlocked ? 'flex' : 'none';
+            unlockItem.style.display = anyLocked ? 'flex' : 'none';
+        }
+
         menu.classList.add('show');
 
         return true;
@@ -1226,6 +1623,7 @@ class SelectTool {
     }
 
     flipObjectHorizontal(obj, centerX) {
+        if (obj.locked) return;
         if (obj._renderCachePoints) delete obj._renderCachePoints;
 
         if (obj.type === 'group') {
@@ -1314,6 +1712,7 @@ class SelectTool {
     }
 
     flipObjectVertical(obj, centerY) {
+        if (obj.locked) return;
         if (obj._renderCachePoints) delete obj._renderCachePoints;
 
         if (obj.type === 'group') {
@@ -1495,6 +1894,8 @@ class SelectTool {
     }
 
     getHandleAtPoint(point, bounds, obj = null) {
+        if (obj && obj.locked) return null;
+
         // Eğer obj parametresi gelmezse ve seçili nesne varsa onu kullan
         if (!obj && this.selectedObjects.length === 1) {
             const index = this.selectedObjects[0];
@@ -1518,6 +1919,7 @@ class SelectTool {
     }
 
     handleResize(handle, obj, startBounds, startPoint, currentPoint) {
+        if (obj.locked) return;
         let deltaX = currentPoint.x - startPoint.x;
         let deltaY = currentPoint.y - startPoint.y;
 
@@ -1908,6 +2310,7 @@ class SelectTool {
     }
 
     rotateObject(obj, angle, centerPoint) {
+        if (obj.locked) return;
         if (obj.type === 'group') {
             obj.children.forEach(child => this.rotateObject(child, angle, centerPoint));
             return;

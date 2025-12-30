@@ -54,6 +54,7 @@ class EraserTool {
 
         // Silgiye yakın nesneleri bul ve sil
         state.objects = state.objects.filter(obj => {
+            if (obj.locked) return true;
             return !this.intersectsWithEraserSegment(obj, lastPos, pos, radius);
         });
 
@@ -66,6 +67,10 @@ class EraserTool {
         let totalModified = false;
 
         for (const obj of state.objects) {
+            if (obj.locked) {
+                nextObjects.push(obj);
+                continue;
+            }
             if (obj.type === 'pen' || obj.type === 'highlighter') {
                 if (this.intersectsWithEraserSegment(obj, lastPos, pos, r)) {
                     // Split logic currently only uses the current pos for simplicity, 

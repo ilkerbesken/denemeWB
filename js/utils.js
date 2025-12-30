@@ -134,5 +134,53 @@ const Utils = {
             x: v.x + t * (w.x - v.x),
             y: v.y + t * (w.y - v.y)
         });
+    },
+
+    // Line segment (p1, p2) intersection with Rectangle (rect:{x,y,width,height})
+    lineRectIntersect(p1, p2, rect) {
+        const minX = rect.x;
+        const minY = rect.y;
+        const maxX = rect.x + rect.width;
+        const maxY = rect.y + rect.height;
+
+        // Cohen-Sutherland Line Clipping Algorithm simplified usually works, 
+        // or just check intersection with 4 sides.
+
+        // Helper to check line intersection
+        const intersect = (x1, y1, x2, y2, x3, y3, x4, y4) => {
+            const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+            if (denom === 0) return false;
+            const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+            const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+            return (ua >= 0 && ua <= 1) && (ub >= 0 && ub <= 1);
+        };
+
+        // Check 4 sides of rect
+        const topLeft = { x: minX, y: minY };
+        const topRight = { x: maxX, y: minY };
+        const bottomRight = { x: maxX, y: maxY };
+        const bottomLeft = { x: minX, y: maxY };
+
+        if (intersect(p1.x, p1.y, p2.x, p2.y, topLeft.x, topLeft.y, topRight.x, topRight.y)) return true;
+        if (intersect(p1.x, p1.y, p2.x, p2.y, topRight.x, topRight.y, bottomRight.x, bottomRight.y)) return true;
+        if (intersect(p1.x, p1.y, p2.x, p2.y, bottomRight.x, bottomRight.y, bottomLeft.x, bottomLeft.y)) return true;
+        if (intersect(p1.x, p1.y, p2.x, p2.y, bottomLeft.x, bottomLeft.y, topLeft.x, topLeft.y)) return true;
+
+        // Check if line is completely inside (already handled by point check, but harmless to repeat implicitly if endpoints are inside)
+        // If one point inside, it's intersection.
+        if ((p1.x >= minX && p1.x <= maxX && p1.y >= minY && p1.y <= maxY) ||
+            (p2.x >= minX && p2.x <= maxX && p2.y >= minY && p2.y <= maxY)) {
+            return true;
+        }
+
+        return false;
+    },
+    // Line segment (p1, p2) intersection with Line segment (p3, p4)
+    lineLineIntersect(x1, y1, x2, y2, x3, y3, x4, y4) {
+        const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+        if (denom === 0) return false;
+        const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+        const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+        return (ua >= 0 && ua <= 1) && (ub >= 0 && ub <= 1);
     }
 };
