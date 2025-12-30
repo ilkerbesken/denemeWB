@@ -67,8 +67,6 @@ class WhiteboardApp {
         this.history = new HistoryManager();
         this.currentMousePos = { x: 0, y: 0 };
         this.isSpacePressed = false;
-        this.activePointers = new Map();
-        this.pinchStart = null;
 
         this.init();
     }
@@ -354,29 +352,22 @@ class WhiteboardApp {
 
         this.canvas.addEventListener('pointerdown', (e) => {
             if (e.cancelable) e.preventDefault();
-            this.activePointers.set(e.pointerId, e);
             this.handlePointerDown(e);
         }, opts);
         this.canvas.addEventListener('pointermove', (e) => {
             if (e.cancelable) e.preventDefault();
-            if (this.activePointers.has(e.pointerId)) {
-                this.activePointers.set(e.pointerId, e);
-            }
             this.handlePointerMove(e);
         }, opts);
         this.canvas.addEventListener('pointerup', (e) => {
             if (e.cancelable) e.preventDefault();
-            this.activePointers.delete(e.pointerId);
             this.handlePointerUp(e);
         }, opts);
         this.canvas.addEventListener('pointerleave', (e) => {
             if (e.cancelable) e.preventDefault();
-            this.activePointers.delete(e.pointerId);
             this.handlePointerUp(e);
         }, opts);
         this.canvas.addEventListener('pointercancel', (e) => {
             if (e.cancelable) e.preventDefault();
-            this.activePointers.delete(e.pointerId);
             this.handlePointerUp(e);
         }, opts);
 
@@ -575,52 +566,7 @@ class WhiteboardApp {
     }
 
 
-    getPinchInfo() {
-        if (this.activePointers.size < 2) return null;
-        const pointers = Array.from(this.activePointers.values());
-        const p1 = pointers[0];
-        const p2 = pointers[1];
-
-        // Rect for offset calculation if needed, but offsetX is used for zoom center
-        const rect = this.canvas.getBoundingClientRect();
-
-        const dist = Math.sqrt(Math.pow(p2.clientX - p1.clientX, 2) + Math.pow(p2.clientY - p1.clientY, 2));
-        const center = {
-            x: (p1.clientX - rect.left + p2.clientX - rect.left) / 2,
-            y: (p1.clientY - rect.top + p2.clientY - rect.top) / 2,
-            clientX: (p1.clientX + p2.clientX) / 2,
-            clientY: (p1.clientY + p2.clientY) / 2
-        };
-        return { dist, center };
-    }
-
     handlePointerDown(e) {
-        // --- Touch Gestures Handling ---
-        if (e.pointerType === 'touch') {
-            if (this.activePointers.size === 1) {
-                // If the current tool IS 'hand', then a single finger pans.
-                // Otherwise, a single finger draws (falls through to tool logic).
-                if (this.state.currentTool === 'hand') {
-                    this.zoomManager.startPan(e);
-                    return;
-                }
-            } else if (this.activePointers.size === 2) {
-                // Two fingers: ALWAYS pan/zoom, and cancel any active drawing.
-                const tool = this.tools[this.state.currentTool];
-                if (tool && tool.isDrawing) {
-                    tool.isDrawing = false;
-                    this.render(); // Redraw once to clear any preview stroke
-                }
-
-                if (this.zoomManager.isPanning) this.zoomManager.endPan();
-                this.pinchStart = this.getPinchInfo();
-                return;
-            } else {
-                // 3+ fingers: Ignore or handle separately.
-                return;
-            }
-        }
-
         if (this.isSpacePressed) {
             this.zoomManager.startPan(e);
             return;
@@ -741,29 +687,6 @@ class WhiteboardApp {
     }
 
     handlePointerMove(e) {
-        // --- Touch Gestures Handling ---
-        if (e.pointerType === 'touch') {
-            if (this.activePointers.size === 1) {
-                if (this.zoomManager.isPanning) {
-                    this.zoomManager.updatePan(e);
-                    return;
-                }
-                // Single finger move falls through to drawing if not panning
-            } else if (this.activePointers.size === 2 && this.pinchStart) {
-                const currentPinch = this.getPinchInfo();
-                if (currentPinch) {
-                    const factor = currentPinch.dist / this.pinchStart.dist;
-                    this.zoomManager.zoomAtPoint(currentPinch.center.x, currentPinch.center.y, factor);
-
-                    // Update pinch start for next move to be incremental
-                    this.pinchStart = currentPinch;
-                }
-                return;
-            } else {
-                return; // Ignore 3+ or other multi-touch states
-            }
-        }
-
         if (this.zoomManager.isPanning) {
             this.zoomManager.updatePan(e);
             return;
@@ -802,26 +725,6 @@ class WhiteboardApp {
     }
 
     handlePointerUp(e) {
-        // --- Touch Gestures Handling ---
-        if (e.pointerType === 'touch') {
-            if (this.activePointers.size === 0) {
-                if (this.zoomManager.isPanning) {
-                    this.zoomManager.endPan();
-                    // Keep current tool state
-                }
-                this.pinchStart = null;
-            } else if (this.activePointers.size === 1) {
-                // One finger removed, if we were pinching, stop it.
-                // If we were panning with 1 finger (hand tool), let it stay if it was hand anyway.
-                this.pinchStart = null;
-
-                // If the remaining pointer is to be used for something, 
-                // we might need to reset its state, but usually pointerup of 
-                // the second finger just stops the gesture.
-            }
-            // Fall through to handle the pointerup for drawing tools
-        }
-
         if (this.zoomManager.isPanning) {
             this.zoomManager.endPan();
             // Restore cursor based on space key and current tool
