@@ -7,9 +7,7 @@ class CanvasSettings {
             pattern: 'none',
             patternColor: 'rgba(0,0,0,0.15)', // Default
             patternSpacing: 20, // Default px
-            patternThickness: 1, // Default px
-            fingerDrawingEnabled: true,
-            penDrawingEnabled: true
+            patternThickness: 1 // Default px
         };
 
         // Gerçek boyutlar - 1 mm = 3.7795 piksel (96 DPI)
@@ -112,12 +110,6 @@ class CanvasSettings {
             thicknessSlider.value = this.settings.patternThickness || 1;
             if (thicknessVal) thicknessVal.textContent = (this.settings.patternThickness || 1) + 'px';
         }
-
-        // Giriş Seçenekleri
-        const fingerChk = document.getElementById('chkFingerDrawing');
-        const penChk = document.getElementById('chkPenDrawing');
-        if (fingerChk) fingerChk.checked = this.settings.fingerDrawingEnabled !== false;
-        if (penChk) penChk.checked = this.settings.penDrawingEnabled !== false;
     }
 
     applySettings(canvas, ctx, syncFromCanvas = null) {

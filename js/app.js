@@ -26,9 +26,6 @@ class WhiteboardApp {
             stabilization: 0.5, // 0.0 to 1.0 (corresponds to 0-100% slider)
             decimation: 0, // Default 0
             fillEnabled: false, // Live fill toggle
-            fingerDrawingEnabled: true, // New: Toggle for drawing with finger
-            penDrawingEnabled: true, // New: Toggle for drawing with pen
-            isPenArtist: false, // New: Detects if user primarily uses pen
             objects: []
         };
 
@@ -70,11 +67,8 @@ class WhiteboardApp {
         this.history = new HistoryManager();
         this.currentMousePos = { x: 0, y: 0 };
         this.isSpacePressed = false;
-
-        // Hybrid Pen/Touch Tracking
-        this.lastPenTime = 0;
-        this.activePointers = new Map(); // Store active touch points for navigation
-        this.palmThreshold = 80; // Higher threshold for iPad palms
+        this.activePointers = new Map();
+        this.pinchStart = null;
 
         this.init();
     }
@@ -227,14 +221,8 @@ class WhiteboardApp {
                 pattern: document.querySelector('.pattern-btn.active').dataset.pattern,
                 patternColor: activePatternColorBtn ? (activePatternColorBtn.dataset.patternColor || 'rgba(0,0,0,0.15)') : 'rgba(0,0,0,0.15)',
                 patternSpacing: spacingSlider ? parseInt(spacingSlider.value) : 20,
-                patternThickness: thicknessSlider ? parseFloat(thicknessSlider.value) : 1,
-                fingerDrawingEnabled: document.getElementById('chkFingerDrawing').checked,
-                penDrawingEnabled: document.getElementById('chkPenDrawing').checked
+                patternThickness: thicknessSlider ? parseFloat(thicknessSlider.value) : 1
             };
-
-            // Sync app state
-            this.state.fingerDrawingEnabled = this.canvasSettings.settings.fingerDrawingEnabled;
-            this.state.penDrawingEnabled = this.canvasSettings.settings.penDrawingEnabled;
 
             // Yeni ayarları uygula
             this.canvasSettings.applySettings(this.canvas, this.ctx);
@@ -366,34 +354,29 @@ class WhiteboardApp {
 
         this.canvas.addEventListener('pointerdown', (e) => {
             if (e.cancelable) e.preventDefault();
-            // iPad/Safari require setPointerCapture to keep receiving move events correctly
-            try { this.canvas.setPointerCapture(e.pointerId); } catch (err) { }
+            this.activePointers.set(e.pointerId, e);
             this.handlePointerDown(e);
         }, opts);
-
         this.canvas.addEventListener('pointermove', (e) => {
             if (e.cancelable) e.preventDefault();
+            if (this.activePointers.has(e.pointerId)) {
+                this.activePointers.set(e.pointerId, e);
+            }
             this.handlePointerMove(e);
         }, opts);
-
         this.canvas.addEventListener('pointerup', (e) => {
             if (e.cancelable) e.preventDefault();
-            try { this.canvas.releasePointerCapture(e.pointerId); } catch (err) { }
+            this.activePointers.delete(e.pointerId);
             this.handlePointerUp(e);
         }, opts);
-
-        this.canvas.addEventListener('pointercancel', (e) => {
-            if (e.cancelable) e.preventDefault();
-            try { this.canvas.releasePointerCapture(e.pointerId); } catch (err) { }
-            this.handlePointerUp(e); // Treat cancel like up
-        }, opts);
-
         this.canvas.addEventListener('pointerleave', (e) => {
             if (e.cancelable) e.preventDefault();
+            this.activePointers.delete(e.pointerId);
             this.handlePointerUp(e);
         }, opts);
         this.canvas.addEventListener('pointercancel', (e) => {
             if (e.cancelable) e.preventDefault();
+            this.activePointers.delete(e.pointerId);
             this.handlePointerUp(e);
         }, opts);
 
@@ -592,62 +575,46 @@ class WhiteboardApp {
     }
 
 
+    getPinchInfo() {
+        if (this.activePointers.size < 2) return null;
+        const pointers = Array.from(this.activePointers.values());
+        const p1 = pointers[0];
+        const p2 = pointers[1];
+
+        // Rect for offset calculation if needed, but offsetX is used for zoom center
+        const rect = this.canvas.getBoundingClientRect();
+
+        const dist = Math.sqrt(Math.pow(p2.clientX - p1.clientX, 2) + Math.pow(p2.clientY - p1.clientY, 2));
+        const center = {
+            x: (p1.clientX - rect.left + p2.clientX - rect.left) / 2,
+            y: (p1.clientY - rect.top + p2.clientY - rect.top) / 2,
+            clientX: (p1.clientX + p2.clientX) / 2,
+            clientY: (p1.clientY + p2.clientY) / 2
+        };
+        return { dist, center };
+    }
+
     handlePointerDown(e) {
-        const now = performance.now();
-
-        // 1. INPUT TRACKING
+        // --- Touch Gestures Handling ---
         if (e.pointerType === 'touch') {
-            // Palm Rejection
-            if (e.width > this.palmThreshold || e.height > this.palmThreshold) return;
-
-            this.activePointers.set(e.pointerId, e);
-
-            // If we have multiple touches, it's purely navigation
-            if (this.activePointers.size >= 2) {
-                this.zoomManager.endPan();
-                this.zoomManager.resetPinch();
-                return;
-            }
-
-            // Single touch logic
-            // If user is a Pen Artist (has used pen in this session) and finger drawing is NOT explicitly enabled
-            // OR if pen was recently used, treat single touch as Pan
-            const isRecentPen = now - this.lastPenTime < 3000;
-            if (this.state.isPenArtist && !this.state.fingerDrawingEnabled && isRecentPen) {
+            if (this.activePointers.size === 1) {
                 this.zoomManager.startPan(e);
                 return;
+            } else if (this.activePointers.size === 2) {
+                if (this.zoomManager.isPanning) this.zoomManager.endPan();
+                this.pinchStart = this.getPinchInfo();
+                return;
             }
-
-            // If we reach here, single touch MIGHT draw, but skip if pen is alread touching (simultaneous)
-            if (this.isPenDown) return;
-        } else if (e.pointerType === 'pen') {
-            if (this.state.penDrawingEnabled === false) return; // Prevent pen drawing if disabled
-
-            this.state.isPenArtist = true;
-            this.lastPenTime = now;
-            this.isPenDown = true;
-            // Pen ALWAYS resets panning if it was started by a touch
-            if (this.zoomManager.isPanning) {
-                this.zoomManager.endPan();
-            }
+            return; // 3+ fingers ignored or could be used for other gestures
         }
 
-        // 2. MOUSE OR KEYBOARD PAN
-        if (this.isSpacePressed && e.pointerType === 'mouse') {
+        if (this.isSpacePressed) {
             this.zoomManager.startPan(e);
             return;
         }
 
-        // 3. TOOL LOGIC
         const tool = this.tools[this.state.currentTool];
         if (!tool) return;
-
-        // NEW: Tool Lock - If a tool is already active with a different pointer, ignore this down
-        // (Prevents finger from "stealing" or "resetting" a pen stroke)
-        if (tool.isDrawing && tool.activePointerId !== undefined && tool.activePointerId !== e.pointerId) {
-            return;
-        }
-        tool.activePointerId = e.pointerId;
 
         const worldPos = this.zoomManager.getPointerWorldPos(e);
 
@@ -658,11 +625,14 @@ class WhiteboardApp {
                 let hit = this.tools.select.isNearObject(obj, worldPos);
 
                 if (hit) {
+                    // We found the object to use as mask
+                    // Calculate bounds to center it properly
                     const bounds = this.tools.select.getBoundingBox(obj);
                     const bWidth = Math.max(bounds.maxX - bounds.minX, 1);
                     const bHeight = Math.max(bounds.maxY - bounds.minY, 1);
-                    const targetPatternHeight = 60;
-                    const padding = 1;
+
+                    const targetPatternHeight = 60; // Base height for pattern
+                    const padding = 1; // Small gap between repetitions
                     const scale = (targetPatternHeight - padding * 1) / bHeight;
 
                     const maskCanvas = document.createElement('canvas');
@@ -670,6 +640,7 @@ class WhiteboardApp {
                     maskCanvas.height = targetPatternHeight;
                     const mCtx = maskCanvas.getContext('2d');
 
+                    // Fill with solid white background
                     mCtx.fillStyle = '#ffffff';
                     mCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
 
@@ -678,17 +649,23 @@ class WhiteboardApp {
                     mCtx.scale(scale, scale);
                     mCtx.translate(-(bounds.minX + bWidth / 2), -(bounds.minY + bHeight / 2));
 
+                    // Draw the object
                     this.drawObject(mCtx, obj);
                     mCtx.restore();
 
                     if (this.tools.tape) {
                         this.tools.tape.updateSettings({ pattern: 'mask', customMask: maskCanvas });
+
+                        // Save to custom patterns list
                         if (this.propertiesSidebar) {
                             this.propertiesSidebar.addCustomTapePattern(maskCanvas, 'mask');
                         }
+
+                        // UI: Deactivate other patterns
                         document.querySelectorAll('.pattern-btn[data-tape-pattern]').forEach(b => b.classList.remove('active'));
                     }
 
+                    // Exit pick mode
                     this.state.pickShapeMode = false;
                     const btn = document.getElementById('btnTapePickShape');
                     if (btn) btn.classList.remove('active');
@@ -696,6 +673,7 @@ class WhiteboardApp {
                     return;
                 }
             }
+            // If we clicked empty space, cancel pick mode?
             this.state.pickShapeMode = false;
             const btn = document.getElementById('btnTapePickShape');
             if (btn) btn.classList.remove('active');
@@ -703,6 +681,7 @@ class WhiteboardApp {
             return;
         }
 
+        // Save state for tools that modify state.objects immediately or via move (Eraser/Select)
         if (this.state.currentTool === 'eraser') {
             this.history.saveState(this.state.objects);
         } else if (this.state.currentTool === 'select' && tool.selectedObjects.length > 0) {
@@ -711,19 +690,25 @@ class WhiteboardApp {
             const selectedObj = this.state.objects[selectedIndex];
 
             if (selectedObj && tool.isNearObject(selectedObj, clickPoint)) {
+                // Sürükleme başlayacak, history kaydet
                 this.history.saveState(this.state.objects);
             }
         }
 
-        // --- Global Tape Interaction ---
+        // --- Global Tape Interaction (Visibility Toggle) ---
         for (let i = this.state.objects.length - 1; i >= 0; i--) {
             const obj = this.state.objects[i];
             if (obj.type === 'tape') {
                 if (this.tools.tape.isPointInside(obj, worldPos)) {
                     if (e.button === 2) return;
+
+                    // Eğer tape seçili DEĞİLSE görünürlüğü değiştir.
+                    // Eğer seçiliyse harekete izin vermek için burayı geçiyoruz.
                     if (this.state.currentTool === 'select' && this.tools.select.selectedObjects.includes(i)) {
                         continue;
                     }
+
+                    // Left click to toggle visibility
                     this.tools.tape.toggleVisibility(obj);
                     this.redrawOffscreen();
                     this.render();
@@ -733,137 +718,136 @@ class WhiteboardApp {
         }
 
         tool.handlePointerDown(e, worldPos, this.canvas, this.ctx, this.state);
+
+        // Update properties sidebar if selection might have changed
         if (this.state.currentTool === 'select') {
             this.propertiesSidebar.updateUIForTool('select');
         }
+
         this.render();
     }
 
     handlePointerMove(e) {
-        const now = performance.now();
-
-        // 1. TOUCH NAVIGATION (2+ fingers or single finger pan)
+        // --- Touch Gestures Handling ---
         if (e.pointerType === 'touch') {
-            if (this.activePointers.has(e.pointerId)) {
-                this.activePointers.set(e.pointerId, e);
+            if (this.activePointers.size === 1) {
+                this.zoomManager.updatePan(e);
+                return;
+            } else if (this.activePointers.size === 2 && this.pinchStart) {
+                const currentPinch = this.getPinchInfo();
+                if (currentPinch) {
+                    const factor = currentPinch.dist / this.pinchStart.dist;
+                    this.zoomManager.zoomAtPoint(currentPinch.center.x, currentPinch.center.y, factor);
 
-                if (this.activePointers.size === 1) {
-                    if (this.zoomManager.isPanning) {
-                        this.zoomManager.updatePan(e);
-                        return;
-                    }
-                } else if (this.activePointers.size >= 2) {
-                    // Pinch-to-zoom with any 2 fingers
-                    const points = Array.from(this.activePointers.values());
-                    this.zoomManager.handlePinch(points.slice(0, 2));
-                    return;
+                    // Update pinch start for next move to be incremental
+                    this.pinchStart = currentPinch;
                 }
+                return;
             }
-            // Reject drawing with touch if pen is active or pen artist mode
-            if (this.state.isPenArtist && !this.state.fingerDrawingEnabled) return;
-            if (this.isPenDown) return;
         }
 
-        if (e.pointerType === 'pen') {
-            this.lastPenTime = now;
-        }
-
-        // 2. GLOBAL PAN (Mouse / Space)
-        if (this.zoomManager.isPanning && e.pointerType === 'mouse') {
+        if (this.zoomManager.isPanning) {
             this.zoomManager.updatePan(e);
             return;
         }
 
-        // 3. TOOL LOGIC
         const tool = this.tools[this.state.currentTool];
         if (!tool) return;
-
-        // ONLY allow the pointer that started the drawing to continue it
-        if (tool.isDrawing && tool.activePointerId !== e.pointerId) return;
 
         const worldPos = this.zoomManager.getPointerWorldPos(e);
         const beforeCount = this.state.objects.length;
         const needsRedraw = tool.handlePointerMove(e, worldPos, this.canvas, this.ctx, this.state);
         const afterCount = this.state.objects.length;
 
+        // Mouse pozisyonunu her harekette güncelle
         this.currentMousePos = { x: e.offsetX, y: e.offsetY };
 
         if (needsRedraw || beforeCount !== afterCount || this.state.currentTool === 'eraser') {
+            // Optimization & Logic Fix:
+            // If SelectTool is dragging/resizing, it modifies state.objects in-place.
+            // We must update the offscreen canvas to reflect these changes.
             if (this.state.currentTool === 'select') {
                 if (tool.isDragging || tool.activeHandle) {
                     this.redrawOffscreen();
                 }
             }
+
+            // Fix for Eraser: If something was modified or count changed, we MUST redraw offscreen
             if (this.state.currentTool === 'eraser' && (needsRedraw || beforeCount !== afterCount)) {
                 this.redrawOffscreen();
             } else if (beforeCount !== afterCount) {
                 this.redrawOffscreen();
             }
+
             this.render();
         }
     }
 
     handlePointerUp(e) {
-        const now = performance.now();
-
-        // 1. TOUCH CLEANUP
+        // --- Touch Gestures Handling ---
         if (e.pointerType === 'touch') {
-            if (this.activePointers.has(e.pointerId)) {
-                this.activePointers.delete(e.pointerId);
-                if (this.activePointers.size < 2) {
-                    this.zoomManager.resetPinch();
-                }
-                if (this.activePointers.size === 0) {
+            if (this.activePointers.size === 0) {
+                if (this.zoomManager.isPanning) {
                     this.zoomManager.endPan();
+                    this.setTool(this.state.currentTool);
                 }
+                this.pinchStart = null;
+            } else if (this.activePointers.size === 1) {
+                // One finger removed, maybe restart pan with the remaining one
+                const remaining = Array.from(this.activePointers.values())[0];
+                this.zoomManager.startPan(remaining);
+                this.pinchStart = null;
             }
-            // If it's a touch and it wasn't the drawing pointer, just exit
-            const tool = this.tools[this.state.currentTool];
-            if (tool && tool.activePointerId !== e.pointerId) return;
+            // If we are handling gestures, we might want to skip tool.handlePointerUp 
+            // BUT we still need to allow tool pointer up if it was a Pen that was lifted.
+            // Wait, if pointerType is 'touch', we only return early if we were actually panning/zooming.
+            // But with the new rule, 1-finger-touch is ALWAYS pan. So we always return early for touch.
+            return;
         }
 
-        if (e.pointerType === 'pen') {
-            this.lastPenTime = now;
-            this.isPenDown = false;
-        }
-
-        // 2. GLOBAL PAN CLEANUP
-        if (this.zoomManager.isPanning && e.pointerType === 'mouse') {
+        if (this.zoomManager.isPanning) {
             this.zoomManager.endPan();
+            // Restore cursor based on space key and current tool
             if (this.isSpacePressed) {
                 this.canvas.style.cursor = 'grab';
             } else {
-                this.setTool(this.state.currentTool);
+                this.setTool(this.state.currentTool); // Use setTool to restore correct cursor
             }
             return;
         }
 
-        // 3. TOOL LOGIC
         const tool = this.tools[this.state.currentTool];
         if (!tool) return;
-
-        // Safety check: ignore up event if it's not the active pointer
-        if (tool.activePointerId !== undefined && tool.activePointerId !== e.pointerId) return;
-        tool.activePointerId = undefined; // Reset tool pointer lock
 
         const worldPos = this.zoomManager.getPointerWorldPos(e);
         const completedObject = tool.handlePointerUp(e, worldPos, this.canvas, this.ctx, this.state);
 
         if (completedObject && typeof completedObject === 'object') {
+            // 1. SAVE STATE BEFORE ADDING (to allow undo to previous state)
             this.history.saveState(this.state.objects);
+
+            // 2. IF AUTO-STRAIGHTENED, INJECT INTERMEDIATE STATE
             if (completedObject.isStraightened && completedObject.originalPoints) {
+                // To allow undo back to squiggly:
+                // We need a state that has all current objects PLUS the squiggly one
                 const freehandObj = JSON.parse(JSON.stringify(completedObject));
                 freehandObj.points = completedObject.originalPoints;
                 freehandObj.isStraightened = false;
                 delete freehandObj.originalPoints;
+
                 const intermediateObjects = JSON.parse(JSON.stringify(this.state.objects));
                 if (completedObject.isHighlighter) {
                     intermediateObjects.unshift(freehandObj);
                 } else {
                     intermediateObjects.push(freehandObj);
                 }
+
+                // Save the intermediate (squiggly) state to the undo stack
                 this.history.saveState(intermediateObjects);
             }
+
+            // 3. ADD THE FINAL OBJECT TO REAL STATE
+            // Tapes always go to the top layer (end of array)
             if (completedObject.type === 'tape') {
                 this.state.objects.push(completedObject);
             } else if (completedObject.isHighlighter) {
@@ -871,12 +855,15 @@ class WhiteboardApp {
             } else {
                 this.state.objects.push(completedObject);
             }
+
             this.redrawOffscreen();
         }
 
+        // Update properties sidebar if selection might have changed (e.g. drag selection finished)
         if (this.state.currentTool === 'select') {
             this.propertiesSidebar.updateUIForTool('select');
         }
+
         this.render();
     }
 

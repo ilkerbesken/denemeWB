@@ -79,6 +79,14 @@
 
         <!-- NEW: Properties Sidebar (Right of Color Palette) -->
         <div id="propertiesSidebar" class="floating-sidebar properties-sidebar">
+            <!-- Brush Settings Group -->
+            <div class="tool-group" id="toolGroupBrushSettings">
+                <button id="btnBrushSettingsTrigger" class="property-trigger-btn" title="Araç Seçenekleri">
+                    <img src="assets/icons/settings.svg" alt="settings" class="icon">
+                    <span class="label" style="font-size: 8px;"></span>
+                </button>
+            </div>
+
             <!-- Select Tool Settings -->
             <div class="tool-group" id="selectSettings" style="display: none;">
                 <button class="tool-btn active" data-select-mode="normal" title="Seç ve Taşı">
@@ -89,15 +97,15 @@
                 </button>
             </div>
 
-            <!-- Brush Settings Group -->
-            <div class="tool-group" id="toolGroupBrushSettings">
-                <button id="btnBrushSettingsTrigger" class="property-trigger-btn" title="Araç Seçenekleri">
-
-                    <img src="assets/icons/settings.svg" alt="settings" class="icon">
-
-                    <span class="label" style="font-size: 8px;"></span>
-                </button>
-
+            <!-- Shared Thickness Group (Quick Access) -->
+            <div class="tool-group" id="toolGroupThickness" style="display: none; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 4px;">
+                    <img src="assets/icons/width.svg" alt="width" class="icon"
+                        style="width: 14px; height: 14px; filter: brightness(0) saturate(100%) invert(40%);">
+                    <input type="range" class="stroke-width-slider" min="1" max="100" value="3" style="width: 80px;">
+                    <span class="label" id="quickThicknessVal"
+                        style="font-size: 10px; color: #666; min-width: 25px; margin-left: 2px;"></span>
+                </div>
             </div>
 
 
@@ -196,17 +204,20 @@
                 </button>
             </div>
 
-            <div class="tool-group" id="eraserSettings" style="display: none;">
-                <label class="label">Silgi</label>
+            <div class="tool-group" id="eraserSettings" style="display: none; align-items: center;">
+                <div style="display: flex; align-items: center; margin-right: 8px; gap: 4px;">
+                    <img src="assets/icons/width.svg" alt="width" class="icon"
+                        style="width: 14px; height: 14px; filter: brightness(0) saturate(100%) invert(40%);">
+                    <input type="range" id="eraserThicknessSlider" class="stroke-width-slider" min="1" max="150"
+                        value="30" style="width: 80px;">
+                    <span id="eraserThicknessVal" style="font-size: 10px; color: #666; min-width: 25px;">30</span>
+                </div>
+                <div style="width: 1px; height: 20px; background: #e0e0e0; margin: 0 4px;"></div>
                 <button class="tool-btn active" data-eraser-mode="object" title="Nesne Silgisi">
-
                     <img src="assets/icons/eraser-object.svg" alt="eraser-object" class="icon">
-
                 </button>
                 <button class="tool-btn" data-eraser-mode="partial" title="Kısmi Silgi (Piksel)">
-
                     <img src="assets/icons/eraser-partial.svg" alt="eraser-partial" class="icon">
-
                 </button>
             </div>
 
@@ -435,20 +446,6 @@
                         style="width: 100%;">
                 </div>
 
-                <div class="setting-item" style="border-left: 1px solid #eee; padding-left: 15px;">
-                    <label>Giriş Seçenekleri:</label>
-                    <div style="display: flex; gap: 10px;">
-                        <label class="radio-label-inline">
-                            <input type="checkbox" id="chkFingerDrawing" checked>
-                            <span>Parmakla Çizim</span>
-                        </label>
-                        <label class="radio-label-inline">
-                            <input type="checkbox" id="chkPenDrawing" checked>
-                            <span>Kalemle Çizim</span>
-                        </label>
-                    </div>
-                </div>
-
                 <button class="btn btn-primary btn-sm" id="applySettingsBtn">Uygula</button>
             </div>
         </div>
@@ -675,7 +672,7 @@
         </div>
     </div>
 
-    <div id="popupArrowStart" class="property-popup">
+    <div id="popupArrowStart" class="property-popup property-popup-grid-3">
         <button class="tool-btn active" data-arrow-start="none" title="Uç Yok">
             <img src="assets/icons/arrow-none.svg" alt="arrow-none" class="icon">
 
@@ -702,7 +699,7 @@
         </button>
     </div>
 
-    <div id="popupArrowEnd" class="property-popup">
+    <div id="popupArrowEnd" class="property-popup property-popup-grid-3">
         <button class="tool-btn" data-arrow-end="none" title="Uç Yok">
             <img src="assets/icons/arrow-none.svg" alt="arrow-none" class="icon">
 
@@ -717,10 +714,6 @@
         </button>
         <button class="tool-btn" data-arrow-end="circle" title="Yuvarlak">
             <img src="assets/icons/arrow-circle-end.svg" alt="arrow-circle-end" class="icon">
-
-        </button>
-        <button class="tool-btn" data-arrow-end="open" title="Açık ok">
-            <img src="assets/icons/arrow-line-right.svg" alt="arrow-line-right" class="icon">
 
         </button>
         <button class="tool-btn" data-arrow-end="square" title="Kare">

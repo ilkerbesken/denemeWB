@@ -549,14 +549,18 @@ input[type="range"] {
 }
 
 .properties-sidebar {
-    top: 38px;
+    top: 52px;
     left: 50%;
     transform: translateX(-50%);
     width: max-content;
     max-width: 95vw;
-    height: auto;
+    height: 42px;
+    /* Fixed height for symmetry */
+    display: flex;
     flex-direction: row;
-    padding: 3px 6px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
     z-index: 105;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -875,6 +879,14 @@ input[type="range"] {
 
 .property-popup.show {
     display: grid;
+}
+
+.property-popup-grid-3.show {
+    display: grid !important;
+    grid-template-columns: repeat(3, 40px);
+    /* Fixed width for columns to force wrapping */
+    gap: 4px;
+    width: max-content;
 }
 
 .property-popup .tool-btn .icon {

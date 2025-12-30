@@ -29,7 +29,10 @@ class PropertiesSidebar {
                 this.app.state.opacity = val / 100;
                 if (opacityVal) opacityVal.textContent = val + '%';
                 // Sync all opacity sliders
-                opacitySliders.forEach(s => { if (s !== e.target) s.value = val; });
+                opacitySliders.forEach(s => {
+                    if (s !== e.target) s.value = val;
+                    if (window.updateRangeProgress) window.updateRangeProgress(s);
+                });
 
                 if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
                     this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { opacity: this.app.state.opacity });
@@ -57,8 +60,18 @@ class PropertiesSidebar {
 
                 this.app.state.strokeWidth = val;
                 if (widthVal) widthVal.textContent = val + 'px';
+
+                const eraserVal = document.getElementById('eraserThicknessVal');
+                if (eraserVal) eraserVal.textContent = val;
+
+                const quickVal = document.getElementById('quickThicknessVal');
+                if (quickVal) quickVal.textContent = val + 'px';
+
                 // Sync all width sliders
-                widthSliders.forEach(s => { if (s !== e.target) s.value = val; });
+                widthSliders.forEach(s => {
+                    if (s !== e.target) s.value = val;
+                    if (window.updateRangeProgress) window.updateRangeProgress(s);
+                });
 
                 if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
                     this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { width: this.app.state.strokeWidth });
@@ -80,7 +93,10 @@ class PropertiesSidebar {
                 this.app.state.stabilization = val / 100;
                 if (stabVal) stabVal.textContent = val + '%';
                 // Sync all stabilization sliders
-                stabSliders.forEach(s => { if (s !== e.target) s.value = val; });
+                stabSliders.forEach(s => {
+                    if (s !== e.target) s.value = val;
+                    if (window.updateRangeProgress) window.updateRangeProgress(s);
+                });
             });
         });
 
@@ -93,7 +109,10 @@ class PropertiesSidebar {
                 this.app.state.decimation = val / 100;
                 if (decVal) decVal.textContent = val + '%';
                 // Sync all decimation sliders
-                decSliders.forEach(s => { if (s !== e.target) s.value = val; });
+                decSliders.forEach(s => {
+                    if (s !== e.target) s.value = val;
+                    if (window.updateRangeProgress) window.updateRangeProgress(s);
+                });
             });
         });
 
@@ -265,10 +284,10 @@ class PropertiesSidebar {
         if (btnStartTrigger && popupStart) {
             btnStartTrigger.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const isVisible = popupStart.style.display === 'grid';
+                const isVisible = popupStart.classList.contains('show');
                 closeAllPopups();
                 if (!isVisible) {
-                    popupStart.style.display = 'grid';
+                    popupStart.classList.add('show');
                     btnStartTrigger.classList.add('active');
                     this.positionPopup(btnStartTrigger, popupStart);
                 }
@@ -278,10 +297,10 @@ class PropertiesSidebar {
         if (btnEndTrigger && popupEnd) {
             btnEndTrigger.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const isVisible = popupEnd.style.display === 'grid';
+                const isVisible = popupEnd.classList.contains('show');
                 closeAllPopups();
                 if (!isVisible) {
-                    popupEnd.style.display = 'grid';
+                    popupEnd.classList.add('show');
                     btnEndTrigger.classList.add('active');
                     this.positionPopup(btnEndTrigger, popupEnd);
                 }
@@ -292,10 +311,10 @@ class PropertiesSidebar {
         if (btnBrushSettingsTrigger && popupBrushSettings) {
             btnBrushSettingsTrigger.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const isVisible = popupBrushSettings.style.display === 'flex';
+                const isVisible = popupBrushSettings.classList.contains('show');
                 closeAllPopups();
                 if (!isVisible) {
-                    popupBrushSettings.style.display = 'flex';
+                    popupBrushSettings.classList.add('show');
                     btnBrushSettingsTrigger.classList.add('active');
                     this.positionPopup(btnBrushSettingsTrigger, popupBrushSettings);
                 }
@@ -603,14 +622,13 @@ class PropertiesSidebar {
         const btnBrushSettingsTrigger = document.getElementById('btnBrushSettingsTrigger');
         const popupTapeCustomPatterns = document.getElementById('popupTapeCustomPatterns');
 
-        if (popupStart) popupStart.style.display = 'none';
-        if (popupEnd) popupEnd.style.display = 'none';
+        if (popupStart) popupStart.classList.remove('show');
+        if (popupEnd) popupEnd.classList.remove('show');
         if (btnStartTrigger) btnStartTrigger.classList.remove('active');
         if (btnEndTrigger) btnEndTrigger.classList.remove('active');
 
-        if (popupBrushSettings) popupBrushSettings.style.display = 'none';
+        if (popupBrushSettings) popupBrushSettings.classList.remove('show');
         if (btnBrushSettingsTrigger) btnBrushSettingsTrigger.classList.remove('active');
-
         if (popupTapeCustomPatterns) popupTapeCustomPatterns.classList.remove('show');
 
         // Close mobile popups
@@ -696,100 +714,50 @@ class PropertiesSidebar {
             }
         }
 
-        // Opacity Logic
-        // We only want to set a default opacity when switching to a tool that specifically 
-        // benefits from it (like highlighter), but we shouldn't reset it every time 
-        // if the user is just switching between similar tools.
-        if (tool === 'highlighter') {
-            // Default Opacity: 50%
-            this.app.state.opacity = 0.5;
-            document.getElementById('opacitySlider').value = 50;
-            const opacityVal = document.getElementById('opacityVal');
-            if (opacityVal) opacityVal.textContent = '50%';
+        // Removed forced resets for pen/highlighter/tape to allow settings persistence.
 
-            // Default Thickness: 14
-            this.app.state.strokeWidth = 14;
-            const thicknessSliders = document.querySelectorAll('.stroke-width-slider');
-            thicknessSliders.forEach(s => {
-                s.value = 14;
-                if (window.updateRangeProgress) window.updateRangeProgress(s);
-            });
-            const thicknessVal = document.getElementById('strokeWidthVal');
-            if (thicknessVal) thicknessVal.textContent = '14px';
+        // Final UI Sync from Global State (ensure sliders match current state)
+        const thicknessSliders = document.querySelectorAll('.stroke-width-slider');
+        thicknessSliders.forEach(s => {
+            s.value = this.app.state.strokeWidth;
+            if (window.updateRangeProgress) window.updateRangeProgress(s);
+        });
+        const thicknessVal = document.getElementById('strokeWidthVal');
+        if (thicknessVal) thicknessVal.textContent = this.app.state.strokeWidth + 'px';
 
-            // Default Tip: Flat (butt)
-            this.app.state.highlighterCap = 'butt';
-            document.querySelectorAll('.tool-btn[data-highlighter-cap]').forEach(b => {
-                b.classList.toggle('active', b.dataset.highlighterCap === 'butt');
-            });
-        } else if (tool === 'pen') {
-            // Reset Pen Defaults
-            // Opacity: 100%
-            this.app.state.opacity = 1.0;
-            document.getElementById('opacitySlider').value = 100;
-            const opacityVal = document.getElementById('opacityVal');
-            if (opacityVal) opacityVal.textContent = '100%';
+        const eraserVal = document.getElementById('eraserThicknessVal');
+        if (eraserVal) eraserVal.textContent = this.app.state.strokeWidth;
 
-            // Thickness: 3
-            this.app.state.strokeWidth = 3;
-            const thicknessSliders = document.querySelectorAll('.stroke-width-slider');
-            thicknessSliders.forEach(s => {
-                s.value = 3;
-                if (window.updateRangeProgress) window.updateRangeProgress(s);
-            });
-            const thicknessVal = document.getElementById('strokeWidthVal');
-            if (thicknessVal) thicknessVal.textContent = '3px';
+        const quickVal = document.getElementById('quickThicknessVal');
+        if (quickVal) quickVal.textContent = this.app.state.strokeWidth + 'px';
 
-            const decVal = document.getElementById('decimationVal');
-            if (decVal) decVal.textContent = '0%';
-        } else if (tool === 'tape') {
-            // Tape defaults
-            this.app.state.opacity = 1.0;
-            document.getElementById('opacitySlider').value = 100;
-            const opacityVal = document.getElementById('opacityVal');
-            if (opacityVal) opacityVal.textContent = '100%';
+        const opacitySliders = document.querySelectorAll('.opacity-slider');
+        opacitySliders.forEach(s => {
+            s.value = Math.round(this.app.state.opacity * 100);
+            if (window.updateRangeProgress) window.updateRangeProgress(s);
+        });
+        const opacityVal = document.getElementById('opacityVal');
+        if (opacityVal) opacityVal.textContent = Math.round(this.app.state.opacity * 100) + '%';
 
-            this.app.state.strokeWidth = 20;
-            const thicknessSliders = document.querySelectorAll('.stroke-width-slider');
-            thicknessSliders.forEach(s => {
-                s.value = 20;
-                if (window.updateRangeProgress) window.updateRangeProgress(s);
-            });
-            const thicknessVal = document.getElementById('strokeWidthVal');
-            if (thicknessVal) thicknessVal.textContent = '20px';
-
-            // Set specific defaults requested by user: Line mode, Stripes pattern, #5c9bfe color
-            if (this.app.tools.tape) {
-                this.app.tools.tape.updateSettings({
-                    mode: 'line',
-                    pattern: 'stripes'
-                });
-            }
-            this.app.state.strokeColor = '#5c9bfe';
-
-            // Sync UI active states for tape
-            document.querySelectorAll('.tool-btn[data-tape-mode]').forEach(b =>
-                b.classList.toggle('active', b.dataset.tapeMode === 'line')
-            );
-            document.querySelectorAll('.pattern-btn[data-tape-pattern]').forEach(b =>
-                b.classList.toggle('active', b.dataset.tapePattern === 'stripes')
-            );
-
-            if (this.app.colorPalette) this.app.colorPalette.renderColors();
-        }
-        // We removed the forced reset to 1.0 for pen/shapes to allow persistent user choice.
+        // Sync Buttons
+        document.querySelectorAll('.tool-btn[data-linestyle]').forEach(b => b.classList.toggle('active', b.dataset.linestyle === this.app.state.lineStyle));
+        document.querySelectorAll('.tool-btn[data-highlighter-cap]').forEach(b => b.classList.toggle('active', b.dataset.highlighterCap === this.app.state.highlighterCap));
+        document.querySelectorAll('.tool-btn[data-arrow-start]').forEach(b => b.classList.toggle('active', b.dataset.arrowStart === this.app.state.arrowStartStyle));
+        document.querySelectorAll('.tool-btn[data-arrow-end]').forEach(b => b.classList.toggle('active', b.dataset.arrowEnd === this.app.state.arrowEndStyle));
+        document.querySelectorAll('.tool-btn[data-arrow-path]').forEach(b => b.classList.toggle('active', b.dataset.arrowPath === this.app.state.arrowPathType));
 
         // Pressure Logic
         const pressureBtn = document.getElementById('pressureBtn');
-        if (tool === 'pen') {
-
-            pressureBtn.style.display = 'flex';
-            pressureBtn.classList.toggle('active', this.app.state.pressureEnabled);
-        } else if (['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'line'].includes(tool)) {
-            pressureBtn.style.display = 'flex';
-            pressureBtn.classList.remove('active');
-        } else {
-            pressureBtn.style.display = 'none';
+        if (pressureBtn) {
+            if (tool === 'pen') {
+                pressureBtn.style.display = 'flex';
+                pressureBtn.classList.toggle('active', this.app.state.pressureEnabled);
+            } else if (['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'line'].includes(tool)) {
+                pressureBtn.style.display = 'flex';
+                pressureBtn.classList.remove('active');
+            } else {
+                pressureBtn.style.display = 'none';
+            }
         }
 
         // Brush Settings Visibility Logic
@@ -816,9 +784,14 @@ class PropertiesSidebar {
             brushSettingsGroup.style.display = showBrushSettings ? 'flex' : 'none';
         }
         if (lineStylesGroup) {
-            // Hide line styles for tape tool as requested
-            const showLineStyles = showBrushSettings && tool !== 'tape';
+            // Hide line styles for tape and eraser
+            const showLineStyles = showBrushSettings && tool !== 'tape' && tool !== 'eraser';
             lineStylesGroup.style.display = showLineStyles ? 'flex' : 'none';
+        }
+
+        const thicknessGroup = document.getElementById('toolGroupThickness');
+        if (thicknessGroup) {
+            thicknessGroup.style.display = (tool === 'pen' || tool === 'highlighter') ? 'flex' : 'none';
         }
 
         if (brushSettingsGroup) {
@@ -883,6 +856,15 @@ class PropertiesSidebar {
         // Toggle Eraser Settings visibility
         if (tool === 'eraser') {
             document.getElementById('eraserSettings').style.display = 'flex';
+
+            // Sync the eraser slider value when switching to eraser
+            const eSlider = document.getElementById('eraserThicknessSlider');
+            if (eSlider) {
+                eSlider.value = this.app.state.strokeWidth;
+                if (window.updateRangeProgress) window.updateRangeProgress(eSlider);
+                const eVal = document.getElementById('eraserThicknessVal');
+                if (eVal) eVal.textContent = this.app.state.strokeWidth;
+            }
         } else {
             document.getElementById('eraserSettings').style.display = 'none';
         }
