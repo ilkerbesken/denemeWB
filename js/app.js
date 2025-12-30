@@ -598,14 +598,27 @@ class WhiteboardApp {
         // --- Touch Gestures Handling ---
         if (e.pointerType === 'touch') {
             if (this.activePointers.size === 1) {
-                this.zoomManager.startPan(e);
-                return;
+                // If the current tool IS 'hand', then a single finger pans.
+                // Otherwise, a single finger draws (falls through to tool logic).
+                if (this.state.currentTool === 'hand') {
+                    this.zoomManager.startPan(e);
+                    return;
+                }
             } else if (this.activePointers.size === 2) {
+                // Two fingers: ALWAYS pan/zoom, and cancel any active drawing.
+                const tool = this.tools[this.state.currentTool];
+                if (tool && tool.isDrawing) {
+                    tool.isDrawing = false;
+                    this.render(); // Redraw once to clear any preview stroke
+                }
+
                 if (this.zoomManager.isPanning) this.zoomManager.endPan();
                 this.pinchStart = this.getPinchInfo();
                 return;
+            } else {
+                // 3+ fingers: Ignore or handle separately.
+                return;
             }
-            return; // 3+ fingers ignored or could be used for other gestures
         }
 
         if (this.isSpacePressed) {
@@ -731,8 +744,11 @@ class WhiteboardApp {
         // --- Touch Gestures Handling ---
         if (e.pointerType === 'touch') {
             if (this.activePointers.size === 1) {
-                this.zoomManager.updatePan(e);
-                return;
+                if (this.zoomManager.isPanning) {
+                    this.zoomManager.updatePan(e);
+                    return;
+                }
+                // Single finger move falls through to drawing if not panning
             } else if (this.activePointers.size === 2 && this.pinchStart) {
                 const currentPinch = this.getPinchInfo();
                 if (currentPinch) {
@@ -743,6 +759,8 @@ class WhiteboardApp {
                     this.pinchStart = currentPinch;
                 }
                 return;
+            } else {
+                return; // Ignore 3+ or other multi-touch states
             }
         }
 
@@ -789,20 +807,19 @@ class WhiteboardApp {
             if (this.activePointers.size === 0) {
                 if (this.zoomManager.isPanning) {
                     this.zoomManager.endPan();
-                    this.setTool(this.state.currentTool);
+                    // Keep current tool state
                 }
                 this.pinchStart = null;
             } else if (this.activePointers.size === 1) {
-                // One finger removed, maybe restart pan with the remaining one
-                const remaining = Array.from(this.activePointers.values())[0];
-                this.zoomManager.startPan(remaining);
+                // One finger removed, if we were pinching, stop it.
+                // If we were panning with 1 finger (hand tool), let it stay if it was hand anyway.
                 this.pinchStart = null;
+
+                // If the remaining pointer is to be used for something, 
+                // we might need to reset its state, but usually pointerup of 
+                // the second finger just stops the gesture.
             }
-            // If we are handling gestures, we might want to skip tool.handlePointerUp 
-            // BUT we still need to allow tool pointer up if it was a Pen that was lifted.
-            // Wait, if pointerType is 'touch', we only return early if we were actually panning/zooming.
-            // But with the new rule, 1-finger-touch is ALWAYS pan. So we always return early for touch.
-            return;
+            // Fall through to handle the pointerup for drawing tools
         }
 
         if (this.zoomManager.isPanning) {
