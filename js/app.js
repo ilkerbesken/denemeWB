@@ -73,7 +73,7 @@ class WhiteboardApp {
         // Hybrid Pen/Touch Tracking
         this.lastPenTime = 0;
         this.activePointers = new Map(); // Store active touch points for navigation
-        this.palmThreshold = 40; // Pixels width/height to ignore as palm
+        this.palmThreshold = 80; // Higher threshold for iPad palms
 
         this.init();
     }
@@ -359,16 +359,28 @@ class WhiteboardApp {
 
         this.canvas.addEventListener('pointerdown', (e) => {
             if (e.cancelable) e.preventDefault();
+            // iPad/Safari require setPointerCapture to keep receiving move events correctly
+            try { this.canvas.setPointerCapture(e.pointerId); } catch (err) { }
             this.handlePointerDown(e);
         }, opts);
+
         this.canvas.addEventListener('pointermove', (e) => {
             if (e.cancelable) e.preventDefault();
             this.handlePointerMove(e);
         }, opts);
+
         this.canvas.addEventListener('pointerup', (e) => {
             if (e.cancelable) e.preventDefault();
+            try { this.canvas.releasePointerCapture(e.pointerId); } catch (err) { }
             this.handlePointerUp(e);
         }, opts);
+
+        this.canvas.addEventListener('pointercancel', (e) => {
+            if (e.cancelable) e.preventDefault();
+            try { this.canvas.releasePointerCapture(e.pointerId); } catch (err) { }
+            this.handlePointerUp(e); // Treat cancel like up
+        }, opts);
+
         this.canvas.addEventListener('pointerleave', (e) => {
             if (e.cancelable) e.preventDefault();
             this.handlePointerUp(e);
@@ -578,29 +590,37 @@ class WhiteboardApp {
 
         // 1. INPUT TRACKING
         if (e.pointerType === 'touch') {
-            // Palm Rejection: Ignore large contact areas
+            // Palm Rejection
             if (e.width > this.palmThreshold || e.height > this.palmThreshold) return;
 
             this.activePointers.set(e.pointerId, e);
 
-            // Decision: Navigation vs Drawing
-            // If it's multi-touch, it's ALWAYS navigation
+            // If we have multiple touches, it's purely navigation
             if (this.activePointers.size >= 2) {
-                this.zoomManager.endPan(); // Stop single finger pan if it was active
+                this.zoomManager.endPan();
                 this.zoomManager.resetPinch();
                 return;
             }
 
             // Single touch logic
-            // If user is a Pen Artist and hasn't enabled Finger Drawing, single touch = Pan
-            if (this.state.isPenArtist && !this.state.fingerDrawingEnabled && now - this.lastPenTime < 2000) {
+            // If user is a Pen Artist (has used pen in this session) and finger drawing is NOT explicitly enabled
+            // OR if pen was recently used, treat single touch as Pan
+            const isRecentPen = now - this.lastPenTime < 3000;
+            if (this.state.isPenArtist && !this.state.fingerDrawingEnabled && isRecentPen) {
                 this.zoomManager.startPan(e);
                 return;
             }
+
+            // If we reach here, single touch MIGHT draw, but skip if pen is alread touching (simultaneous)
+            if (this.isPenDown) return;
         } else if (e.pointerType === 'pen') {
             this.state.isPenArtist = true;
             this.lastPenTime = now;
-            // Note: Pen doesn't return; it always proceeds to tool logic
+            this.isPenDown = true;
+            // Pen ALWAYS resets panning if it was started by a touch
+            if (this.zoomManager.isPanning) {
+                this.zoomManager.endPan();
+            }
         }
 
         // 2. MOUSE OR KEYBOARD PAN
@@ -612,6 +632,13 @@ class WhiteboardApp {
         // 3. TOOL LOGIC
         const tool = this.tools[this.state.currentTool];
         if (!tool) return;
+
+        // NEW: Tool Lock - If a tool is already active with a different pointer, ignore this down
+        // (Prevents finger from "stealing" or "resetting" a pen stroke)
+        if (tool.isDrawing && tool.activePointerId !== undefined && tool.activePointerId !== e.pointerId) {
+            return;
+        }
+        tool.activePointerId = e.pointerId;
 
         const worldPos = this.zoomManager.getPointerWorldPos(e);
 
@@ -706,7 +733,7 @@ class WhiteboardApp {
     handlePointerMove(e) {
         const now = performance.now();
 
-        // 1. TOUCH NAVIGATION
+        // 1. TOUCH NAVIGATION (2+ fingers or single finger pan)
         if (e.pointerType === 'touch') {
             if (this.activePointers.has(e.pointerId)) {
                 this.activePointers.set(e.pointerId, e);
@@ -716,14 +743,16 @@ class WhiteboardApp {
                         this.zoomManager.updatePan(e);
                         return;
                     }
-                } else if (this.activePointers.size === 2) {
+                } else if (this.activePointers.size >= 2) {
+                    // Pinch-to-zoom with any 2 fingers
                     const points = Array.from(this.activePointers.values());
-                    this.zoomManager.handlePinch(points);
+                    this.zoomManager.handlePinch(points.slice(0, 2));
                     return;
                 }
             }
-            // If it's a touch not in navigation map, check if it should be drawing
+            // Reject drawing with touch if pen is active or pen artist mode
             if (this.state.isPenArtist && !this.state.fingerDrawingEnabled) return;
+            if (this.isPenDown) return;
         }
 
         if (e.pointerType === 'pen') {
@@ -739,6 +768,9 @@ class WhiteboardApp {
         // 3. TOOL LOGIC
         const tool = this.tools[this.state.currentTool];
         if (!tool) return;
+
+        // ONLY allow the pointer that started the drawing to continue it
+        if (tool.isDrawing && tool.activePointerId !== e.pointerId) return;
 
         const worldPos = this.zoomManager.getPointerWorldPos(e);
         const beforeCount = this.state.objects.length;
@@ -775,12 +807,15 @@ class WhiteboardApp {
                 if (this.activePointers.size === 0) {
                     this.zoomManager.endPan();
                 }
-                return;
             }
+            // If it's a touch and it wasn't the drawing pointer, just exit
+            const tool = this.tools[this.state.currentTool];
+            if (tool && tool.activePointerId !== e.pointerId) return;
         }
 
         if (e.pointerType === 'pen') {
             this.lastPenTime = now;
+            this.isPenDown = false;
         }
 
         // 2. GLOBAL PAN CLEANUP
@@ -797,6 +832,10 @@ class WhiteboardApp {
         // 3. TOOL LOGIC
         const tool = this.tools[this.state.currentTool];
         if (!tool) return;
+
+        // Safety check: ignore up event if it's not the active pointer
+        if (tool.activePointerId !== undefined && tool.activePointerId !== e.pointerId) return;
+        tool.activePointerId = undefined; // Reset tool pointer lock
 
         const worldPos = this.zoomManager.getPointerWorldPos(e);
         const completedObject = tool.handlePointerUp(e, worldPos, this.canvas, this.ctx, this.state);
