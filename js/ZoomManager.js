@@ -242,36 +242,44 @@ class ZoomManager {
     // --- Touch Specific Navigation ---
 
     handlePinch(points) {
-        if (points.length < 2) return;
+        if (points.length < 2) {
+            this.resetPinch();
+            return;
+        }
 
         const p1 = points[0];
         const p2 = points[1];
 
-        // Current distance and center
-        const dist = Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
-        const centerX = (p1.x + p2.x) / 2;
-        const centerY = (p1.y + p2.y) / 2;
+        // Current distance and center in screen coordinates
+        const dist = Math.sqrt(Math.pow(p1.clientX - p2.clientX, 2) + Math.pow(p1.clientY - p2.clientY, 2));
+        const centerX = (p1.clientX + p2.clientX) / 2;
+        const centerY = (p1.clientY + p2.clientY) / 2;
+
+        const canvasRect = this.app.canvas.getBoundingClientRect();
+        const localX = centerX - canvasRect.left;
+        const localY = centerY - canvasRect.top;
 
         if (!this.lastPinchDist) {
             this.lastPinchDist = dist;
-            this.lastPinchCenter = { x: centerX, y: centerY };
+            this.lastPinchCenter = { x: localX, y: localY };
             return;
         }
 
-        // Zoom factor
+        // 1. Zoom logic
         const factor = dist / this.lastPinchDist;
-        if (Math.abs(1 - factor) > 0.001) {
-            this.zoomAtPoint(centerX, centerY, factor);
+        if (Math.abs(1 - factor) > 0.005) { // Sensitivity threshold
+            this.zoomAtPoint(localX, localY, factor);
         }
 
-        // Pan movement
-        const dx = centerX - this.lastPinchCenter.x;
-        const dy = centerY - this.lastPinchCenter.y;
+        // 2. Pan logic (Drag while pinching)
+        const dx = localX - this.lastPinchCenter.x;
+        const dy = localY - this.lastPinchCenter.y;
+
         this.pan.x += dx;
         this.pan.y += dy;
 
         this.lastPinchDist = dist;
-        this.lastPinchCenter = { x: centerX, y: centerY };
+        this.lastPinchCenter = { x: localX, y: localY };
 
         this.app.redrawOffscreen();
         this.app.render();
