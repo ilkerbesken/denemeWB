@@ -460,8 +460,8 @@ class PropertiesSidebar {
                 closeAllPopups();
                 if (!isVisible) {
                     popupTapeCustomPatterns.classList.add('show');
-                    this.positionPopup(btnTapeCustomPatterns, popupTapeCustomPatterns);
                     this.renderCustomTapePatterns();
+                    this.positionPopup(btnTapeCustomPatterns, popupTapeCustomPatterns);
                 } else {
                     popupTapeCustomPatterns.classList.remove('show');
                 }
@@ -626,7 +626,21 @@ class PropertiesSidebar {
         const rect = trigger.getBoundingClientRect();
         popup.style.position = 'fixed';
         popup.style.top = (rect.bottom + 8) + 'px';
-        popup.style.left = rect.left + 'px';
+
+        // Wait a tiny bit for the layout to compute the final width of the newly shown popup
+        // or just use offsetWidth if it's already display: block/grid/etc. 
+        let left = rect.left;
+        const popupWidth = popup.offsetWidth || 200;
+
+        // If the popup would overflow the right edge of the screen
+        if (left + popupWidth > window.innerWidth) {
+            left = window.innerWidth - popupWidth - 10;
+        }
+
+        // Ensure it doesn't overflow the left edge
+        if (left < 10) left = 10;
+
+        popup.style.left = left + 'px';
         popup.style.transform = 'none';
         popup.style.zIndex = '1001'; // Ensure it is above everything
     }
@@ -635,22 +649,14 @@ class PropertiesSidebar {
         if (!this.container) return;
         this.container.style.display = 'flex';
 
-        // Sync UI with selection if in select tool
+        // 1. Sync State from Selection (If in Select Tool)
         if (tool === 'select') {
-            // Sync Select Mode Buttons
-            if (this.app.tools.select) {
-                const currentMode = this.app.tools.select.selectionMode || 'normal';
-                document.querySelectorAll('.tool-btn[data-select-mode]').forEach(b => {
-                    b.classList.toggle('active', b.dataset.selectMode === currentMode);
-                });
-            }
-
             const selectTool = this.app.tools.select;
             if (selectTool.selectedObjects.length === 1) {
                 const obj = this.app.state.objects[selectTool.selectedObjects[0]];
                 if (obj) {
                     const shapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
-                    // Update State to match selected object (so subsequent changes are relative to it)
+                    // Update State to match selected object
                     if (shapes.includes(obj.type)) {
                         if (obj.strokeWidth !== undefined) this.app.state.strokeWidth = obj.strokeWidth;
                     } else {
@@ -664,119 +670,67 @@ class PropertiesSidebar {
                     if (obj.startStyle) this.app.state.arrowStartStyle = obj.startStyle;
                     if (obj.endStyle) this.app.state.arrowEndStyle = obj.endStyle;
                     if (obj.pathType) this.app.state.arrowPathType = obj.pathType;
-
-                    // Sync Sliders
-                    const thicknessSliders = document.querySelectorAll('.stroke-width-slider');
-                    thicknessSliders.forEach(s => {
-                        s.value = this.app.state.strokeWidth;
-                        if (window.updateRangeProgress) window.updateRangeProgress(s);
-                    });
-                    const thicknessVal = document.getElementById('strokeWidthVal');
-                    if (thicknessVal) thicknessVal.textContent = this.app.state.strokeWidth + 'px';
-
-                    const opacitySliders = document.querySelectorAll('.opacity-slider');
-                    opacitySliders.forEach(s => {
-                        s.value = Math.round(this.app.state.opacity * 100);
-                        if (window.updateRangeProgress) window.updateRangeProgress(s);
-                    });
-                    const opacityVal = document.getElementById('opacityVal');
-                    if (opacityVal) opacityVal.textContent = Math.round(this.app.state.opacity * 100) + '%';
-
-                    // Sync Active Buttons
-                    document.querySelectorAll('.tool-btn[data-linestyle]').forEach(b => b.classList.toggle('active', b.dataset.linestyle === this.app.state.lineStyle));
-                    document.querySelectorAll('.tool-btn[data-highlighter-cap]').forEach(b => b.classList.toggle('active', b.dataset.highlighterCap === this.app.state.highlighterCap));
-                    document.querySelectorAll('.tool-btn[data-arrow-start]').forEach(b => b.classList.toggle('active', b.dataset.arrowStart === this.app.state.arrowStartStyle));
-                    document.querySelectorAll('.tool-btn[data-arrow-end]').forEach(b => b.classList.toggle('active', b.dataset.arrowEnd === this.app.state.arrowEndStyle));
-                    document.querySelectorAll('.tool-btn[data-arrow-path]').forEach(b => b.classList.toggle('active', b.dataset.arrowPath === this.app.state.arrowPathType));
-                    document.querySelectorAll('#shapeSettings .tool-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === obj.type));
-
-                    // Sync Color Palette
-                    if (this.app.colorPalette) this.app.colorPalette.renderColors();
                 }
             }
         }
 
-        // Opacity Logic
-        // We only want to set a default opacity when switching to a tool that specifically 
-        // benefits from it (like highlighter), but we shouldn't reset it every time 
-        // if the user is just switching between similar tools.
-        if (tool === 'highlighter') {
-            // Default Opacity: 50%
-            this.app.state.opacity = 0.5;
-            document.getElementById('opacitySlider').value = 50;
-            const opacityVal = document.getElementById('opacityVal');
-            if (opacityVal) opacityVal.textContent = '50%';
+        // 2. Sync UI Components from Current State (Runs for ALL tools)
 
-            // Default Thickness: 14
-            this.app.state.strokeWidth = 14;
-            const thicknessSliders = document.querySelectorAll('.stroke-width-slider');
-            thicknessSliders.forEach(s => {
-                s.value = 14;
-                if (window.updateRangeProgress) window.updateRangeProgress(s);
+        // Sync Select Mode Buttons
+        if (this.app.tools.select) {
+            const currentMode = this.app.tools.select.selectionMode || 'normal';
+            document.querySelectorAll('.tool-btn[data-select-mode]').forEach(b => {
+                b.classList.toggle('active', b.dataset.selectMode === currentMode);
             });
-            const thicknessVal = document.getElementById('strokeWidthVal');
-            if (thicknessVal) thicknessVal.textContent = '14px';
+        }
 
-            // Default Tip: Flat (butt)
-            this.app.state.highlighterCap = 'butt';
-            document.querySelectorAll('.tool-btn[data-highlighter-cap]').forEach(b => {
-                b.classList.toggle('active', b.dataset.highlighterCap === 'butt');
-            });
-        } else if (tool === 'pen') {
-            // Reset Pen Defaults
-            // Opacity: 100%
-            this.app.state.opacity = 1.0;
-            document.getElementById('opacitySlider').value = 100;
-            const opacityVal = document.getElementById('opacityVal');
-            if (opacityVal) opacityVal.textContent = '100%';
+        // Sync Sliders
+        const thicknessSlider = document.getElementById('strokeWidthSlider');
+        if (thicknessSlider) {
+            thicknessSlider.value = this.app.state.strokeWidth;
+            if (window.updateRangeProgress) window.updateRangeProgress(thicknessSlider);
+        }
+        const thicknessSliders = document.querySelectorAll('.stroke-width-slider');
+        thicknessSliders.forEach(s => {
+            s.value = this.app.state.strokeWidth;
+            if (window.updateRangeProgress) window.updateRangeProgress(s);
+        });
+        const thicknessVal = document.getElementById('strokeWidthVal');
+        if (thicknessVal) thicknessVal.textContent = this.app.state.strokeWidth + 'px';
 
-            // Thickness: 3
-            this.app.state.strokeWidth = 3;
-            const thicknessSliders = document.querySelectorAll('.stroke-width-slider');
-            thicknessSliders.forEach(s => {
-                s.value = 3;
-                if (window.updateRangeProgress) window.updateRangeProgress(s);
-            });
-            const thicknessVal = document.getElementById('strokeWidthVal');
-            if (thicknessVal) thicknessVal.textContent = '3px';
+        const opacitySlider = document.getElementById('opacitySlider');
+        if (opacitySlider) {
+            opacitySlider.value = Math.round(this.app.state.opacity * 100);
+            if (window.updateRangeProgress) window.updateRangeProgress(opacitySlider);
+        }
+        const opacitySliders = document.querySelectorAll('.opacity-slider');
+        opacitySliders.forEach(s => {
+            s.value = Math.round(this.app.state.opacity * 100);
+            if (window.updateRangeProgress) window.updateRangeProgress(s);
+        });
+        const opacityVal = document.getElementById('opacityVal');
+        if (opacityVal) opacityVal.textContent = Math.round(this.app.state.opacity * 100) + '%';
 
-            const decVal = document.getElementById('decimationVal');
-            if (decVal) decVal.textContent = '0%';
-        } else if (tool === 'tape') {
-            // Tape defaults
-            this.app.state.opacity = 1.0;
-            document.getElementById('opacitySlider').value = 100;
-            const opacityVal = document.getElementById('opacityVal');
-            if (opacityVal) opacityVal.textContent = '100%';
+        // Sync Active Buttons
+        document.querySelectorAll('.tool-btn[data-linestyle]').forEach(b => b.classList.toggle('active', b.dataset.linestyle === this.app.state.lineStyle));
+        document.querySelectorAll('.tool-btn[data-highlighter-cap]').forEach(b => b.classList.toggle('active', b.dataset.highlighterCap === this.app.state.highlighterCap));
+        document.querySelectorAll('.tool-btn[data-arrow-start]').forEach(b => b.classList.toggle('active', b.dataset.arrowStart === this.app.state.arrowStartStyle));
+        document.querySelectorAll('.tool-btn[data-arrow-end]').forEach(b => b.classList.toggle('active', b.dataset.arrowEnd === this.app.state.arrowEndStyle));
+        document.querySelectorAll('.tool-btn[data-arrow-path]').forEach(b => b.classList.toggle('active', b.dataset.arrowPath === this.app.state.arrowPathType));
 
-            this.app.state.strokeWidth = 20;
-            const thicknessSliders = document.querySelectorAll('.stroke-width-slider');
-            thicknessSliders.forEach(s => {
-                s.value = 20;
-                if (window.updateRangeProgress) window.updateRangeProgress(s);
-            });
-            const thicknessVal = document.getElementById('strokeWidthVal');
-            if (thicknessVal) thicknessVal.textContent = '20px';
-
-            // Set specific defaults requested by user: Line mode, Stripes pattern, #5c9bfe color
-            if (this.app.tools.tape) {
-                this.app.tools.tape.updateSettings({
-                    mode: 'line',
-                    pattern: 'stripes'
-                });
-            }
-            this.app.state.strokeColor = '#5c9bfe';
-
-            // Sync UI active states for tape
+        // Tape Specific UI Sync
+        if (tool === 'tape' && this.app.tools.tape) {
+            const tapeSettings = this.app.tools.tape.settings;
             document.querySelectorAll('.tool-btn[data-tape-mode]').forEach(b =>
-                b.classList.toggle('active', b.dataset.tapeMode === 'line')
+                b.classList.toggle('active', b.dataset.tapeMode === tapeSettings.mode)
             );
             document.querySelectorAll('.pattern-btn[data-tape-pattern]').forEach(b =>
-                b.classList.toggle('active', b.dataset.tapePattern === 'stripes')
+                b.classList.toggle('active', b.dataset.tapePattern === tapeSettings.pattern)
             );
-
-            if (this.app.colorPalette) this.app.colorPalette.renderColors();
         }
+
+        // Sync Color Palette
+        if (this.app.colorPalette) this.app.colorPalette.renderColors();
         // We removed the forced reset to 1.0 for pen/shapes to allow persistent user choice.
 
         // Pressure Logic

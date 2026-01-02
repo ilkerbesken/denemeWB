@@ -125,6 +125,7 @@ class WhiteboardApp {
      * Set the active tool and update all related UI elements (icons, active classes, properties)
      */
     setTool(tool) {
+        const prevTool = this.state.currentTool;
         this.state.currentTool = tool;
 
         const shapeTypes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
@@ -132,6 +133,28 @@ class WhiteboardApp {
 
         if (isShape) {
             this.state.currentShapeType = tool;
+        }
+
+        // --- Tool Specific Defaults (Apply only when switching TO the tool) ---
+        if (tool !== prevTool) {
+            if (tool === 'highlighter') {
+                this.state.opacity = 0.5;
+                this.state.strokeWidth = 14;
+                this.state.highlighterCap = 'butt';
+            } else if (tool === 'pen') {
+                this.state.opacity = 1.0;
+                this.state.strokeWidth = 3;
+            } else if (tool === 'tape') {
+                this.state.opacity = 1.0;
+                this.state.strokeWidth = 20;
+                this.state.strokeColor = '#5c9bfe';
+                if (this.tools.tape) {
+                    this.tools.tape.updateSettings({
+                        mode: 'line',
+                        pattern: 'stripes'
+                    });
+                }
+            }
         }
 
         const shapePickerBtn = document.getElementById('shapePickerBtn');
