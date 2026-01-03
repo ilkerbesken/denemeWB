@@ -13,6 +13,9 @@
 
     <div id="app">
         <div class="toolbar">
+            <button class="tool-btn" id="btnPageSidebarTrigger" title="Sayfalar">
+                <img src="assets/icons/pages.svg" alt="pages" class="icon">
+            </button>
             <div class="app-logo">WB</div>
             <div class="tool-group">
                 <button class="tool-btn" data-tool="select" title="Seç (V)">
@@ -29,10 +32,8 @@
                     <img src="assets/icons/pen.svg" alt="pen" class="icon">
 
                 </button>
-                <button class="tool-btn" data-tool="highlighter" title="Vurgulayıcı Pen (H)">
-
+                <button class="tool-btn" data-tool="highlighter" title="Vurgulayıcı Pen (I)">
                     <img src="assets/icons/highlighter.svg" alt="highlighter" class="icon">
-
                 </button>
                 <button class="tool-btn" data-tool="eraser" title="Silgi (X)">
                     <img src="assets/icons/eraser.svg" alt="eraser" class="icon">
@@ -43,10 +44,8 @@
             </div>
 
             <div class="tool-group">
-                <button class="tool-btn" id="shapePickerBtn" data-tool="rectangle" title="Şekiller">
-
+                <button class="tool-btn" id="shapePickerBtn" data-tool="rectangle" title="Şekiller (O)">
                     <img src="assets/icons/rectangle.svg" alt="rectangle" class="icon">
-
                 </button>
                 <button class="tool-btn" data-tool="arrow" title="Ok (A)">
 
@@ -488,12 +487,14 @@
                     <img src="assets/icons/lock.svg" alt="lock" class="icon">
                 </span>
                 <span>Kilitle</span>
+                <span class="menu-shortcut">K</span>
             </div>
             <div class="context-menu-item" data-action="unlock">
                 <span class="menu-icon">
                     <img src="assets/icons/unlock.svg" alt="unlock" class="icon">
                 </span>
                 <span>Kilidi Aç</span>
+                <span class="menu-shortcut">J</span>
             </div>
             <div class="context-menu-separator"></div>
             <!--<div class="context-menu-item" data-action="applyColor">
@@ -552,16 +553,16 @@
             <div class="context-menu-item" data-action="group">
                 <span class="menu-icon">
                     <img src="assets/icons/group.svg" alt="group" class="icon">
-
                 </span>
                 <span>Grupla</span>
+                <span class="menu-shortcut">G</span>
             </div>
             <div class="context-menu-item" data-action="ungroup">
                 <span class="menu-icon">
                     <img src="assets/icons/ungroup.svg" alt="ungroup" class="icon">
-
                 </span>
                 <span>Grubu Çöz</span>
+                <span class="menu-shortcut">U</span>
             </div>
             <div class="context-menu-separator"></div>
             <div class="context-menu-item" data-action="saveAsSticker">
@@ -569,6 +570,28 @@
                     <img src="assets/icons/sticker.svg" alt="sticker" class="icon">
                 </span>
                 <span>Sticker Olarak Kaydet</span>
+            </div>
+        </div>
+
+        <div id="pageSidebar" class="page-sidebar collapsed">
+            <div class="sidebar-header">
+                <span>Sayfalar</span>
+                <div class="header-actions">
+                    <button id="btnTogglePageView" class="view-toggle-btn" title="Görünümü Değiştir">
+                        <img src="assets/icons/grid-view.svg" alt="view" class="icon"
+                            style="width: 14px; height: 14px;">
+                    </button>
+                    <button id="btnTogglePageSidebar" class="close-sidebar-btn" title="Kapat">×</button>
+                </div>
+            </div>
+            <div id="pageList" class="page-list">
+                <!-- Sayfalar buraya gelecek -->
+            </div>
+            <div class="sidebar-footer">
+                <button id="btnAddPage" class="btn btn-primary"
+                    style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <span style="font-size: 16px;">+</span> Yeni Sayfa
+                </button>
             </div>
         </div>
 
@@ -744,6 +767,7 @@
     <script src="./js/HistoryManager.js?v=0.7.1"></script>
     <script src="./js/StickerTool.js?v=0.7.1"></script>
     <script src="./js/TapeTool.js?v=0.7.1"></script>
+    <script src="./js/PageManager.js?v=0.7.1"></script>
     <script src="./js/app.js?v=0.7.1"></script>
 </body>
 

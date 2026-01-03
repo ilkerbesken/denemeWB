@@ -361,7 +361,7 @@ class StickerTool {
         const selectedObjs = selectTool.selectedObjects.map(idx => this.app.state.objects[idx]);
         const sticker = {
             id: Date.now(),
-            objects: JSON.parse(JSON.stringify(selectedObjs)), // Deep copy
+            objects: Utils.deepClone(selectedObjs), // Deep copy
             createdAt: new Date().toISOString()
         };
 
@@ -379,7 +379,7 @@ class StickerTool {
     createStickerFromObject(object) {
         const sticker = {
             id: Date.now(),
-            objects: [JSON.parse(JSON.stringify(object))], // Deep copy
+            objects: [Utils.deepClone(object)], // Deep copy
             createdAt: new Date().toISOString()
         };
 
@@ -428,7 +428,7 @@ class StickerTool {
 
         // Add objects to canvas with offset
         this.currentSticker.objects.forEach(obj => {
-            const newObj = JSON.parse(JSON.stringify(obj));
+            const newObj = Utils.deepClone(obj);
             this.moveObject(newObj, offsetX, offsetY);
             this.app.state.objects.push(newObj);
         });

@@ -65,6 +65,7 @@ class WhiteboardApp {
         this.propertiesSidebar = new PropertiesSidebar(this);
 
         this.history = new HistoryManager();
+        this.pageManager = new PageManager(this);
         this.currentMousePos = { x: 0, y: 0 };
         this.isSpacePressed = false;
 
@@ -454,6 +455,14 @@ class WhiteboardApp {
             });
         });
 
+        // Sayfa Sidebar Tetikleyici
+        const pageSidebarTrigger = document.getElementById('btnPageSidebarTrigger');
+        if (pageSidebarTrigger) {
+            pageSidebarTrigger.addEventListener('click', () => {
+                this.pageManager.toggleSidebar();
+            });
+        }
+
         // Temizle
         document.getElementById('clearBtn').addEventListener('click', () => {
             this.history.saveState(this.state.objects);
@@ -773,12 +782,12 @@ class WhiteboardApp {
             if (completedObject.isStraightened && completedObject.originalPoints) {
                 // To allow undo back to squiggly:
                 // We need a state that has all current objects PLUS the squiggly one
-                const freehandObj = JSON.parse(JSON.stringify(completedObject));
+                const freehandObj = Utils.deepClone(completedObject);
                 freehandObj.points = completedObject.originalPoints;
                 freehandObj.isStraightened = false;
                 delete freehandObj.originalPoints;
 
-                const intermediateObjects = JSON.parse(JSON.stringify(this.state.objects));
+                const intermediateObjects = Utils.deepClone(this.state.objects);
                 if (completedObject.isHighlighter) {
                     intermediateObjects.unshift(freehandObj);
                 } else {
@@ -811,6 +820,11 @@ class WhiteboardApp {
     }
 
     handleKeyDown(e) {
+        // Eğer kullanıcı bir input veya textarea'da yazı yazıyorsa kısayolları çalıştırma
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            return;
+        }
+
         if (e.repeat) return;
 
         if (e.code === 'Space') {
@@ -900,18 +914,62 @@ class WhiteboardApp {
             this.undo();
         }
 
+        // Geri al (Ctrl+Z)
+        if (e.ctrlKey && e.key === 'z') {
+            e.preventDefault();
+            this.undo();
+        }
+
         // İleri al (Ctrl+Y)
         if (e.ctrlKey && e.key === 'y') {
             e.preventDefault();
             this.redo();
         }
 
+        // Selection Actions (G, U, K, J)
+        if (this.state.currentTool === 'select' && !e.ctrlKey) {
+            const selectTool = this.tools.select;
+            if (e.key.toLowerCase() === 'g') {
+                e.preventDefault();
+                this.history.saveState(this.state.objects);
+                selectTool.groupSelected(this.state);
+                this.redrawOffscreen();
+                this.render();
+                return;
+            }
+            if (e.key.toLowerCase() === 'u') {
+                e.preventDefault();
+                this.history.saveState(this.state.objects);
+                selectTool.ungroupSelected(this.state);
+                this.redrawOffscreen();
+                this.render();
+                return;
+            }
+            if (e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                this.history.saveState(this.state.objects);
+                selectTool.lockSelected(this.state);
+                return;
+            }
+            if (e.key.toLowerCase() === 'j') {
+                e.preventDefault();
+                this.history.saveState(this.state.objects);
+                selectTool.unlockSelected(this.state);
+                return;
+            }
+        }
+
         // Araç kısayolları
         const toolShortcuts = {
             'p': 'pen',
-            'l': 'arrow',  // Changed from 'line' to 'arrow' (arrow tool is now the line tool)
+            'i': 'highlighter',
+            'h': 'hand',
+            'a': 'arrow',
+            'l': 'arrow',
             'r': 'rectangle',
             'e': 'ellipse',
+            'o': 'shape',
+            'q': 'shape',
             'x': 'eraser',
             'v': 'select',
             's': 'sticker',
@@ -921,14 +979,18 @@ class WhiteboardApp {
 
         if (toolShortcuts[e.key.toLowerCase()]) {
             e.preventDefault();
+            const toolName = toolShortcuts[e.key.toLowerCase()];
 
-            if (e.key.toLowerCase() === 'c') {
+            if (toolName === 'settings') {
                 this.canvasSettings.togglePanel();
                 if (this.canvasSettings.isPanelOpen) {
                     this.canvasSettings.loadSettingsToPanel();
                 }
+            } else if (toolName === 'shape') {
+                const shapePickerBtn = document.getElementById('shapePickerBtn');
+                if (shapePickerBtn) shapePickerBtn.click(); // Trigger the existing picker logic
             } else {
-                this.setTool(toolShortcuts[e.key.toLowerCase()]);
+                this.setTool(toolName);
             }
         }
     }

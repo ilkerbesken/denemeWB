@@ -6,34 +6,34 @@ class HistoryManager {
     }
 
     saveState(objects) {
-        // Derin kopyalama
-        const state = JSON.parse(JSON.stringify(objects));
+        // Derin kopyalama (Canvas/Image referanslarını koruyarak)
+        const state = Utils.deepClone(objects);
         this.undoStack.push(state);
-        
+
         if (this.undoStack.length > this.maxHistory) {
             this.undoStack.shift();
         }
-        
+
         // Yeni durum kaydedildiğinde redo stack'i temizle
         this.redoStack = [];
     }
 
     undo(currentObjects) {
         if (this.undoStack.length === 0) return null;
-        
+
         // Mevcut durumu redo stack'e kaydet
-        this.redoStack.push(JSON.parse(JSON.stringify(currentObjects)));
-        
+        this.redoStack.push(Utils.deepClone(currentObjects));
+
         // Önceki durumu geri getir
         return this.undoStack.pop();
     }
 
     redo(currentObjects) {
         if (this.redoStack.length === 0) return null;
-        
+
         // Mevcut durumu undo stack'e kaydet
-        this.undoStack.push(JSON.parse(JSON.stringify(currentObjects)));
-        
+        this.undoStack.push(Utils.deepClone(currentObjects));
+
         // İleri durumu geri getir
         return this.redoStack.pop();
     }

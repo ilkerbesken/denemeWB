@@ -182,5 +182,25 @@ const Utils = {
         const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
         const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
         return (ua >= 0 && ua <= 1) && (ub >= 0 && ub <= 1);
+    },
+    // Deep clone objects whilst preserving Canvas/Image references
+    deepClone(obj) {
+        if (obj === null || typeof obj !== 'object') return obj;
+
+        if (obj instanceof HTMLCanvasElement || obj instanceof HTMLImageElement) {
+            return obj; // Maintain reference
+        }
+
+        if (Array.isArray(obj)) {
+            return obj.map(item => this.deepClone(item));
+        }
+
+        const clonedObj = {};
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                clonedObj[key] = this.deepClone(obj[key]);
+            }
+        }
+        return clonedObj;
     }
 };

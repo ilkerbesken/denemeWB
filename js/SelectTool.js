@@ -432,6 +432,8 @@ class SelectTool {
     }
 
     checkLassoIntersectionV2(obj, polygon) {
+        if (!polygon || polygon.length < 3) return false;
+
         const objBounds = this.getBoundingBox(obj);
 
         // 1. STEP: Fast AABB Filter
@@ -448,17 +450,16 @@ class SelectTool {
             return false;
         }
 
-        // 2. STEP: Precise Check (Object Vertices vs Lasso)
+        // 2. STEP: Intersection Check (Sensitive)
+        // User requested: "Small part is enough"
 
-        // Define Object Polygons/Points
         let objPoints = [];
         let isClosedShape = false;
+        const shapeTypes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'tape', 'sticker'];
 
-        const simpleShapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'tape'];
-
-        if (simpleShapes.includes(obj.type)) {
+        if (shapeTypes.includes(obj.type)) {
             objPoints = this.getRotatedCorners(obj);
-            if (objPoints.length === 0) { // Fallback if getRotatedCorners fails
+            if (objPoints.length === 0) {
                 objPoints = [
                     { x: objBounds.minX, y: objBounds.minY },
                     { x: objBounds.maxX, y: objBounds.minY },
@@ -467,30 +468,28 @@ class SelectTool {
                 ];
             }
             isClosedShape = true;
-        } else if (obj.points) { // Pen, Highlighter
+        } else if (obj.points) {
             objPoints = obj.points;
-            // downsample for performance if too many points?
-            if (objPoints.length > 100) {
-                // Sample every Nth point to speed up
-                const sample = [];
-                const step = Math.ceil(objPoints.length / 50);
-                for (let i = 0; i < objPoints.length; i += step) sample.push(objPoints[i]);
-                // Ensure last point is included
-                if (sample[sample.length - 1] !== objPoints[objPoints.length - 1]) sample.push(objPoints[objPoints.length - 1]);
-                objPoints = sample;
+            if (objPoints.length > 200) {
+                const sampled = [];
+                const step = Math.ceil(objPoints.length / 100);
+                for (let i = 0; i < objPoints.length; i += step) sampled.push(objPoints[i]);
+                if (sampled[sampled.length - 1] !== objPoints[objPoints.length - 1]) sampled.push(objPoints[objPoints.length - 1]);
+                objPoints = sampled;
             }
-        } else if (obj.start && obj.end) { // Line, Arrow
+        } else if (obj.start && obj.end) {
             objPoints = [obj.start, obj.end];
             if (obj.curveControlPoint) objPoints.push(obj.curveControlPoint);
         }
 
-        // A) Check if ANY Object Vertex is inside Lasso
+        if (objPoints.length === 0) return false;
+
+        // A) ANY Object point inside Lasso -> Select
         for (let p of objPoints) {
             if (this.isPointInPolygon(p, polygon)) return true;
         }
 
-        // B) Check Edge Intersections (Lasso Edges vs Object Edges)
-        // Construct Object Segments
+        // B) Edge Intersection
         const objSegments = [];
         for (let i = 0; i < objPoints.length - 1; i++) {
             objSegments.push([objPoints[i], objPoints[i + 1]]);
@@ -499,7 +498,6 @@ class SelectTool {
             objSegments.push([objPoints[objPoints.length - 1], objPoints[0]]);
         }
 
-        // Construct Lasso Segments
         const lassoSegments = [];
         for (let i = 0; i < polygon.length - 1; i++) {
             lassoSegments.push([polygon[i], polygon[i + 1]]);
@@ -508,22 +506,12 @@ class SelectTool {
             lassoSegments.push([polygon[polygon.length - 1], polygon[0]]);
         }
 
-        // Double Loop Intersection Check (O(N*M))
-        // N = Lasso segments (~10-100), M = Object segments (4 for rect, ~50 for pen)
-        for (let ls of lassoSegments) {
-            for (let os of objSegments) {
+        for (let os of objSegments) {
+            for (let ls of lassoSegments) {
                 if (Utils.lineLineIntersect(ls[0].x, ls[0].y, ls[1].x, ls[1].y, os[0].x, os[0].y, os[1].x, os[1].y)) {
                     return true;
                 }
             }
-        }
-
-        // C) Check if Lasso is fully INSIDE Object (Inverse inclusion)
-        // Valid for shapes. Check if 1st Lasso point is in Object Polygon.
-        // For shapes like Circle/Triangle, getRotatedCorners returns Poly approximation.
-        if (isClosedShape && polygon.length > 0) {
-            // For standard shapes, we can check 1st point against Object Poly
-            if (this.isPointInPolygon(polygon[0], objPoints)) return true;
         }
 
         return false;
@@ -1226,7 +1214,7 @@ class SelectTool {
             const obj = state.objects[index];
             if (obj) {
                 // Deep copy to clipboard
-                items.push(JSON.parse(JSON.stringify(obj)));
+                items.push(Utils.deepClone(obj));
             }
         });
 
@@ -1256,7 +1244,7 @@ class SelectTool {
 
         items.forEach(item => {
             // Deep copy clipboard item
-            const newObj = JSON.parse(JSON.stringify(item));
+            const newObj = Utils.deepClone(item);
 
             // Offset uygula
             this.moveObject(newObj, offsetX, offsetY);
@@ -1301,7 +1289,7 @@ class SelectTool {
             const obj = state.objects[index];
             if (obj) {
                 // Deep copy
-                const duplicate = JSON.parse(JSON.stringify(obj));
+                const duplicate = Utils.deepClone(obj);
                 // Offset uygula
                 this.moveObject(duplicate, 20, 20);
                 copies.push(duplicate);
@@ -2219,7 +2207,7 @@ class SelectTool {
         if (allShapes.includes(obj.type)) {
             // Primitive şekiller için açı özelliğini güncelle
             if (!this.originalObjectState) {
-                this.originalObjectState = JSON.parse(JSON.stringify(obj));
+                this.originalObjectState = Utils.deepClone(obj);
                 this.originalObjectState.startRotation = obj.rotation !== undefined ? obj.rotation : (obj.angle || 0);
             }
 
@@ -2234,7 +2222,7 @@ class SelectTool {
         } else {
             // Diğerleri için (line, arrow, pen) nokta dönüşümü yap
             if (!this.originalObjectState) {
-                this.originalObjectState = JSON.parse(JSON.stringify(obj));
+                this.originalObjectState = Utils.deepClone(obj);
             }
             // Orijinal nesneden başlayarak döndür
             this.rotateObjectFromOriginal(obj, this.originalObjectState, deltaAngle, centerPoint);

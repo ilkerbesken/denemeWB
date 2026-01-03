@@ -105,6 +105,10 @@ class TapeTool {
         if (this.currentTape.mode !== 'freehand' && this.currentTape.width < 2 && this.currentTape.height < 2) {
             // If it's a line, check distance
             if (this.currentTape.mode === 'line') {
+                if (this.currentTape.points.length < 2) {
+                    this.currentTape = null;
+                    return null;
+                }
                 const p1 = this.currentTape.points[0];
                 const p2 = this.currentTape.points[1];
                 if (Utils.distance(p1, p2) < 2) {
@@ -158,9 +162,13 @@ class TapeTool {
                 ctx.rect(obj.x, obj.y, obj.width, obj.height);
                 ctx.fill();
             } else if (obj.mode === 'line') {
-                this.drawLineTape(ctx, obj);
+                if (obj.points && obj.points.length >= 2) {
+                    this.drawLineTape(ctx, obj);
+                }
             } else {
-                this.drawFreehandTape(ctx, obj);
+                if (obj.points && obj.points.length >= 2) {
+                    this.drawFreehandTape(ctx, obj);
+                }
             }
         }
 
@@ -209,6 +217,7 @@ class TapeTool {
     }
 
     drawLineTape(ctx, obj) {
+        if (!obj.points || obj.points.length < 2) return;
         const p1 = obj.points[0];
         const p2 = obj.points[1];
         const dx = p2.x - p1.x;
@@ -277,20 +286,28 @@ class TapeTool {
      */
     applyStyle(ctx, obj) {
         if (obj.pattern === 'solid') {
-            ctx.fillStyle = obj.color;
-        } else if (obj.pattern === 'custom' && obj.customImage) {
-            const pattern = ctx.createPattern(obj.customImage, 'repeat');
-            ctx.fillStyle = pattern;
-        } else if (obj.pattern === 'mask' && obj.customMask) {
-            const pattern = ctx.createPattern(obj.customMask, 'repeat');
-            ctx.fillStyle = pattern;
+            ctx.fillStyle = obj.color || '#000';
+        } else if (obj.pattern === 'custom' && obj.customImage && (obj.customImage instanceof HTMLImageElement || obj.customImage instanceof HTMLCanvasElement)) {
+            try {
+                const pattern = ctx.createPattern(obj.customImage, 'repeat');
+                ctx.fillStyle = pattern;
+            } catch (e) {
+                ctx.fillStyle = obj.color || '#000';
+            }
+        } else if (obj.pattern === 'mask' && obj.customMask && (obj.customMask instanceof HTMLCanvasElement || obj.customMask instanceof HTMLImageElement)) {
+            try {
+                const pattern = ctx.createPattern(obj.customMask, 'repeat');
+                ctx.fillStyle = pattern;
+            } catch (e) {
+                ctx.fillStyle = obj.color || '#000';
+            }
         } else {
             // Built-in patterns
             const patternInstance = this.getBuiltInPattern(obj.pattern, obj.color);
             if (patternInstance) {
                 ctx.fillStyle = patternInstance;
             } else {
-                ctx.fillStyle = obj.color;
+                ctx.fillStyle = obj.color || '#000';
             }
         }
     }
