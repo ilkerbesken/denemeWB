@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="4.2313504mm"
+   height="4.2313504mm"
+   viewBox="0 0 15.992506 15.992506"
+   version="1.1"
+   id="svg1172"
+   xml:space="preserve"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg"><defs
+     id="defs820"><style
+       id="style818">
+      .icon-stroke {
+        fill: none;
+        stroke: #262626;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .icon-fill {
+        fill: #262626;
+        stroke: none;
+      }
+      .label {
+        fill: #999;
+        stroke: none;
+        font-family: Arial, sans-serif;
+        font-size: 10px;
+        text-anchor: middle;
+      }
+    </style><style
+       id="style818-7">
+      .icon-stroke {
+        fill: none;
+        stroke: #262626;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .icon-fill {
+        fill: #262626;
+        stroke: none;
+      }
+      .label {
+        fill: #999;
+        stroke: none;
+        font-family: Arial, sans-serif;
+        font-size: 10px;
+        text-anchor: middle;
+      }
+    </style></defs><g
+     transform="matrix(1.5289219,-1.5289219,-1.5289219,-1.5289219,262.81054,47.380049)"
+     id="g6717"
+     style="stroke:#262626;stroke-width:0.924974;stroke-dasharray:none;stroke-opacity:1"><path
+       id="path6723"
+       style="fill:none;stroke:#262626;stroke-width:0.924974;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1;paint-order:fill markers stroke"
+       d="m -67.216087,96.210959 h -6.471357 m 3.235678,3.235679 v -6.471357 m 2.28797,5.523648 -4.575939,-4.575939 m 0,4.575939 4.575939,-4.575939" /></g></svg>
