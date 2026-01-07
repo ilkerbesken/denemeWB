@@ -43,10 +43,17 @@ class ZoomManager {
         }
     }
 
+    getLogicalDims() {
+        if (this.app.canvasSettings && this.app.canvasSettings.getLogicalSize) {
+            return this.app.canvasSettings.getLogicalSize();
+        }
+        return { width: CANVAS_CONSTANTS.LOGICAL_WIDTH, height: CANVAS_CONSTANTS.LOGICAL_HEIGHT };
+    }
+
     handleWheel(e) {
         e.preventDefault();
 
-        const logicalW = CANVAS_CONSTANTS.LOGICAL_WIDTH;
+        const { width: logicalW } = this.getLogicalDims();
         const cssW = this.app.canvas.clientWidth;
         const scale = (cssW > 0) ? (logicalW / cssW) : 1;
 
@@ -76,8 +83,7 @@ class ZoomManager {
 
         const dpr = window.devicePixelRatio || 1;
         // Sabit mantıksal boyutlar
-        const logicalW = CANVAS_CONSTANTS.LOGICAL_WIDTH;
-        const logicalH = CANVAS_CONSTANTS.LOGICAL_HEIGHT;
+        const { width: logicalW, height: logicalH } = this.getLogicalDims();
 
         // 1. Yatay kısıtlama (Esnek yatay kaydırma)
         const pageWidth = this.app.pageManager.getPageWidth();
@@ -119,7 +125,7 @@ class ZoomManager {
         if (!this.app.pageManager) return;
 
         // Mantıksal yükseklik üzerinden hesapla
-        const canvasH = CANVAS_CONSTANTS.LOGICAL_HEIGHT;
+        const { height: canvasH } = this.getLogicalDims();
         const viewportCenterY = -this.pan.y / this.zoom + (canvasH / (2 * this.zoom));
         const activeIndex = this.app.pageManager.getPageIndexAt(viewportCenterY);
         if (activeIndex !== this.app.pageManager.currentPageIndex) {
@@ -144,12 +150,14 @@ class ZoomManager {
     }
 
     zoomIn() {
-        const center = { x: CANVAS_CONSTANTS.LOGICAL_WIDTH / 2, y: CANVAS_CONSTANTS.LOGICAL_HEIGHT / 2 };
+        const { width: logicalW, height: logicalH } = this.getLogicalDims();
+        const center = { x: logicalW / 2, y: logicalH / 2 };
         this.zoomAtPoint(center.x, center.y, 1.25);
     }
 
     zoomOut() {
-        const center = { x: CANVAS_CONSTANTS.LOGICAL_WIDTH / 2, y: CANVAS_CONSTANTS.LOGICAL_HEIGHT / 2 };
+        const { width: logicalW, height: logicalH } = this.getLogicalDims();
+        const center = { x: logicalW / 2, y: logicalH / 2 };
         this.zoomAtPoint(center.x, center.y, 0.8);
     }
 
@@ -157,7 +165,7 @@ class ZoomManager {
         const cssW = this.app.canvas.clientWidth;
         if (!cssW) return;
 
-        const logicalW = CANVAS_CONSTANTS.LOGICAL_WIDTH;
+        const { width: logicalW } = this.getLogicalDims();
         const scale = logicalW / cssW; // map CSS px to Logic px
         const marginLogic = marginPX * scale;
 
@@ -198,7 +206,7 @@ class ZoomManager {
     getPointerWorldPos(e) {
         // Returns { x, y, pressure } in logic coordinates
 
-        const logicalW = CANVAS_CONSTANTS.LOGICAL_WIDTH;
+        const { width: logicalW } = this.getLogicalDims();
         const cssW = this.app.canvas.clientWidth;
         const scale = (cssW > 0) ? (logicalW / cssW) : 1;
 
@@ -256,7 +264,8 @@ class ZoomManager {
             let val = parseInt(input.value);
             if (!isNaN(val)) {
                 val = Math.max(10, Math.min(500, val));
-                const center = { x: CANVAS_CONSTANTS.LOGICAL_WIDTH / 2, y: CANVAS_CONSTANTS.LOGICAL_HEIGHT / 2 };
+                const { width: logicalW, height: logicalH } = this.getLogicalDims();
+                const center = { x: logicalW / 2, y: logicalH / 2 };
                 const targetZoom = val / 100;
                 const factor = targetZoom / this.zoom;
                 this.zoomAtPoint(center.x, center.y, factor);
@@ -310,7 +319,7 @@ class ZoomManager {
     updatePan(e) {
         if (!this.isPanning) return;
 
-        const logicalW = CANVAS_CONSTANTS.LOGICAL_WIDTH;
+        const { width: logicalW } = this.getLogicalDims();
         const cssW = this.app.canvas.clientWidth;
         const scale = (cssW > 0) ? (logicalW / cssW) : 1;
 

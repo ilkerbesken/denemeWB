@@ -135,14 +135,116 @@ class WhiteboardApp {
                                 const cWidth = obj.colWidths[c];
                                 if (point.x >= currentX && point.x <= currentX + cWidth) {
                                     // Found cell [r][c]
-                                    const currentText = obj.data[r][c];
-                                    const newText = prompt("Hücre İçeriği:", currentText);
-                                    if (newText !== null) {
-                                        obj.data[r][c] = newText;
+
+                                    // Use TableTool's startEditing method (we need to implement/expose it or do it here)
+                                    // Let's implement inline editing right here for simplicity akin to TextTool
+
+                                    const cellText = obj.data[r][c];
+
+                                    // Create overlay textarea
+                                    const textarea = document.createElement('textarea');
+                                    textarea.value = cellText;
+                                    textarea.className = 'text-editor-overlay';
+
+                                    // Calculate screen coordinates for the textarea
+                                    // We need to convert LOGICAL coordinates (currentX, currentY) back to SCREEN coordinates
+                                    // ScreenX = (WorldX * Zoom) + PanX
+                                    // But WorldX is (PageX, PageY relative to page start)
+                                    // So WorldGlobalY = PageY + obj.y + ...
+
+                                    // obj.x is relative to page. We need global world coordinates first.
+                                    const pageY = this.pageManager.getPageY(pageIndex);
+                                    const absoluteX = currentX;
+                                    const absoluteY = currentY + pageY;
+
+                                    // Calculate Scale: Logical pixels to CSS pixels
+                                    const logicalSize = this.canvasSettings.getLogicalSize();
+                                    const logicalW = logicalSize.width;
+                                    const cssW = this.canvas.clientWidth;
+                                    const scaleFactor = (cssW > 0) ? (logicalW / cssW) : 1;
+
+                                    // Apply zoom and pan in logical coordinates
+                                    const logicScreenX = (absoluteX * this.zoomManager.zoom) + this.zoomManager.pan.x;
+                                    const logicScreenY = (absoluteY * this.zoomManager.zoom) + this.zoomManager.pan.y;
+
+                                    // Convert to actual screen (CSS) coordinates
+                                    const screenX = (logicScreenX / scaleFactor) + this.canvas.offsetLeft;
+                                    const screenY = (logicScreenY / scaleFactor) + this.canvas.offsetTop;
+                                    const screenW = (cWidth * this.zoomManager.zoom) / scaleFactor;
+                                    const screenH = (rHeight * this.zoomManager.zoom) / scaleFactor;
+
+                                    textarea.style.left = `${screenX}px`;
+                                    textarea.style.top = `${screenY}px`;
+                                    textarea.style.width = `${screenW}px`;
+                                    textarea.style.height = `${screenH}px`;
+                                    textarea.style.fontSize = `${(12 * this.zoomManager.zoom) / scaleFactor}px`;
+                                    textarea.style.fontFamily = 'sans-serif';
+
+                                    // Vertical centering approximation
+                                    const fs = (12 * this.zoomManager.zoom) / scaleFactor;
+                                    const padTop = (screenH - (fs * 1.2)) / 2;
+
+                                    textarea.style.padding = `${Math.max(0, padTop)}px 5px 0 5px`;
+                                    textarea.style.margin = '0';
+                                    textarea.style.border = '2px solid #2196f3';
+                                    textarea.style.outline = 'none';
+                                    textarea.style.resize = 'none';
+                                    textarea.style.overflow = 'hidden';
+                                    // Ensure opacity to cover the underlying text which is being updated
+                                    textarea.style.background = (obj.backgroundColor && obj.backgroundColor !== 'transparent') ? obj.backgroundColor : '#ffffff';
+                                    textarea.style.color = 'black';
+                                    textarea.style.position = 'absolute';
+                                    textarea.style.zIndex = '1000';
+
+                                    // Parent to .canvas-container for stable positioning like TextTool
+                                    const container = this.canvas.parentElement;
+                                    container.appendChild(textarea);
+                                    textarea.focus();
+
+                                    // Real-time update
+                                    textarea.addEventListener('input', () => {
+                                        obj.data[r][c] = textarea.value;
+                                        // We assume the opaque textarea covers the canvas text
+                                        // But we assume render() might be called by other things, so we update the model
+                                        // Optional: trigger render() to see side-effects if any? 
+                                        // this.render(); 
+                                    });
+
+                                    // Auto-update and cleanup
+                                    let isFinished = false;
+                                    const finish = () => {
+                                        if (isFinished) return;
+                                        isFinished = true;
+
+                                        obj.data[r][c] = textarea.value;
                                         this.history.saveState(this.state.objects);
                                         this.redrawOffscreen();
                                         this.render();
-                                    }
+
+                                        if (textarea.parentNode) {
+                                            textarea.parentNode.removeChild(textarea);
+                                        }
+                                    };
+
+                                    textarea.addEventListener('blur', finish);
+                                    textarea.addEventListener('keydown', (e) => {
+                                        // Shift+Enter for new line, Enter to finish
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            textarea.blur();
+                                        }
+                                        if (e.key === 'Escape') {
+                                            if (isFinished) return;
+                                            isFinished = true;
+
+                                            obj.data[r][c] = cellText; // Revert
+                                            if (textarea.parentNode) {
+                                                textarea.parentNode.removeChild(textarea);
+                                            }
+                                            this.render();
+                                        }
+                                    });
+
                                     return;
                                 }
                                 currentX += cWidth;
@@ -863,7 +965,7 @@ class WhiteboardApp {
             // If SelectTool is dragging/resizing, it modifies state.objects in-place.
             // We must update the offscreen canvas to reflect these changes.
             if (this.state.currentTool === 'select') {
-                if (tool.isDragging || tool.activeHandle) {
+                if (tool.isDragging || tool.activeHandle || tool.activeTableDivider) {
                     this.redrawOffscreen();
                 }
             }
@@ -1156,9 +1258,16 @@ class WhiteboardApp {
 
     redrawOffscreen() {
         const dpr = window.devicePixelRatio || 1;
-        // Sabit mantıksal boyutlar
-        const logicalW = CANVAS_CONSTANTS.LOGICAL_WIDTH;
-        const logicalH = CANVAS_CONSTANTS.LOGICAL_HEIGHT;
+
+        // Dinamik mantıksal boyutlar
+        let logicalW = CANVAS_CONSTANTS.LOGICAL_WIDTH;
+        let logicalH = CANVAS_CONSTANTS.LOGICAL_HEIGHT;
+
+        if (this.canvasSettings && this.canvasSettings.getLogicalSize) {
+            const dims = this.canvasSettings.getLogicalSize();
+            logicalW = dims.width;
+            logicalH = dims.height;
+        }
 
         // Reset and clear
         this.offscreenCtx.setTransform(1, 0, 0, 1, 0, 0);
@@ -1224,9 +1333,15 @@ class WhiteboardApp {
         // Fast Render Loop
         const dpr = window.devicePixelRatio || 1;
 
-        // Sabit mantıksal boyutlar - CanvasSettings ile aynı olmalı
-        const LOGICAL_WIDTH = CANVAS_CONSTANTS.LOGICAL_WIDTH;
-        const LOGICAL_HEIGHT = CANVAS_CONSTANTS.LOGICAL_HEIGHT;
+        // Dinamik mantıksal boyutlar
+        let LOGICAL_WIDTH = CANVAS_CONSTANTS.LOGICAL_WIDTH;
+        let LOGICAL_HEIGHT = CANVAS_CONSTANTS.LOGICAL_HEIGHT;
+
+        if (this.canvasSettings && this.canvasSettings.getLogicalSize) {
+            const dims = this.canvasSettings.getLogicalSize();
+            LOGICAL_WIDTH = dims.width;
+            LOGICAL_HEIGHT = dims.height;
+        }
 
         // 1. Clear Screen (using logical bounds)
         this.ctx.clearRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);

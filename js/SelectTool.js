@@ -22,6 +22,7 @@ class SelectTool {
         this.longPressStartPos = null;
         this.LONG_PRESS_DURATION = 500; // ms
         this.LONG_PRESS_THRESHOLD = 5; // px movement tolerance
+        this.activeTableDivider = null; // { tableIndex: number, type: 'row'|'col', index: number }
     }
 
     handlePointerDown(e, pos, canvas, ctx, state) {
@@ -95,6 +96,28 @@ class SelectTool {
                     }
 
                     return true;
+                }
+
+                // TABLE DIVIDER CHECK
+                if (selectedObj.type === 'table') {
+                    const divider = this.isNearTableDivider(selectedObj, clickPoint);
+                    if (divider) {
+                        this.activeTableDivider = {
+                            tableIndex: selectedIndex,
+                            type: divider.type,
+                            index: divider.index
+                        };
+                        this.dragStartPoint = clickPoint;
+                        this.initialDividerState = {
+                            rowHeights: [...selectedObj.rowHeights],
+                            colWidths: [...selectedObj.colWidths],
+                            width: selectedObj.width,
+                            height: selectedObj.height,
+                            x: selectedObj.x,
+                            y: selectedObj.y
+                        };
+                        return true;
+                    }
                 }
             }
         }
@@ -260,6 +283,45 @@ class SelectTool {
             }
         }
 
+        if (this.activeTableDivider) {
+            const table = state.objects[this.activeTableDivider.tableIndex];
+            if (table) {
+                const deltaX = currentPoint.x - this.dragStartPoint.x;
+                const deltaY = currentPoint.y - this.dragStartPoint.y;
+
+                if (this.activeTableDivider.type === 'row') {
+                    const idx = this.activeTableDivider.index;
+                    if (idx === -1) {
+                        // Top Border: Resize first row and shift Y
+                        const newHeight = Math.max(10, this.initialDividerState.rowHeights[0] - deltaY);
+                        const actualDelta = this.initialDividerState.rowHeights[0] - newHeight;
+                        table.rowHeights[0] = newHeight;
+                        table.y = this.initialDividerState.y + actualDelta;
+                    } else {
+                        // Internal or Bottom Border
+                        const newHeight = Math.max(10, this.initialDividerState.rowHeights[idx] + deltaY);
+                        table.rowHeights[idx] = newHeight;
+                    }
+                    table.height = table.rowHeights.reduce((a, b) => a + b, 0);
+                } else {
+                    const idx = this.activeTableDivider.index;
+                    if (idx === -1) {
+                        // Left Border: Resize first column and shift X
+                        const newWidth = Math.max(10, this.initialDividerState.colWidths[0] - deltaX);
+                        const actualDelta = this.initialDividerState.colWidths[0] - newWidth;
+                        table.colWidths[0] = newWidth;
+                        table.x = this.initialDividerState.x + actualDelta;
+                    } else {
+                        // Internal or Right Border
+                        const newWidth = Math.max(10, this.initialDividerState.colWidths[idx] + deltaX);
+                        table.colWidths[idx] = newWidth;
+                    }
+                    table.width = table.colWidths.reduce((a, b) => a + b, 0);
+                }
+                return true;
+            }
+        }
+
         if (this.isDragSelecting) {
             this.dragCurrentPoint = currentPoint;
 
@@ -293,6 +355,26 @@ class SelectTool {
             return true;
         }
 
+        // --- Cursor Update for Table Dividers ---
+        if (!this.isDragSelecting && !this.activeHandle && !this.activeTableDivider && this.selectedObjects.length === 1) {
+            const selectedIdx = this.selectedObjects[0];
+            const obj = state.objects[selectedIdx];
+            if (obj && obj.type === 'table') {
+                const divider = this.isNearTableDivider(obj, currentPoint);
+                if (divider) {
+                    canvas.style.cursor = divider.type === 'row' ? 'ns-resize' : 'ew-resize';
+                } else {
+                    // Reset to default if not over divider (app.js handles base tool cursors, but here we override specific select hover)
+                    // Check if over resize handles first
+                    const bounds = this.getBoundingBox(obj);
+                    const handle = this.getHandleAtPoint(currentPoint, bounds, obj);
+                    if (!handle) {
+                        canvas.style.cursor = 'default';
+                    }
+                }
+            }
+        }
+
         return false;
     }
 
@@ -308,6 +390,12 @@ class SelectTool {
             this.resizeStartBounds = null;
             this.rotateCenter = null;
             this.originalObjectState = null;
+            return false;
+        }
+
+        if (this.activeTableDivider) {
+            this.activeTableDivider = null;
+            this.initialDividerState = null;
             return false;
         }
 
@@ -745,88 +833,6 @@ class SelectTool {
         }
     }
 
-    isNearObject(obj, point, threshold = 10) {
-        if (obj.type === 'group') {
-            // Check bounds first optimization?
-            // const bounds = this.getBoundingBox(obj);
-            // if (!this.checkIntersection({ type: 'rect', ...bounds }, { x: point.x - threshold, y: point.y - threshold, width: threshold * 2, height: threshold * 2 })) return false;
-
-            return obj.children.some(child => this.isNearObject(child, point, threshold));
-        }
-
-        switch (obj.type) {
-            case 'highlighter':
-            case 'pen':
-                // 1. Check if point is near spine, accounting for stroke width
-                const hitThreshold = threshold + (obj.width || 2) / 2;
-                const isNearSpine = obj.points.some(p =>
-                    Utils.distance(p, point) < hitThreshold
-                );
-                if (isNearSpine) return true;
-
-                // 2. If it is filled, check if point is inside any of its loops
-                if (obj.filled && obj.points.length > 2 && window.app && window.app.fillManager) {
-                    const loops = window.app.fillManager.findLoops(obj.points);
-                    const shapeTool = window.app.tools.shape;
-                    if (shapeTool && shapeTool.isPointInPolygon) {
-                        return loops.some(loop => shapeTool.isPointInPolygon(point, loop));
-                    }
-                }
-                return false;
-
-            case 'line':
-            case 'arrow':
-                const dist = this.pointToLineDistance(
-                    point, obj.start, obj.end
-                );
-                return dist < threshold;
-
-            case 'rectangle':
-            case 'rect':
-            case 'ellipse':
-            case 'triangle':
-            case 'trapezoid':
-            case 'star':
-            case 'diamond':
-            case 'parallelogram':
-            case 'oval':
-            case 'heart':
-            case 'cloud':
-                // Use ShapeTool's generic hit detection
-                const sTool = (window.app && window.app.tools) ? (window.app.tools.shape || window.app.tools.rectangle) : null;
-                if (sTool && sTool.isPointInside) {
-                    if (sTool.isPointInside(obj, point)) return true;
-                }
-
-                // If not inside, check if near border (optional but good for non-filled shapes)
-                // Also acts as a fallback for filled areas of all shape types
-                const bounds = this.getBoundingBox(obj);
-                if (point.x >= bounds.minX - threshold && point.x <= bounds.maxX + threshold &&
-                    point.y >= bounds.minY - threshold && point.y <= bounds.maxY + threshold) {
-
-                    const shapeTypes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
-                    if (shapeTypes.includes(obj.type)) return true;
-                }
-                return false;
-
-            case 'tape':
-                const tTool = (window.app && window.app.tools) ? window.app.tools.tape : null;
-                if (tTool && tTool.isPointInside) {
-                    return tTool.isPointInside(obj, point);
-                }
-                return false;
-
-            case 'text':
-                if (point.x >= obj.x - threshold && point.x <= obj.x + obj.width + threshold &&
-                    point.y >= obj.y - threshold && point.y <= obj.y + obj.height + threshold) {
-                    return true;
-                }
-                return false;
-
-            default:
-                return false;
-        }
-    }
 
     getBoundingBox(obj) {
         let minX = Infinity, minY = Infinity;
@@ -879,14 +885,9 @@ class SelectTool {
             minY = obj.y;
             maxX = obj.x + obj.width;
             maxY = obj.y + obj.height;
-        } else if (obj.type === 'text') {
-            minX = obj.x;
-            minY = obj.y;
-            maxX = obj.x + obj.width;
-            maxY = obj.y + obj.height;
-        } else if (['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'].includes(obj.type)) {
+        } else if (['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'text', 'sticker', 'tape'].includes(obj.type)) {
             const rotation = obj.rotation !== undefined ? obj.rotation : (obj.angle || 0);
-            if (rotation !== 0) {
+            if (rotation !== 0 && obj.type !== 'tape') {
                 const corners = this.getRotatedCorners(obj);
                 corners.forEach(p => {
                     minX = Math.min(minX, p.x);
@@ -998,11 +999,12 @@ class SelectTool {
                 }
                 return false;
 
+            case 'text':
             case 'sticker':
-                // Only consider bounding box for sticker (simple rect)
+                // Only consider bounding box for sticker and text
                 if (obj.x !== undefined && obj.width !== undefined) {
-                    if (point.x >= obj.x && point.x <= obj.x + obj.width &&
-                        point.y >= obj.y && point.y <= obj.y + obj.height) {
+                    if (point.x >= obj.x - threshold && point.x <= obj.x + obj.width + threshold &&
+                        point.y >= obj.y - threshold && point.y <= obj.y + obj.height + threshold) {
                         return true;
                     }
                 }
@@ -1011,106 +1013,6 @@ class SelectTool {
         return false;
     }
 
-    handleContextMenu(e, canvas, state) {
-        // Seçili nesne yoksa menüyü gösterme
-        if (this.selectedObjects.length === 0) return;
-
-        e.preventDefault();
-
-        const menu = document.getElementById('contextMenu');
-
-        // Menüyü konumlandır
-        menu.style.left = e.clientX + 'px';
-
-        if (e.clientY > window.innerHeight / 2) {
-            menu.style.top = 'auto';
-            menu.style.bottom = (window.innerHeight - e.clientY) + 'px';
-        } else {
-            menu.style.top = e.clientY + 'px';
-            menu.style.bottom = 'auto';
-        }
-
-        // Prevent overflow on the right
-        const menuWidth = 150;
-        if (e.clientX + menuWidth > window.innerWidth) {
-            menu.style.left = 'auto';
-            menu.style.right = '10px';
-        } else {
-            menu.style.right = 'auto';
-            menu.style.left = e.clientX + 'px';
-        }
-
-        // CHECK SELECTION TYPE
-        const isTable = this.selectedObjects.length === 1 && state.objects[this.selectedObjects[0]].type === 'table';
-        const hasTape = this.selectedObjects.some(index => state.objects[index] && state.objects[index].type === 'tape');
-
-        // Show/Hide Table Options
-        const tableOptions = menu.querySelectorAll('.table-option');
-        tableOptions.forEach(opt => opt.style.display = isTable ? 'flex' : 'none');
-
-        // If tape is selected, hide all options except basic ones
-        if (hasTape) {
-            const flipItems = menu.querySelectorAll('[data-action="flipHorizontal"], [data-action="flipVertical"]');
-            flipItems.forEach(item => item.style.display = 'none');
-
-            const layerItems = menu.querySelectorAll('[data-action="bringToFront"], [data-action="bringForward"], [data-action="sendBackward"], [data-action="sendToBack"]');
-            layerItems.forEach(item => item.style.display = 'flex');
-
-            const groupItems = menu.querySelectorAll('[data-action="group"], [data-action="ungroup"]');
-            groupItems.forEach(item => item.style.display = 'none');
-
-            const stickerItem = menu.querySelector('[data-action="saveAsSticker"]');
-            if (stickerItem) stickerItem.style.display = 'none';
-        } else {
-            // Show all options for non-tape objects (if not Table specific override needed)
-            const flipItems = menu.querySelectorAll('[data-action="flipHorizontal"], [data-action="flipVertical"]');
-            flipItems.forEach(item => item.style.display = 'flex');
-
-            const layerItems = menu.querySelectorAll('[data-action="bringToFront"], [data-action="bringForward"], [data-action="sendBackward"], [data-action="sendToBack"]');
-            layerItems.forEach(item => item.style.display = 'flex');
-
-            const groupItems = menu.querySelectorAll('[data-action="group"], [data-action="ungroup"]');
-            groupItems.forEach(item => item.style.display = 'flex');
-
-            const stickerItem = menu.querySelector('[data-action="saveAsSticker"]');
-            if (stickerItem) stickerItem.style.display = 'flex';
-        }
-
-        // If it's a table, maybe hide some shape-specific things?
-        if (isTable) {
-            // For simplicity, table supports layers, locking, delete, copy. But maybe not Group checks yet.
-            // Keep it standard.
-        }
-
-        // Show/Hide "Change Border Color" only for shapes
-        const borderItem = document.getElementById('ctxChangeBorderColor');
-        if (borderItem) {
-            let isShape = false;
-            if (this.selectedObjects.length === 1) {
-                const obj = state.objects[this.selectedObjects[0]];
-                if (obj && ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'].includes(obj.type)) {
-                    isShape = true;
-                }
-            }
-            borderItem.style.display = isShape ? 'flex' : 'none';
-        }
-
-        // Show/Hide Lock/Unlock
-        const lockItem = menu.querySelector('[data-action="lock"]');
-        const unlockItem = menu.querySelector('[data-action="unlock"]');
-
-        if (lockItem && unlockItem) {
-            const anyLocked = this.selectedObjects.some(index => state.objects[index] && state.objects[index].locked);
-            const anyUnlocked = this.selectedObjects.some(index => state.objects[index] && !state.objects[index].locked);
-
-            lockItem.style.display = anyUnlocked ? 'flex' : 'none';
-            unlockItem.style.display = anyLocked ? 'flex' : 'none';
-        }
-
-        menu.classList.add('show');
-
-        return true;
-    }
 
     getRotatedCorners(obj) {
         let rx, ry, rw, rh;
@@ -2189,7 +2091,9 @@ class SelectTool {
         // Bu yüzden Visual Bounds'dan Stroke Padding'i ÇIKARMALIYIZ.
 
         let padding = 0;
-        if (obj.width) {
+        if (obj.strokeWidth !== undefined) {
+            padding = obj.strokeWidth / 2;
+        } else if (obj.width !== undefined && ['pen', 'highlighter', 'line', 'arrow'].includes(obj.type)) {
             padding = obj.width / 2;
         }
 
@@ -2689,5 +2593,42 @@ class SelectTool {
             if (navigator.vibrate) navigator.vibrate(50);
 
         }, this.LONG_PRESS_DURATION);
+    }
+
+    isNearTableDivider(obj, point, threshold = 8) {
+        if (obj.type !== 'table') return null;
+
+        // Check horizontal lines
+        // 1. Top border
+        if (point.x >= obj.x && point.x <= obj.x + obj.width &&
+            Math.abs(point.y - obj.y) <= threshold) {
+            return { type: 'row', index: -1 };
+        }
+
+        let currentY = obj.y;
+        for (let r = 0; r < obj.rows; r++) {
+            currentY += obj.rowHeights[r];
+            if (point.x >= obj.x && point.x <= obj.x + obj.width &&
+                Math.abs(point.y - currentY) <= threshold) {
+                return { type: 'row', index: r };
+            }
+        }
+
+        // Check vertical lines
+        // 1. Left border
+        if (point.y >= obj.y && point.y <= obj.y + obj.height &&
+            Math.abs(point.x - obj.x) <= threshold) {
+            return { type: 'col', index: -1 };
+        }
+
+        let currentX = obj.x;
+        for (let c = 0; c < obj.cols; c++) {
+            currentX += obj.colWidths[c];
+            if (point.y >= obj.y && point.y <= obj.y + obj.height &&
+                Math.abs(point.x - currentX) <= threshold) {
+                return { type: 'col', index: c };
+            }
+        }
+        return null;
     }
 }

@@ -84,12 +84,27 @@ class CanvasSettings {
         }
     }
 
+    getLogicalSize() {
+        if (this.settings.size === 'full') {
+            return { width: CANVAS_CONSTANTS.LOGICAL_WIDTH, height: CANVAS_CONSTANTS.LOGICAL_HEIGHT };
+        }
+
+        const dim = this.sizes[this.settings.size] || this.sizes.a4;
+
+        if (this.settings.orientation === 'landscape') {
+            return { width: dim.height, height: dim.width };
+        } else {
+            return { width: dim.width, height: dim.height };
+        }
+    }
+
     applySettings(canvas, ctx, syncFromCanvas = null) {
         const dpr = window.devicePixelRatio || 1;
 
-        // Sabit mantıksal boyutlar - constants.js'den alınıyor
-        const LOGICAL_WIDTH = CANVAS_CONSTANTS.LOGICAL_WIDTH;
-        const LOGICAL_HEIGHT = CANVAS_CONSTANTS.LOGICAL_HEIGHT;
+        // Dynamic logical sizes
+        const logicalSize = this.getLogicalSize();
+        const LOGICAL_WIDTH = logicalSize.width;
+        const LOGICAL_HEIGHT = logicalSize.height;
 
         let containerWidth, containerHeight;
 
@@ -131,9 +146,18 @@ class CanvasSettings {
             cssHeight = containerHeight;
             cssWidth = cssHeight * canvasAspect;
         } else {
-            // Container daha dar - genişliğe göre ölçekle
-            cssWidth = containerWidth;
-            cssHeight = cssWidth / canvasAspect;
+            // Container daha dar - normalde genişliğe göre ölçekleriz
+            // AMA: Kullanıcı isteği: Dikey kanvaslarda dikey boşluk kalmasın (Cover Height)
+            // Eğer canvas Portrait ise (Width < Height) ve Container çok darsa:
+            if (canvasAspect < 1) {
+                // Height'a göre ölçekle (Cover Width - Yatay taşma olur)
+                cssHeight = containerHeight;
+                cssWidth = cssHeight * canvasAspect;
+            } else {
+                // Landscape veya Kare - Fit Width
+                cssWidth = containerWidth;
+                cssHeight = cssWidth / canvasAspect;
+            }
         }
 
         canvas.style.width = cssWidth + 'px';
@@ -143,7 +167,7 @@ class CanvasSettings {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.scale(dpr, dpr);
 
-        // Arka planı çiz
+        // Arkaplanı çiz
         this.drawBackground(canvas, ctx, null, LOGICAL_WIDTH, LOGICAL_HEIGHT, 1);
     }
 

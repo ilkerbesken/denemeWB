@@ -33,7 +33,7 @@ class TextTool {
             width: 200,
             height: 40,
             htmlContent: '<div>Yeni Metin</div>',
-            fontSize: 12,
+            fontSize: 16,
             color: state.strokeColor || '#000000',
             alignment: 'left',
             locked: false,
@@ -73,7 +73,7 @@ class TextTool {
         const pageY = window.app.pageManager.getPageY(window.app.pageManager.currentPageIndex);
 
         // Calculate Scale: Logical pixels to CSS pixels
-        const logicalW = CANVAS_CONSTANTS.LOGICAL_WIDTH;
+        const logicalW = window.app.canvasSettings ? window.app.canvasSettings.getLogicalSize().width : CANVAS_CONSTANTS.LOGICAL_WIDTH;
         const cssW = canvas.clientWidth;
         const scale = (cssW > 0) ? (logicalW / cssW) : 1;
 
@@ -144,7 +144,8 @@ class TextTool {
 
         editor.addEventListener('input', () => {
             const currentZoom = window.app.zoomManager.zoom;
-            const currentScale = (canvas.clientWidth > 0) ? (CANVAS_CONSTANTS.LOGICAL_WIDTH / canvas.clientWidth) : 1;
+            const logicalW = window.app.canvasSettings ? window.app.canvasSettings.getLogicalSize().width : CANVAS_CONSTANTS.LOGICAL_WIDTH;
+            const currentScale = (canvas.clientWidth > 0) ? (logicalW / canvas.clientWidth) : 1;
 
             // Reverse coordinates to logic
             this.editingObject.width = (editor.offsetWidth * currentScale) / currentZoom;
@@ -205,7 +206,8 @@ class TextTool {
             this.editingObject.fontSize = parseInt(sizeSelect.value);
             const zoom = window.app.zoomManager.zoom;
             const cssW = window.app.canvas.clientWidth;
-            const currentScale = (cssW > 0) ? (CANVAS_CONSTANTS.LOGICAL_WIDTH / cssW) : 1;
+            const logicalW = window.app.canvasSettings ? window.app.canvasSettings.getLogicalSize().width : window.app.canvas.width;
+            const currentScale = (cssW > 0) ? (logicalW / cssW) : 1;
             editor.style.fontSize = `${(this.editingObject.fontSize * zoom) / currentScale}px`;
             editor.focus();
         };
@@ -232,7 +234,8 @@ class TextTool {
 
         const zoom = window.app.zoomManager.zoom;
         const cssW = window.app.canvas.clientWidth;
-        const currentScale = (cssW > 0) ? (CANVAS_CONSTANTS.LOGICAL_WIDTH / cssW) : 1;
+        const logicalW = window.app.canvasSettings ? window.app.canvasSettings.getLogicalSize().width : CANVAS_CONSTANTS.LOGICAL_WIDTH;
+        const currentScale = (cssW > 0) ? (logicalW / cssW) : 1;
 
         this.editingObject.width = (this.activeEditor.offsetWidth * currentScale) / zoom;
         this.editingObject.height = (this.activeEditor.offsetHeight * currentScale) / zoom;
