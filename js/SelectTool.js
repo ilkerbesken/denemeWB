@@ -842,6 +842,8 @@ class SelectTool {
         // Base padding (from stroke width)
         if (obj.strokeWidth !== undefined) {
             padding = obj.strokeWidth / 2;
+        } else if (obj.thickness !== undefined) {
+            padding = obj.thickness / 2;
         } else if (obj.width !== undefined && (obj.type === 'pen' || obj.type === 'highlighter' || obj.type === 'line' || obj.type === 'arrow')) {
             padding = obj.width / 2;
         }
@@ -1626,56 +1628,78 @@ class SelectTool {
             menu.style.left = e.clientX + 'px';
         }
 
-        // Check if any selected object is a tape
-        const hasTape = this.selectedObjects.some(index => {
+        // Check if any selected object is a tape or table
+        let hasTape = false;
+        let hasTable = false;
+
+        this.selectedObjects.forEach(index => {
             const obj = state.objects[index];
-            return obj && obj.type === 'tape';
+            if (obj) {
+                if (obj.type === 'tape') hasTape = true;
+                if (obj.type === 'table') hasTable = true;
+            }
         });
 
-        // If tape is selected, hide all options except basic ones
-        if (hasTape) {
+        // Show/hide table specific options
+        const tableOptions = menu.querySelectorAll('.table-option');
+        tableOptions.forEach(opt => {
+            const isTableSpecific = hasTable && this.selectedObjects.length === 1;
+            opt.style.display = isTableSpecific ? (opt.classList.contains('context-menu-separator') ? 'block' : 'flex') : 'none';
+        });
+
+        const flipItems = menu.querySelectorAll('[data-action="flipHorizontal"], [data-action="flipVertical"]');
+        const layerItems = menu.querySelectorAll('[data-action="bringToFront"], [data-action="bringForward"], [data-action="sendBackward"], [data-action="sendToBack"]');
+        const groupItems = menu.querySelectorAll('[data-action="group"], [data-action="ungroup"]');
+        const stickerItem = menu.querySelector('[data-action="saveAsSticker"]');
+        const separators = menu.querySelectorAll('.context-menu-separator');
+
+        if (hasTape || hasTable) {
             // Hide flip options
-            const flipItems = menu.querySelectorAll('[data-action="flipHorizontal"], [data-action="flipVertical"]');
             flipItems.forEach(item => item.style.display = 'none');
 
-            // Show layering options
-            const layerItems = menu.querySelectorAll('[data-action="bringToFront"], [data-action="bringForward"], [data-action="sendBackward"], [data-action="sendToBack"]');
-            layerItems.forEach(item => item.style.display = 'flex');
+            if (hasTable) {
+                // Table: Hide layering, grouping, stickers as well
+                layerItems.forEach(item => item.style.display = 'none');
+                groupItems.forEach(item => item.style.display = 'none');
+                if (stickerItem) stickerItem.style.display = 'none';
 
-            // Hide grouping options
-            const groupItems = menu.querySelectorAll('[data-action="group"], [data-action="ungroup"]');
-            groupItems.forEach(item => item.style.display = 'none');
+                // Hide most separators for table
+                separators.forEach((sep, index) => {
+                    // Show separator after Paste(0), Delete(1), Unlock(2) and before TableOptions(4)
+                    // Index 4 is the one with class .table-option, which is already handled above
+                    if (index === 0 || index === 1 || index === 2) {
+                        sep.style.display = 'block';
+                    } else if (!sep.classList.contains('table-option')) {
+                        sep.style.display = 'none';
+                    }
+                });
+            } else {
+                // Tape: Show layering but hide grouping/stickers
+                layerItems.forEach(item => item.style.display = 'flex');
+                groupItems.forEach(item => item.style.display = 'none');
+                if (stickerItem) stickerItem.style.display = 'none';
 
-            // Hide save as sticker
-            const stickerItem = menu.querySelector('[data-action="saveAsSticker"]');
-            if (stickerItem) stickerItem.style.display = 'none';
-
-            // Manage separators
-            const separators = menu.querySelectorAll('.context-menu-separator');
-            separators.forEach((sep, index) => {
-                // Show separator after Paste (0), after Delete (1), and after Unlock (2)
-                if (index === 0 || index === 1 || index === 2) {
-                    sep.style.display = 'block';
-                } else {
-                    sep.style.display = 'none';
-                }
-            });
+                separators.forEach((sep, index) => {
+                    // Show separator after Paste (0), after Delete (1), and after Unlock (2)
+                    if (index === 0 || index === 1 || index === 2) {
+                        sep.style.display = 'block';
+                    } else if (!sep.classList.contains('table-option')) {
+                        sep.style.display = 'none';
+                    }
+                });
+            }
         } else {
-            // Show all options for non-tape objects
-            const flipItems = menu.querySelectorAll('[data-action="flipHorizontal"], [data-action="flipVertical"]');
+            // Show all options for general objects
             flipItems.forEach(item => item.style.display = 'flex');
-
-            const layerItems = menu.querySelectorAll('[data-action="bringToFront"], [data-action="bringForward"], [data-action="sendBackward"], [data-action="sendToBack"]');
             layerItems.forEach(item => item.style.display = 'flex');
-
-            const groupItems = menu.querySelectorAll('[data-action="group"], [data-action="ungroup"]');
             groupItems.forEach(item => item.style.display = 'flex');
-
-            const stickerItem = menu.querySelector('[data-action="saveAsSticker"]');
             if (stickerItem) stickerItem.style.display = 'flex';
 
-            const separators = menu.querySelectorAll('.context-menu-separator');
-            separators.forEach(sep => sep.style.display = 'block');
+            separators.forEach(sep => {
+                if (!sep.classList.contains('table-option')) {
+                    sep.style.display = 'block';
+                }
+            });
         }
 
         // Show/Hide "Change Border Color" only for shapes
@@ -2551,6 +2575,8 @@ class SelectTool {
             const shapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
             if (shapes.includes(obj.type)) {
                 obj.strokeWidth = style.width;
+            } else if (obj.type === 'tape') {
+                obj.thickness = style.width;
             } else {
                 obj.width = style.width;
             }
@@ -2560,6 +2586,7 @@ class SelectTool {
         }
         if (style.opacity !== undefined) {
             obj.opacity = style.opacity;
+            if (obj.type === 'tape') obj.originalOpacity = style.opacity;
         }
         if (style.highlighterCap !== undefined) {
             obj.cap = style.highlighterCap;
@@ -2572,6 +2599,14 @@ class SelectTool {
         }
         if (style.arrowPathType !== undefined) {
             obj.pathType = style.arrowPathType;
+        }
+
+        // Tape Specific Style Updates
+        if (obj.type === 'tape') {
+            if (style.tapeMode !== undefined) obj.mode = style.tapeMode;
+            if (style.tapePattern !== undefined) obj.pattern = style.tapePattern;
+            if (style.customImage !== undefined) obj.customImage = style.customImage;
+            if (style.customMask !== undefined) obj.customMask = style.customMask;
         }
     }
 

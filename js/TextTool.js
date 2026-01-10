@@ -127,17 +127,32 @@ class TextTool {
 
         editor.focus();
 
-        if (isNew) {
+        const isDefault = () => editor.innerText.trim().toLowerCase() === 'yeni metin';
+
+        if (isDefault()) {
+            // Select all by default so typing replaces it
             document.execCommand('selectAll', false, null);
         }
 
         editor.addEventListener('pointerdown', e => e.stopPropagation());
+
+        // Handle placeholder clearing on first input
+        editor.addEventListener('beforeinput', (e) => {
+            if (isDefault() && e.inputType.startsWith('insert')) {
+                editor.innerHTML = '';
+            }
+        });
+
         editor.addEventListener('keydown', e => {
             if (e.key === 'Escape') {
                 this.finishEditing(state);
             }
             if (e.key === 'Enter' && e.ctrlKey) {
                 this.finishEditing(state);
+            }
+            // Clear placeholder on first keydown if it's a printable character (safeguard for beforeinput)
+            if (isDefault() && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                editor.innerHTML = '';
             }
             e.stopPropagation();
         });
@@ -213,16 +228,24 @@ class TextTool {
         };
         toolbar.appendChild(sizeSelect);
 
-        const colorInput = document.createElement('input');
-        colorInput.type = 'color';
-        colorInput.className = 'toolbar-color';
-        colorInput.value = this.editingObject.color || '#000000';
-        colorInput.oninput = () => {
-            this.editingObject.color = colorInput.value;
-            editor.style.color = colorInput.value;
-            document.execCommand('foreColor', false, colorInput.value);
+        const colorBtn = document.createElement('div');
+        colorBtn.className = 'toolbar-color';
+        colorBtn.title = 'Metin Rengi';
+        colorBtn.style.backgroundColor = this.editingObject.color || '#000000';
+        colorBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (window.app.colorPalette) {
+                window.app.colorPalette.showColorPicker(this.editingObject.color || '#000000', (newColor) => {
+                    this.editingObject.color = newColor;
+                    colorBtn.style.backgroundColor = newColor;
+                    editor.style.color = newColor;
+                    document.execCommand('foreColor', false, newColor);
+                    editor.focus();
+                }, colorBtn, 'left');
+            }
         };
-        toolbar.appendChild(colorInput);
+        toolbar.appendChild(colorBtn);
 
         return toolbar;
     }
@@ -241,7 +264,9 @@ class TextTool {
         this.editingObject.height = (this.activeEditor.offsetHeight * currentScale) / zoom;
 
         const plainText = this.activeEditor.innerText.trim();
-        if (plainText === "" && !this.activeEditor.querySelector('img')) {
+        const isPlaceholder = plainText.toLowerCase() === 'yeni metin';
+
+        if ((plainText === "" || isPlaceholder) && !this.activeEditor.querySelector('img')) {
             const idx = state.objects.indexOf(this.editingObject);
             if (idx !== -1) {
                 state.objects.splice(idx, 1);

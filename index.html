@@ -152,6 +152,12 @@
                 </button>
             </div>
 
+            <div class="tool-group" style="border-right: none; padding-left: 10px;">
+                <button class="tool-btn" id="btnTimerTool" title="Geri Sayım (Pomodoro)">
+                    <img src="assets/icons/clock.svg" alt="timer" class="icon">
+                </button>
+            </div>
+
             <!-- Sayfa Kontrolleri (Sağa Sabitlenmiş) -->
             <div class="page-navigation-group">
                 <button class="tool-btn" id="btnPrevPage" title="Önceki Sayfa">
@@ -163,24 +169,12 @@
                 <button class="tool-btn" id="btnNextPage" title="Sonraki Sayfa">
                     <img src="assets/icons/arrow-line-right.svg" alt="next" class="icon">
                 </button>
-            </div>
 
-            <!-- More Actions Menu -->
-            <div class="app-menu-container">
-                <button class="tool-btn" id="btnAppMenu" title="Daha Fazla">
-                    <span>...</span>
-                </button>
-                <div class="app-menu-dropdown" id="appMenuDropdown">
-                    <div class="menu-item" id="menuSave">
-                        <img src="assets/icons/save.svg" class="icon-small">
-                        <span>Kaydet</span>
-                        <span class="shortcut">Ctrl+S</span>
-                    </div>
-                    <div class="menu-item" id="menuCanvasSettings">
-                        <img src="assets/icons/canvas.svg" class="icon-small">
-                        <span>Tuval Ayarları</span>
-                        <span class="shortcut">C</span>
-                    </div>
+                <!-- More Actions Menu -->
+                <div class="app-menu-container">
+                    <button class="tool-btn" id="btnAppMenu" title="Daha Fazla">
+                        <span>...</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -199,14 +193,18 @@
                 <div class="property-input-group"
                     style="display: flex; align-items: center; gap: 4px; background: #f8f9fa; padding: 2px 6px; border-radius: 6px; border: 1px solid #e9ecef;">
                     <span class="label" style="font-size: 10px; color: #666; font-weight: 600;">Satır</span>
+                    <button class="num-adj-btn" data-dir="down" data-target="tableRowInput">−</button>
                     <input type="number" id="tableRowInput" class="num-input clean-input" min="1" max="20" value="3"
                         title="Satır Sayısı">
+                    <button class="num-adj-btn" data-dir="up" data-target="tableRowInput">+</button>
                 </div>
                 <div class="property-input-group"
                     style="display: flex; align-items: center; gap: 4px; background: #f8f9fa; padding: 2px 6px; border-radius: 6px; border: 1px solid #e9ecef;">
                     <span class="label" style="font-size: 10px; color: #666; font-weight: 600;">Sütun</span>
+                    <button class="num-adj-btn" data-dir="down" data-target="tableColInput">−</button>
                     <input type="number" id="tableColInput" class="num-input clean-input" min="1" max="20" value="3"
                         title="Sütun Sayısı">
+                    <button class="num-adj-btn" data-dir="up" data-target="tableColInput">+</button>
                 </div>
             </div>
 
@@ -965,6 +963,19 @@
         </div>
     </div>
 
+    <div class="app-menu-dropdown" id="appMenuDropdown">
+        <div class="menu-item" id="menuSave">
+            <img src="assets/icons/save.svg" class="icon-small">
+            <span>Kaydet</span>
+            <span class="shortcut">Ctrl+S</span>
+        </div>
+        <div class="menu-item" id="menuCanvasSettings">
+            <img src="assets/icons/canvas.svg" class="icon-small">
+            <span>Tuval Ayarları</span>
+            <span class="shortcut">C</span>
+        </div>
+    </div>
+
     <script src="./js/constants.js?v=0.7.1"></script>
     <script src="./js/utils.js?v=0.7.1"></script>
     <script src="./js/ZoomManager.js?v=0.7.1"></script>
@@ -986,6 +997,7 @@
     <script src="./js/Dashboard.js?v=0.7.1"></script>
     <script src="./js/TableTool.js?v=0.7.1"></script>
     <script src="./js/TextTool.js?v=0.7.1"></script>
+    <script src="./js/TimerTool.js?v=0.7.1"></script>
     <script src="./js/app.js?v=0.7.1"></script>
 </body>
 

@@ -235,7 +235,12 @@ class PageManager {
         });
         ctx.restore();
 
-        page.thumbnail = tempCanvas.toDataURL('image/png', 0.5);
+        try {
+            page.thumbnail = tempCanvas.toDataURL('image/png', 0.5);
+        } catch (e) {
+            console.warn("Could not generate thumbnail due to security restrictions (tainted canvas).", e);
+            page.thumbnail = null; // Fallback
+        }
         this.renderPageList();
     }
 

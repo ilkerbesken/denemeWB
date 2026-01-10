@@ -386,6 +386,15 @@ class PropertiesSidebar {
                 if (this.app.tools.tape) {
                     this.app.tools.tape.updateSettings({ mode: mode });
                 }
+
+                // Update Selection
+                if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
+                    this.app.history.saveState(this.app.state.objects);
+                    this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { tapeMode: mode });
+                    if (this.app.redrawOffscreen) this.app.redrawOffscreen();
+                    this.app.render();
+                }
+
                 document.querySelectorAll('.tool-btn[data-tape-mode]').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
             });
@@ -398,6 +407,15 @@ class PropertiesSidebar {
                 if (this.app.tools.tape) {
                     this.app.tools.tape.updateSettings({ pattern: pattern });
                 }
+
+                // Update Selection
+                if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
+                    this.app.history.saveState(this.app.state.objects);
+                    this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { tapePattern: pattern });
+                    if (this.app.redrawOffscreen) this.app.redrawOffscreen();
+                    this.app.render();
+                }
+
                 document.querySelectorAll('.pattern-btn[data-tape-pattern]').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
             });
@@ -424,6 +442,15 @@ class PropertiesSidebar {
                                 // Save to custom patterns list
                                 this.addCustomTapePattern(img, 'custom');
                             }
+
+                            // Update Selection
+                            if (this.app.state.currentTool === 'select' && this.app.tools.select.selectedObjects.length > 0) {
+                                this.app.history.saveState(this.app.state.objects);
+                                this.app.tools.select.updateSelectedObjectsStyle(this.app.state, { tapePattern: 'custom', customImage: img });
+                                if (this.app.redrawOffscreen) this.app.redrawOffscreen();
+                                this.app.render();
+                            }
+
                             // UI Update: highlight upload btn
                             document.querySelectorAll('.pattern-btn[data-tape-pattern]').forEach(b => b.classList.remove('active'));
                             btnTapeImageUpload.classList.add('active');
@@ -493,6 +520,31 @@ class PropertiesSidebar {
                     this.app.state.tableCols = val;
                 });
             }
+
+            // Table Row/Col Adjustment Buttons
+            document.querySelectorAll('.num-adj-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const targetId = btn.dataset.target;
+                    const dir = btn.dataset.dir;
+                    const input = document.getElementById(targetId);
+                    if (input) {
+                        let val = parseInt(input.value);
+                        if (dir === 'up') val++;
+                        else val--;
+
+                        const min = parseInt(input.min) || 1;
+                        const max = parseInt(input.max) || 20;
+
+                        if (val < min) val = min;
+                        if (val > max) val = max;
+
+                        input.value = val;
+                        // Trigger change event to update app state
+                        input.dispatchEvent(new Event('change'));
+                    }
+                });
+            });
         }
     }
 
@@ -679,6 +731,8 @@ class PropertiesSidebar {
                     // Update State to match selected object
                     if (shapes.includes(obj.type)) {
                         if (obj.strokeWidth !== undefined) this.app.state.strokeWidth = obj.strokeWidth;
+                    } else if (obj.type === 'tape') {
+                        if (obj.thickness !== undefined) this.app.state.strokeWidth = obj.thickness;
                     } else {
                         if (obj.width !== undefined) this.app.state.strokeWidth = obj.width;
                     }
@@ -739,14 +793,35 @@ class PropertiesSidebar {
         document.querySelectorAll('.tool-btn[data-arrow-path]').forEach(b => b.classList.toggle('active', b.dataset.arrowPath === this.app.state.arrowPathType));
 
         // Tape Specific UI Sync
-        if (tool === 'tape' && this.app.tools.tape) {
-            const tapeSettings = this.app.tools.tape.settings;
-            document.querySelectorAll('.tool-btn[data-tape-mode]').forEach(b =>
-                b.classList.toggle('active', b.dataset.tapeMode === tapeSettings.mode)
-            );
-            document.querySelectorAll('.pattern-btn[data-tape-pattern]').forEach(b =>
-                b.classList.toggle('active', b.dataset.tapePattern === tapeSettings.pattern)
-            );
+        const tapeSettingsGroup = document.getElementById('tapeSettings');
+        if (tapeSettingsGroup) {
+            let showTapeGroup = (tool === 'tape');
+            let activeTapeSettings = (this.app.tools.tape) ? { ...this.app.tools.tape.settings } : null;
+
+            if (tool === 'select') {
+                const selectTool = this.app.tools.select;
+                if (selectTool.selectedObjects.length === 1) {
+                    const obj = this.app.state.objects[selectTool.selectedObjects[0]];
+                    if (obj && obj.type === 'tape') {
+                        showTapeGroup = true;
+                        activeTapeSettings = {
+                            mode: obj.mode,
+                            pattern: obj.pattern
+                        };
+                    }
+                }
+            }
+
+            tapeSettingsGroup.style.display = showTapeGroup ? 'flex' : 'none';
+
+            if (showTapeGroup && activeTapeSettings) {
+                document.querySelectorAll('.tool-btn[data-tape-mode]').forEach(b =>
+                    b.classList.toggle('active', b.dataset.tapeMode === activeTapeSettings.mode)
+                );
+                document.querySelectorAll('.pattern-btn[data-tape-pattern]').forEach(b =>
+                    b.classList.toggle('active', b.dataset.tapePattern === activeTapeSettings.pattern)
+                );
+            }
         }
 
         // Sync Color Palette

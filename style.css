@@ -30,7 +30,7 @@ body {
 .toolbar {
     background: white;
     border-bottom: 1px solid #e0e0e0;
-    padding: 1px 4px;
+    padding: 1px 60px;
     display: flex;
     justify-content: center;
     position: relative;
@@ -39,6 +39,8 @@ body {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     z-index: 3000;
     min-height: 42px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
 }
 
 .app-logo {
@@ -62,6 +64,7 @@ body {
     gap: 4px;
     padding: 0 8px;
     border-right: 1px solid #e0e0e0;
+    flex-shrink: 0;
 }
 
 .tool-group:last-child {
@@ -184,17 +187,17 @@ input[type="range"]::-moz-range-progress {
 }
 
 .app-menu-dropdown {
-    position: absolute;
-    top: calc(100% + 10px);
-    right: 0;
+    position: fixed;
+    top: 50px;
+    right: 12px;
     background: white;
-    border: 1px solid #efefef;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-    min-width: 200px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    min-width: 180px;
     display: none;
-    padding: 8px;
-    z-index: 2500;
+    padding: 6px;
+    z-index: 5000;
     animation: dropdownFade 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -803,7 +806,7 @@ input[type="range"] {
     border-radius: 12px;
     padding: 12px;
     width: 300px;
-    z-index: 3000;
+    z-index: 20000;
     position: fixed;
     animation: fadeIn 0.15s ease-out;
 }
@@ -891,17 +894,49 @@ input[type="range"] {
     outline: none;
 }
 
+.picker-eyedropper-btn {
+    background: #f8fafc;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    width: 25px;
+    height: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #64748b;
+    transition: all 0.2s;
+    padding: 0;
+}
+
+.picker-eyedropper-btn:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #334155;
+}
+
+.picker-eyedropper-btn .icon {
+    width: 16px;
+    height: 16px;
+    filter: brightness(0) saturate(100%) invert(40%) sepia(10%) saturate(1000%) hue-rotate(180deg);
+}
+
 .picker-add-btn {
     width: 100%;
-    background: #2196f3;
+    background: #1971c2;
     color: white;
     border: none;
-    border-radius: 4px;
-    padding: 6px;
-    font-size: 10px;
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 11px;
     font-weight: 600;
     cursor: pointer;
-    margin-top: 8px;
+    margin-top: 10px;
+    transition: background 0.2s;
+}
+
+.picker-add-btn:hover {
+    background: #1864ab;
 }
 
 .picker-hex-input:focus {
@@ -1291,8 +1326,8 @@ input[type="range"] {
     .toolbar {
         overflow-x: auto;
         white-space: nowrap;
-        justify-content: center;
-        padding: 4px 4px 4px 48px;
+        justify-content: flex-start;
+        padding: 4px 4px 4px 50px;
         /* Room for logo */
         -webkit-overflow-scrolling: touch;
         /* Smooth scrolling on iOS */
@@ -1302,7 +1337,8 @@ input[type="range"] {
         position: fixed;
         /* Keep it visible while scrolling toolbar */
         left: 8px;
-        top: 4px;
+        top: 7px;
+        /* Center vertically in min-height 42px toolbar approx */
         z-index: 110;
         font-size: 13px;
         padding: 2px 6px;
@@ -2903,6 +2939,34 @@ input[type="range"] {
     margin-top: 10px;
 }
 
+.num-adj-btn {
+    width: 20px;
+    height: 20px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: #333;
+    transition: all 0.2s;
+    user-select: none;
+    padding: 0;
+}
+
+.num-adj-btn:hover {
+    background: #f5f5f5;
+    border-color: #2196f3;
+    color: #2196f3;
+}
+
+.num-adj-btn:active {
+    background: #e3f2fd;
+    transform: scale(0.95);
+}
+
 .clean-input {
     width: 40px;
     border: none;
@@ -2969,8 +3033,8 @@ input[type="range"] {
 }
 
 .rich-text-toolbar .toolbar-btn {
-    width: 32px;
-    height: 32px;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3020,7 +3084,7 @@ input[type="range"] {
 }
 
 .rich-text-toolbar .toolbar-select {
-    padding: 6px 8px;
+    padding: 2px 2px;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
     font-size: 13px;
@@ -3030,13 +3094,13 @@ input[type="range"] {
 }
 
 .rich-text-toolbar .toolbar-color {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     padding: 0;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
     cursor: pointer;
-    background: none;
+    flex-shrink: 0;
 }
 
 /* Mobile Text Geometry & Toolbar Improvements */
@@ -3072,20 +3136,20 @@ input[type="range"] {
 
     /* Make touch targets larger */
     .rich-text-toolbar .toolbar-btn {
-        width: 44px !important;
+        width: 24px !important;
         /* Larger touch target */
-        height: 44px !important;
+        height: 24px !important;
         flex-shrink: 0;
     }
 
     .rich-text-toolbar .toolbar-select {
-        height: 44px !important;
+        height: 24px !important;
         font-size: 14px !important;
     }
 
     .rich-text-toolbar .toolbar-color {
-        width: 44px !important;
-        height: 44px !important;
+        width: 24px !important;
+        height: 24px !important;
     }
 
     .rich-text-toolbar .separator {
@@ -3109,4 +3173,145 @@ input[type="range"] {
             opacity: 1;
         }
     }
+}
+
+/* Timer Widget */
+.timer-widget {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    width: 200px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    border: 1px solid #e2e8f0;
+    z-index: 5000;
+    overflow: hidden;
+    font-family: 'Inter', sans-serif;
+    transition: transform 0.3s ease, right 0.3s ease;
+}
+
+.timer-widget.hidden {
+    display: none;
+}
+
+.timer-header {
+    background: #f8fafc;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+    cursor: move;
+}
+
+.timer-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.timer-controls-top {
+    display: flex;
+    gap: 5px;
+}
+
+.timer-controls-top button {
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: #94a3b8;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 3px;
+}
+
+.timer-controls-top button:hover {
+    color: #475569;
+}
+
+.timer-content {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+
+.timer-display {
+    font-size: 32px;
+    font-weight: 700;
+    color: #1e293b;
+    font-variant-numeric: tabular-nums;
+}
+
+.timer-presets {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+}
+
+.timer-presets button {
+    flex: 1;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    padding: 4px;
+    font-size: 11px;
+    border-radius: 4px;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.timer-presets button:hover {
+    background: #e2e8f0;
+}
+
+.timer-actions {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.timer-actions button {
+    flex: 1;
+    padding: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-timer-start {
+    background: #2563eb;
+    color: white;
+    border: none;
+}
+
+.btn-timer-start:hover {
+    background: #1d4ed8;
+}
+
+.btn-timer-start.active {
+    background: #ef4444;
+}
+
+.btn-timer-reset {
+    background: white;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+}
+
+.btn-timer-reset:hover {
+    background: #f8fafc;
+}
+
+/* Collapsed State */
+.timer-widget.collapsed .timer-content {
+    display: none;
+}
+
+.timer-widget.collapsed {
+    width: auto;
+    min-width: 120px;
 }

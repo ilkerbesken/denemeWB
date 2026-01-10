@@ -222,7 +222,7 @@ class ColorPalette {
 
     // --- Custom Color Wheel Implementation ---
     // --- Custom Color Wheel Implementation ---
-    showColorPicker(initialColor, onSelect) {
+    showColorPicker(initialColor, onSelect, anchorElement = null, direction = 'right') {
         // Remove existing picker if any
         if (this.picker) {
             this.picker.remove();
@@ -268,6 +268,11 @@ class ColorPalette {
             <div class="picker-input-row" style="display: flex; gap: 6px; align-items: center;">
                 <div class="picker-preview" style="background-color: ${selectedColor}; width: 24px; height: 24px; border-radius: 4px; border: 1px solid #e0e0e0;"></div>
                 <input type="text" class="picker-hex-input" value="${selectedColor}" maxlength="7" style="flex: 1; border: 1px solid #e0e0e0; border-radius: 4px; padding: 3px 6px; font-size: 10px; font-family: monospace;">
+                ${window.EyeDropper ? `
+                <button class="picker-eyedropper-btn" title="Ekranda Renk Seç">
+                    <img src="assets/icons/eyedropper.svg" class="icon">
+                </button>
+                ` : ''}
             </div>
             <div class="picker-actions">
                 <button class="picker-add-btn">Ekle / Seç</button>
@@ -277,10 +282,31 @@ class ColorPalette {
         document.body.appendChild(picker);
         this.picker = picker;
 
-        // Positioning logic - next to Add Button
-        const rect = this.addButton.getBoundingClientRect();
-        picker.style.left = `${rect.right + 9}px`;
-        picker.style.top = `${Math.min(window.innerHeight - picker.offsetHeight - 15, Math.max(15, rect.top))}px`;
+        // Eyedropper Logic
+        const eyedropperBtn = picker.querySelector('.picker-eyedropper-btn');
+        if (eyedropperBtn) {
+            eyedropperBtn.onclick = async () => {
+                try {
+                    const eyeDropper = new EyeDropper();
+                    const result = await eyeDropper.open();
+                    updateSelectedColor(result.sRGBHex, true);
+                } catch (e) {
+                    console.log('Eyedropper cancelled or failed', e);
+                }
+            };
+        }
+
+        // Positioning logic
+        const anchor = anchorElement || this.addButton;
+        const rect = anchor.getBoundingClientRect();
+        if (direction === 'right') {
+            picker.style.left = `${rect.right + 9}px`;
+            picker.style.right = 'auto';
+        } else {
+            picker.style.left = 'auto';
+            picker.style.right = `${window.innerWidth - rect.right}px`;
+        }
+        picker.style.top = `${Math.min(window.innerHeight - picker.offsetHeight - 15, Math.max(15, (rect.top + rect.bottom) / 2 - picker.offsetHeight / 2))}px`;
 
         // Canvas Implementation
         const canvas = picker.querySelector('#colorWheelCanvas');
@@ -431,18 +457,18 @@ class ColorPalette {
             onSelect(selectedColor);
             picker.remove();
             this.picker = null;
-            document.removeEventListener('mousedown', closePicker);
+            document.removeEventListener('pointerdown', closePicker);
         };
 
         // Close when clicking outside
         const closePicker = (e) => {
-            if (!picker.contains(e.target) && !this.addButton.contains(e.target)) {
+            if (!picker.contains(e.target) && !anchor.contains(e.target)) {
                 picker.remove();
                 this.picker = null;
-                document.removeEventListener('mousedown', closePicker);
+                document.removeEventListener('pointerdown', closePicker);
             }
         };
-        setTimeout(() => document.addEventListener('mousedown', closePicker), 0);
+        setTimeout(() => document.addEventListener('pointerdown', closePicker), 0);
     }
 
     // --- Helpers ---
