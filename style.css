@@ -812,6 +812,8 @@ input[type="range"] {
     touch-action: none;
     background: white;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateZ(0);
+    will-change: transform;
 }
 
 /* Status Bar */
@@ -3440,11 +3442,7 @@ input[type="range"] {
 }
 
 .folder-dropdown {
-<<<<<<< HEAD
-    z-index: 3000;
-=======
     z-index: 10000;
->>>>>>> e156fe7 (Dashboard düzenlemeleri ve pdf select tool düzenlemesi)
 }
 
 /* Folders styling */
@@ -4039,8 +4037,6 @@ input[type="range"] {
 
 .board-card:hover .dashed-plus-icon {
     color: #2196f3;
-    transform: scale(1.1);
-<<<<<<< HEAD
 }
 
 /* Main Color Sidebar visibility: only for mobile/tablet */
@@ -4527,6 +4523,6 @@ input[type="range"] {
         padding-bottom: 40px !important;
         /* Extra breathing room for the footer button */
     }
-=======
->>>>>>> e156fe7 (Dashboard düzenlemeleri ve pdf select tool düzenlemesi)
+
+
 }

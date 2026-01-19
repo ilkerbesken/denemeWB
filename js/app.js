@@ -35,10 +35,10 @@ class WhiteboardApp {
         this.fillManager = new FillManager();
 
         // Araçlar
-        const shapeTool = new ShapeTool(() => this.render());
+        const shapeTool = new ShapeTool(() => { this.needsRender = true; });
         this.tools = {
-            pen: new PenTool(() => this.render()),
-            highlighter: new PenTool(() => this.render()), // Re-use PenTool
+            pen: new PenTool(() => { this.needsRender = true; }),
+            highlighter: new PenTool(() => { this.needsRender = true; }), // Re-use PenTool
             line: new LineTool(),
             rectangle: shapeTool,
             ellipse: shapeTool,
@@ -57,13 +57,13 @@ class WhiteboardApp {
             hand: new HandTool(this.zoomManager),
             select: new SelectTool(),
             sticker: null,
-            text: new TextTool(() => { this.redrawOffscreen(); this.render(); }),
+            text: new TextTool(() => { this.needsRedrawOffscreen = true; this.needsRender = true; }),
             table: new TableTool()
         };
 
         // Initialize sticker tool after this is available
         this.tools.sticker = new StickerTool(this.canvas, this.ctx, this);
-        this.tools.tape = new TapeTool(() => this.render());
+        this.tools.tape = new TapeTool(() => { this.needsRender = true; });
 
         this.colorPalette = new ColorPalette(this);
         this.propertiesSidebar = new PropertiesSidebar(this);
@@ -79,7 +79,55 @@ class WhiteboardApp {
         this.currentMousePos = { x: 0, y: 0 };
         this.isSpacePressed = false;
 
+        this.needsRender = false;
+        this.needsRedrawOffscreen = false;
+        this.renderLoop = this.renderLoop.bind(this);
+        requestAnimationFrame(this.renderLoop);
+
         this.init();
+    }
+
+    renderLoop() {
+        // Flush move queue before rendering
+        if (this.moveQueue && this.moveQueue.length > 0) {
+            this.flushMoveQueue();
+        }
+
+        if (this.needsRedrawOffscreen) {
+            this.redrawOffscreen();
+            this.needsRedrawOffscreen = false;
+        }
+
+        if (this.needsRender) {
+            this.render();
+            this.needsRender = false;
+        }
+        requestAnimationFrame(this.renderLoop);
+    }
+
+    simplifyEvent(e) {
+        return {
+            offsetX: e.offsetX,
+            offsetY: e.offsetY,
+            clientX: e.clientX,
+            clientY: e.clientY,
+            pressure: e.pressure,
+            pointerType: e.pointerType,
+            button: e.button,
+            buttons: e.buttons,
+            shiftKey: e.shiftKey,
+            ctrlKey: e.ctrlKey,
+            altKey: e.altKey,
+            metaKey: e.metaKey
+        };
+    }
+
+    flushMoveQueue() {
+        if (this.moveQueue && this.moveQueue.length > 0) {
+            const events = [...this.moveQueue];
+            this.moveQueue = [];
+            events.forEach(ev => this.processPointerMove(ev));
+        }
     }
 
     init() {
@@ -94,8 +142,8 @@ class WhiteboardApp {
 
         // Initial draw (only if visible)
         if (this.canvas.clientWidth > 0) {
-            this.redrawOffscreen();
-            this.render();
+            this.needsRedrawOffscreen = true;
+            this.needsRender = true;
         }
 
         // Double Click Handler for Table Text Edit
@@ -180,8 +228,8 @@ class WhiteboardApp {
             this.canvasSettings.applySettings(this.offscreenCanvas, this.offscreenCtx, this.canvas);
 
             this.state.objects = oldObjects;
-            this.redrawOffscreen();
-            this.render();
+            this.needsRedrawOffscreen = true;
+            this.needsRender = true;
         });
     }
 
@@ -350,8 +398,8 @@ class WhiteboardApp {
             if (this.zoomManager) {
                 this.zoomManager.clampPan(); // Ortalamayı ve kaydırmayı yeniden hesapla
             } else {
-                this.redrawOffscreen();
-                this.render();
+                this.needsRedrawOffscreen = true;
+                this.needsRender = true;
             }
 
             // Panel'i kapat
@@ -560,8 +608,8 @@ class WhiteboardApp {
         safeBind('clearBtn', () => {
             this.saveHistory();
             this.state.objects = [];
-            this.redrawOffscreen();
-            this.render();
+            this.needsRedrawOffscreen = true;
+            this.needsRender = true;
         });
         safeBind('undoBtn', () => this.undo());
         safeBind('redoBtn', () => this.redo());
@@ -854,14 +902,15 @@ class WhiteboardApp {
                 }
 
                 selectTool.hideContextMenu();
-                this.redrawOffscreen();
-                this.render();
+                this.needsRedrawOffscreen = true;
+                this.needsRender = true;
             });
         });
     }
 
 
     handlePointerDown(e) {
+        this.flushMoveQueue();
         if (this.isSpacePressed) {
             this.zoomManager.startPan(e);
             return;
@@ -985,8 +1034,8 @@ class WhiteboardApp {
 
                     // Left click to toggle visibility
                     this.tools.tape.toggleVisibility(obj);
-                    this.redrawOffscreen();
-                    this.render();
+                    this.needsRedrawOffscreen = true;
+                    this.needsRender = true;
                     return; // Return immediately
                 }
             }
@@ -999,12 +1048,33 @@ class WhiteboardApp {
             this.propertiesSidebar.updateUIForTool('select');
         }
 
-        this.render();
+        this.needsRender = true;
     }
 
     handlePointerMove(e) {
+        if (!this.moveQueue) this.moveQueue = [];
+
+        // Support high-frequency points (iPad Pro 120Hz)
+        if (e.getCoalescedEvents) {
+            const coalesced = e.getCoalescedEvents();
+            if (coalesced && coalesced.length > 0) {
+                coalesced.forEach(ce => {
+                    this.moveQueue.push(this.simplifyEvent(ce));
+                });
+            } else {
+                this.moveQueue.push(this.simplifyEvent(e));
+            }
+        } else {
+            this.moveQueue.push(this.simplifyEvent(e));
+        }
+
+        this.needsRender = true;
+    }
+
+    processPointerMove(e) {
         if (this.zoomManager.isPanning) {
             this.zoomManager.updatePan(e);
+            this.needsRender = true;
             return;
         }
 
@@ -1012,7 +1082,6 @@ class WhiteboardApp {
         const pageIndex = this.pageManager.getPageIndexAt(worldPosGlobal.y);
         const pageY = this.pageManager.getPageY(pageIndex);
 
-        // Mevcut sayfanın yerel koordinatlarına çevir
         const worldPos = {
             ...worldPosGlobal,
             y: worldPosGlobal.y - pageY
@@ -1025,31 +1094,27 @@ class WhiteboardApp {
         const needsRedraw = tool.handlePointerMove(e, worldPos, this.canvas, this.ctx, this.state);
         const afterCount = this.state.objects.length;
 
-        // Mouse pozisyonunu her harekette güncelle
         this.currentMousePos = { x: e.offsetX, y: e.offsetY };
 
         if (needsRedraw || beforeCount !== afterCount || this.state.currentTool === 'eraser') {
-            // Optimization & Logic Fix:
-            // If SelectTool is dragging/resizing, it modifies state.objects in-place.
-            // We must update the offscreen canvas to reflect these changes.
             if (this.state.currentTool === 'select') {
                 if (tool.isDragging || tool.activeHandle || tool.activeTableDivider) {
-                    this.redrawOffscreen();
+                    this.needsRedrawOffscreen = true;
                 }
             }
 
-            // Fix for Eraser: If something was modified or count changed, we MUST redraw offscreen
             if (this.state.currentTool === 'eraser' && (needsRedraw || beforeCount !== afterCount)) {
-                this.redrawOffscreen();
+                this.needsRedrawOffscreen = true;
             } else if (beforeCount !== afterCount) {
-                this.redrawOffscreen();
+                this.needsRedrawOffscreen = true;
             }
 
-            this.render();
+            this.needsRender = true;
         }
     }
 
     handlePointerUp(e) {
+        this.flushMoveQueue();
         if (this.zoomManager.isPanning) {
             this.zoomManager.endPan();
             // Restore cursor based on space key and current tool
@@ -1109,7 +1174,7 @@ class WhiteboardApp {
                 this.state.objects.push(completedObject);
             }
 
-            this.redrawOffscreen();
+            this.needsRedrawOffscreen = true;
         }
 
         // Update properties sidebar if selection might have changed (e.g. drag selection finished)
@@ -1117,7 +1182,7 @@ class WhiteboardApp {
             this.propertiesSidebar.updateUIForTool('select');
         }
 
-        this.render();
+        this.needsRender = true;
     }
 
     handleKeyDown(e) {
@@ -1169,8 +1234,8 @@ class WhiteboardApp {
                             this.state.objects.push(pastedResult);
                         }
                     }
-                    this.redrawOffscreen();
-                    this.render();
+                    this.needsRedrawOffscreen = true;
+                    this.needsRender = true;
                 }
                 return;
             }
@@ -1180,8 +1245,8 @@ class WhiteboardApp {
                 e.preventDefault();
                 this.saveHistory();
                 selectTool.cutSelected(this.state);
-                this.redrawOffscreen();
-                this.render();
+                this.needsRedrawOffscreen = true;
+                this.needsRender = true;
                 return;
             }
 
@@ -1192,8 +1257,8 @@ class WhiteboardApp {
                 this.saveHistory();
                 const duplicateResult = selectTool.duplicateSelected(this.state);
                 if (duplicateResult) {
-                    this.redrawOffscreen();
-                    this.render();
+                    this.needsRedrawOffscreen = true;
+                    this.needsRender = true;
                 }
                 return;
             }
@@ -1203,8 +1268,8 @@ class WhiteboardApp {
                 e.preventDefault();
                 this.saveHistory();
                 selectTool.deleteSelected(this.state);
-                this.redrawOffscreen();
-                this.render();
+                this.needsRedrawOffscreen = true;
+                this.needsRender = true;
                 return;
             }
         }
@@ -1234,16 +1299,16 @@ class WhiteboardApp {
                 e.preventDefault();
                 this.saveHistory();
                 selectTool.groupSelected(this.state);
-                this.redrawOffscreen();
-                this.render();
+                this.needsRedrawOffscreen = true;
+                this.needsRender = true;
                 return;
             }
             if (e.key.toLowerCase() === 'u') {
                 e.preventDefault();
                 this.saveHistory();
                 selectTool.ungroupSelected(this.state);
-                this.redrawOffscreen();
-                this.render();
+                this.needsRedrawOffscreen = true;
+                this.needsRender = true;
                 return;
             }
             if (e.key.toLowerCase() === 'k') {
@@ -1357,8 +1422,8 @@ class WhiteboardApp {
                 this.state.objects = previous.objects;
                 this.applyToolSettings(previous.settings);
             }
-            this.redrawOffscreen();
-            this.render();
+            this.needsRedrawOffscreen = true;
+            this.needsRender = true;
         }
     }
 
@@ -1375,8 +1440,8 @@ class WhiteboardApp {
                 this.state.objects = next.objects;
                 this.applyToolSettings(next.settings);
             }
-            this.redrawOffscreen();
-            this.render();
+            this.needsRedrawOffscreen = true;
+            this.needsRender = true;
         }
     }
 
@@ -1502,7 +1567,7 @@ class WhiteboardApp {
 
         // Request next frame if an animation (like eraser trail fade) is active
         if (needsNextFrame) {
-            requestAnimationFrame(() => this.render());
+            requestAnimationFrame(() => { this.needsRender = true; });
         }
 
         // Silgi imleci - World Coordinates

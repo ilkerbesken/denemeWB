@@ -118,6 +118,7 @@ class PenTool {
         // REAL-TIME SMOOTHING 
         // Apply a lightweight smoothing pass during drawing so the preview matches 
         // the final high-quality output and doesn't look "angular".
+        // Performance optimization: Use only 1 iteration during move for 120Hz responsiveness.
         if (this.streamlinePoints.length > 5) {
             let pts = [...this.streamlinePoints];
             // Lightweight sanitize during move
@@ -135,7 +136,8 @@ class PenTool {
                 const tail = pts.slice(-2);
                 pts = [...head, ...mid, ...tail];
             }
-            pts = Utils.chaikin(pts, 3);
+            // Use 1 iteration instead of 3 for real-time preview (Performance)
+            pts = Utils.chaikin(pts, 1);
             this.currentPath.points = Utils.smoothPressure(pts);
         } else {
             this.currentPath.points = this.streamlinePoints;

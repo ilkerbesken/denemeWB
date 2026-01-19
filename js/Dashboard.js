@@ -72,15 +72,11 @@ class Dashboard {
                 this.pdfInput.onchange = (e) => this.handlePDFUpload(e);
             }
 
-<<<<<<< HEAD
             // Template Gallery
             this.btnOpenTemplates = document.getElementById('btnOpenTemplates');
             if (this.btnOpenTemplates) {
                 this.btnOpenTemplates.onclick = () => this.openTemplateGallery();
             }
-
-=======
->>>>>>> e156fe7 (Dashboard düzenlemeleri ve pdf select tool düzenlemesi)
             if (this.btnEmptyTrash) {
                 this.btnEmptyTrash.onclick = () => this.emptyTrash();
             }
