@@ -108,7 +108,7 @@ class CanvasSettings {
         const container = canvas.parentElement;
         let width, height;
 
-        if (container) {
+        if (container && container.clientWidth > 0 && container.clientHeight > 0) {
             width = container.clientWidth;
             height = container.clientHeight;
         } else {

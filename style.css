@@ -26,11 +26,16 @@ textarea,
 }
 
 #app {
+    position: fixed;
+    top: 0;
+    left: 0;
     width: 100vw;
     height: 100vh;
     display: flex;
     flex-direction: column;
     touch-action: none;
+    z-index: 1001;
+    /* Higher than dashboard-sidebar but may need to be higher overall later */
 }
 
 /* ========================================
