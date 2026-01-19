@@ -441,7 +441,7 @@ class WhiteboardApp {
 
                     document.querySelectorAll('.color-option-rect[data-color]').forEach(b => b.classList.remove('active'));
                     btnCustomBg.classList.add('active');
-                });
+                }, btnCustomBg, 'right'); // Added anchor and direction
             });
         }
 
@@ -476,15 +476,16 @@ class WhiteboardApp {
         // Özel Desen Rengi
         const btnCustomPattern = document.getElementById('btnCustomPatternColor');
         if (btnCustomPattern) {
-            btnCustomPattern.addEventListener('click', () => {
+            btnCustomPattern.addEventListener('click', (e) => {
                 const currentColor = btnCustomPattern.dataset.patternColor || 'rgba(0,0,0,0.15)';
                 this.colorPalette.showColorPicker(currentColor, (color) => {
                     if (color === 'rainbow') return;
                     btnCustomPattern.style.backgroundColor = color;
                     btnCustomPattern.dataset.patternColor = color;
+                    btnCustomPattern.innerHTML = ''; // Remove '+' when color is set
                     document.querySelectorAll('.color-option-rect[data-pattern-color]').forEach(b => b.classList.remove('active'));
                     btnCustomPattern.classList.add('active');
-                });
+                }, btnCustomPattern, 'right');
             });
         }
 

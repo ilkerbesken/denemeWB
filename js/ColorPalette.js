@@ -472,6 +472,19 @@ class ColorPalette {
 
     hexToHsv(hex) {
         if (!hex || typeof hex !== 'string') return [0, 0, 0];
+
+        // If it's rgba, convert to hex first
+        if (hex.startsWith('rgba')) {
+            const parts = hex.match(/[\d.]+/g);
+            if (parts && parts.length >= 3) {
+                const r = parseInt(parts[0]);
+                const g = parseInt(parts[1]);
+                const b = parseInt(parts[2]);
+                const toHex = x => x.toString(16).padStart(2, '0');
+                hex = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+            }
+        }
+
         let r, g, b;
         if (hex.length === 4) {
             r = parseInt(hex[1] + hex[1], 16) / 255;
