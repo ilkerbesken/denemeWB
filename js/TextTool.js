@@ -308,13 +308,19 @@ class TextTool {
     draw(ctx, obj) {
         if (!obj.htmlContent) return;
 
-        if (!obj._cachedImage || obj._cachedHtml !== obj.htmlContent || obj._cachedWidth !== obj.width || obj._cachedHeight !== obj.height || obj._cachedSize !== obj.fontSize || obj._cachedColor !== obj.color) {
+        // If restored from localStorage, _cachedImage might be a plain object {} 
+        // We must ensure it's a real HTMLImageElement.
+        const isRealImage = obj._cachedImage instanceof HTMLImageElement;
+
+        if (!isRealImage || obj._cachedHtml !== obj.htmlContent || obj._cachedWidth !== obj.width || obj._cachedHeight !== obj.height || obj._cachedSize !== obj.fontSize || obj._cachedColor !== obj.color) {
             this.generateCachedImage(obj);
         }
 
-        if (obj._cachedImage && obj._imageLoaded) {
+        if (obj._cachedImage && obj._imageLoaded && (obj._cachedImage instanceof HTMLImageElement) && obj._cachedImage.complete && obj._cachedImage.naturalWidth > 0) {
             // Draw slightly offset to compensate for potential sub-pixel differences or padding
-            ctx.drawImage(obj._cachedImage, obj.x, obj.y, obj.width, obj.height);
+            if (obj.width > 0 && obj.height > 0) {
+                ctx.drawImage(obj._cachedImage, obj.x, obj.y, obj.width, obj.height);
+            }
         } else {
             // Minimal fallback so it's not invisible
             ctx.save();

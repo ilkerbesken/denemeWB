@@ -7,8 +7,13 @@ class ZoomManager {
         this.isEditingZoom = false;
         this.lastMousePos = { x: 0, y: 0 };
         this.minZoom = 0.1;
-        this.maxZoom = 5;
+        this.maxZoom = 10; // Increased max zoom
         this.zoomSpeed = 0.1;
+
+        // Touch gesture state
+        this.activePointers = new Map();
+        this.lastPinchDistance = 0;
+        this.isPinching = false;
 
         this.init();
     }
@@ -100,8 +105,8 @@ class ZoomManager {
         if (this.pan.y < minY) this.pan.y = minY;
         if (this.pan.y > maxY) this.pan.y = maxY;
 
-        this.app.redrawOffscreen();
-        this.app.render();
+        this.app.needsRedrawOffscreen = true;
+        this.app.needsRender = true;
 
         if (this.app.pdfManager && this.app.pdfManager.textSelector) {
             this.app.pdfManager.textSelector.updateTransform(this.zoom, this.pan.x, this.pan.y);
@@ -270,11 +275,87 @@ class ZoomManager {
         this.updateUI();
     }
 
-    // ... Methods below (enableZoomInput, finishEditingZoom) remain largely same but omitted here for brevity 
-    // since I'm targeting replacements. But wait, I need to keep enableZoomInput.
-    // I will use replace_file_content for the block from handleWheel to end of updatePan or getPointerWorldPos.
+    handleTouchDown(e) {
+        this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-    // ...
+        if (this.activePointers.size === 1) {
+            this.startPan(e);
+        } else if (this.activePointers.size === 2) {
+            this.isPinching = true;
+            this.isPanning = false; // Stop one-finger pan when second finger arrives
+            this.lastPinchDistance = this.getGestureDistance();
+        }
+    }
+
+    handleTouchMove(e) {
+        if (!this.activePointers.has(e.pointerId)) return;
+        this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+        if (this.isPinching && this.activePointers.size === 2) {
+            this.handlePinch(e);
+        } else if (this.isPanning && this.activePointers.size === 1) {
+            // Re-using the logic from updatePan but ensuring we use the correct pointer
+            const { width: logicalW } = this.getLogicalDims();
+            const cssW = this.app.canvas.clientWidth;
+            const scale = (cssW > 0) ? (logicalW / cssW) : 1;
+
+            const deltaX = (e.clientX - this.lastMousePos.x) * scale;
+            const deltaY = (e.clientY - this.lastMousePos.y) * scale;
+
+            this.pan.x += deltaX;
+            this.pan.y += deltaY;
+
+            this.lastMousePos = { x: e.clientX, y: e.clientY };
+
+            this.updateUI();
+            this.clampPan();
+            this.syncActivePageByScroll();
+        }
+    }
+
+    handleTouchUp(e) {
+        this.activePointers.delete(e.pointerId);
+
+        if (this.activePointers.size < 2) {
+            this.isPinching = false;
+            this.lastPinchDistance = 0;
+        }
+
+        if (this.activePointers.size === 0) {
+            this.endPan();
+        } else if (this.activePointers.size === 1) {
+            // If one finger remains, resume panning from its current position
+            const remainingPointer = this.activePointers.values().next().value;
+            this.lastMousePos = { x: remainingPointer.x, y: remainingPointer.y };
+            this.isPanning = true;
+        }
+    }
+
+    getGestureDistance() {
+        const pts = Array.from(this.activePointers.values());
+        const dx = pts[0].x - pts[1].x;
+        const dy = pts[0].y - pts[1].y;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    handlePinch(e) {
+        const currentDistance = this.getGestureDistance();
+        if (this.lastPinchDistance > 0 && currentDistance > 0) {
+            const factor = currentDistance / this.lastPinchDistance;
+
+            // Zoom center point (average of two touches)
+            const pts = Array.from(this.activePointers.values());
+            const centerX = (pts[0].x + pts[1].x) / 2;
+            const centerY = (pts[0].y + pts[1].y) / 2;
+
+            const rect = this.app.canvas.getBoundingClientRect();
+            const localX = centerX - rect.left;
+            const localY = centerY - rect.top;
+
+            this.zoomAtPoint(localX, localY, factor);
+        }
+        this.lastPinchDistance = currentDistance;
+    }
 
     startPan(e) {
         this.isPanning = true;

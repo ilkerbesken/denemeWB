@@ -114,12 +114,9 @@ class WhiteboardApp {
         return drawingTools.includes(toolName);
     }
 
-    shouldIgnorePointer(e) {
-        return this.isIOS && e.pointerType === 'touch' && this.isDrawingTool(this.state.currentTool);
-    }
-
     simplifyEvent(e) {
         return {
+            pointerId: e.pointerId,
             offsetX: e.offsetX,
             offsetY: e.offsetY,
             clientX: e.clientX,
@@ -925,11 +922,13 @@ class WhiteboardApp {
     handlePointerDown(e) {
         this.flushMoveQueue();
 
-        // PALM REJECTION (iPad / Stylus Optimization)
-        if (this.shouldIgnorePointer(e)) {
+        // 1. TOUCH NAVIGATION (1-Finger Pan, 2-Finger Zoom)
+        if (e.pointerType === 'touch') {
+            this.zoomManager.handleTouchDown(e);
             return;
         }
 
+        // 2. SPACEBAR PAN (For Mouse/Pencil)
         if (this.isSpacePressed) {
             this.zoomManager.startPan(e);
             return;
@@ -1071,6 +1070,12 @@ class WhiteboardApp {
     }
 
     handlePointerMove(e) {
+        if (e.pointerType === 'touch') {
+            this.zoomManager.handleTouchMove(e);
+            this.needsRender = true;
+            return;
+        }
+
         if (!this.moveQueue) this.moveQueue = [];
 
         // Support high-frequency points (iPad Pro 120Hz)
@@ -1091,10 +1096,6 @@ class WhiteboardApp {
     }
 
     processPointerMove(e) {
-        if (this.shouldIgnorePointer(e)) {
-            return;
-        }
-
         if (this.zoomManager.isPanning) {
             this.zoomManager.updatePan(e);
             this.needsRender = true;
@@ -1139,7 +1140,8 @@ class WhiteboardApp {
     handlePointerUp(e) {
         this.flushMoveQueue();
 
-        if (this.shouldIgnorePointer(e)) {
+        if (e.pointerType === 'touch') {
+            this.zoomManager.handleTouchUp(e);
             return;
         }
 
