@@ -1497,20 +1497,49 @@ class WhiteboardApp {
         this.longPressTimer = setTimeout(() => {
             this.longPressTriggered = true;
 
-            // Eğer çizim/pan modundaysak bitir
-            if (this.state.currentTool && this.tools[this.state.currentTool] && this.tools[this.state.currentTool].handlePointerUp) {
-                this.tools[this.state.currentTool].handlePointerUp(e, this.canvas, this.state);
+            // vibration feedback
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
             }
 
-            // Context Menu Göster
-            if (this.state.currentTool === 'select') {
+            // 1. Mevcut aracın çizimini/işlemini iptal et (obje eklenmesini önle)
+            const currentTool = this.tools[this.state.currentTool];
+            if (currentTool) {
+                if (currentTool.isDrawing !== undefined) currentTool.isDrawing = false;
+                if (currentTool.currentPath !== undefined) currentTool.currentPath = null;
+                if (currentTool.activeObject !== undefined) currentTool.activeObject = null;
+                if (currentTool.currentShape !== undefined) currentTool.currentShape = null;
+                if (currentTool.currentTape !== undefined) currentTool.currentTape = null;
+            }
+
+            // 2. Seç aracına geç (Eğer henüz değilse)
+            if (this.state.currentTool !== 'select') {
+                this.setTool('select');
+            }
+
+            // 3. Tıklanan yerdeki objeyi bul ve seç
+            const worldPosGlobal = this.zoomManager.getPointerWorldPos(e);
+            const pageIndex = this.pageManager.getPageIndexAt(worldPosGlobal.y);
+            const pageY = this.pageManager.getPageY(pageIndex);
+            const worldPos = {
+                ...worldPosGlobal,
+                y: worldPosGlobal.y - pageY
+            };
+
+            if (pageIndex !== this.pageManager.currentPageIndex) {
+                this.pageManager.switchPage(pageIndex, false);
+            }
+
+            // Seçim işlemini manuel tetikle
+            this.tools.select.handlePointerDown(e, worldPos, this.canvas, this.ctx, this.state);
+
+            // 4. Eğer bir obje seçildiyse sağ tık menüsünü aç
+            if (this.tools.select.selectedObjects.length > 0) {
                 this.tools.select.handleContextMenu(e, this.canvas, this.state);
-
-                // Haptic feedback
-                if (navigator.vibrate) {
-                    navigator.vibrate(50);
-                }
             }
+
+            this.needsRedrawOffscreen = true;
+            this.needsRender = true;
         }, this.longPressThreshold);
     }
 
