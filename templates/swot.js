@@ -28,7 +28,8 @@ const SWOT_TEMPLATE = {
             x: config.startX + config.size + (config.gap / 2),
             y: 60,
             text: "SWOT Analizi",
-            fontSize: 24, fontWeight: "bold", color: "#2d3436", textAlign: "center"
+            fontSize: 24, fontWeight: "bold", color: "#2d3436", textAlign: "center",
+            locked: true
         }];
 
         // 2. Çeyrekleri Döngü ile Oluştur
@@ -41,7 +42,8 @@ const SWOT_TEMPLATE = {
                 type: "rectangle",
                 x: posX, y: posY, width: config.size, height: config.size,
                 color: q.color, fillColor: q.color, filled: true,
-                opacity: 0.2, strokeWidth: 2, lineStyle: "solid"
+                opacity: 0.2, strokeWidth: 2, lineStyle: "solid",
+                locked: true
             });
 
             // Bölüm başlığı
@@ -50,7 +52,8 @@ const SWOT_TEMPLATE = {
                 x: posX + (config.size / 2), // Yatayda kutunun ortası
                 y: posY + config.titleOffset,
                 text: q.label,
-                fontSize: 16, fontWeight: "bold", color: q.color, textAlign: "center"
+                fontSize: 16, fontWeight: "bold", color: q.color, textAlign: "center",
+                locked: true
             });
         });
     }

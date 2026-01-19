@@ -127,7 +127,7 @@ class SelectTool {
         let clickedIndex = -1;
         for (let i = state.objects.length - 1; i >= 0; i--) {
             const obj = state.objects[i];
-            if (this.isNearObject(obj, clickPoint)) {
+            if (!obj.locked && this.isNearObject(obj, clickPoint)) {
                 clickedIndex = i;
                 break;
             }
@@ -443,6 +443,7 @@ class SelectTool {
 
             // Check objects inside polygon
             state.objects.forEach((obj, index) => {
+                if (obj.locked) return;
                 if (this.checkLassoIntersectionV2(obj, polygon)) {
                     if (!this.selectedObjects.includes(index)) {
                         this.selectedObjects.push(index);
@@ -469,6 +470,7 @@ class SelectTool {
 
         // Kutu içindeki veya temas eden nesneleri bul
         state.objects.forEach((obj, index) => {
+            if (obj.locked) return;
             if (this.checkIntersection(obj, selectionBox)) {
                 if (!this.selectedObjects.includes(index)) {
                     this.selectedObjects.push(index);

@@ -15,6 +15,12 @@ class ZoomManager {
         this.lastPinchDistance = 0;
         this.isPinching = false;
 
+        // Palm Rejection / Stylus Tracking
+        this.lastStylusTime = 0;
+        this.STYLUS_GRACE_PERIOD = 500; // ms
+        this.MIN_PINCH_DISTANCE = 60; // pixels
+        this.ZOOM_THRESHOLD = 0.02; // 2% minimum change to trigger zoom
+
         this.init();
     }
 
@@ -276,14 +282,26 @@ class ZoomManager {
     }
 
     handleTouchDown(e) {
+        // 1. Stylus Priority: If a stylus was used very recently, ignore new touches
+        if (Date.now() - this.lastStylusTime < this.STYLUS_GRACE_PERIOD) {
+            return;
+        }
+
         this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
         if (this.activePointers.size === 1) {
             this.startPan(e);
         } else if (this.activePointers.size === 2) {
+            const distance = this.getGestureDistance();
+
+            // 2. Minimum Distance: Ignore if "fingers" are too close (likely palm+pen error)
+            if (distance < this.MIN_PINCH_DISTANCE) {
+                return;
+            }
+
             this.isPinching = true;
             this.isPanning = false; // Stop one-finger pan when second finger arrives
-            this.lastPinchDistance = this.getGestureDistance();
+            this.lastPinchDistance = distance;
         }
     }
 
@@ -340,8 +358,17 @@ class ZoomManager {
 
     handlePinch(e) {
         const currentDistance = this.getGestureDistance();
+
+        // 3. Minimum Distance Check during move
+        if (currentDistance < this.MIN_PINCH_DISTANCE) return;
+
         if (this.lastPinchDistance > 0 && currentDistance > 0) {
             const factor = currentDistance / this.lastPinchDistance;
+
+            // 4. Zoom Sensitivity Threshold: Ignore micro-jitters
+            if (Math.abs(factor - 1) < this.ZOOM_THRESHOLD) {
+                return;
+            }
 
             // Zoom center point (average of two touches)
             const pts = Array.from(this.activePointers.values());
@@ -353,8 +380,8 @@ class ZoomManager {
             const localY = centerY - rect.top;
 
             this.zoomAtPoint(localX, localY, factor);
+            this.lastPinchDistance = currentDistance;
         }
-        this.lastPinchDistance = currentDistance;
     }
 
     startPan(e) {

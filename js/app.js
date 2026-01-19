@@ -922,6 +922,11 @@ class WhiteboardApp {
     handlePointerDown(e) {
         this.flushMoveQueue();
 
+        // Track stylus activity for palm rejection
+        if (e.pointerType === 'pen') {
+            this.zoomManager.lastStylusTime = Date.now();
+        }
+
         // 1. TOUCH NAVIGATION (1-Finger Pan, 2-Finger Zoom)
         if (e.pointerType === 'touch') {
             this.zoomManager.handleTouchDown(e);
@@ -1070,6 +1075,11 @@ class WhiteboardApp {
     }
 
     handlePointerMove(e) {
+        // Track stylus activity for palm rejection
+        if (e.pointerType === 'pen') {
+            this.zoomManager.lastStylusTime = Date.now();
+        }
+
         if (e.pointerType === 'touch') {
             this.zoomManager.handleTouchMove(e);
             this.needsRender = true;
@@ -1096,6 +1106,10 @@ class WhiteboardApp {
     }
 
     processPointerMove(e) {
+        if (e.pointerType === 'pen') {
+            this.zoomManager.lastStylusTime = Date.now();
+        }
+
         if (this.zoomManager.isPanning) {
             this.zoomManager.updatePan(e);
             this.needsRender = true;
@@ -1139,6 +1153,11 @@ class WhiteboardApp {
 
     handlePointerUp(e) {
         this.flushMoveQueue();
+
+        // Track stylus activity for palm rejection
+        if (e.pointerType === 'pen') {
+            this.zoomManager.lastStylusTime = Date.now();
+        }
 
         if (e.pointerType === 'touch') {
             this.zoomManager.handleTouchUp(e);

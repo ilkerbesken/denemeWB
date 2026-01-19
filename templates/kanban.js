@@ -36,7 +36,8 @@ const KANBAN_TEMPLATE = {
                 x: currentX, y: config.startY,
                 width: config.columnWidth, height: config.headerHeight,
                 color: config.headerColor, fillColor: config.headerColor, filled: true,
-                opacity: 1.0, strokeWidth: 2, lineStyle: "solid"
+                opacity: 1.0, strokeWidth: 2, lineStyle: "solid",
+                locked: true
             });
 
             // 2. Header Text (Sütun Başlığı)
@@ -46,7 +47,8 @@ const KANBAN_TEMPLATE = {
                 width: config.columnWidth, height: config.headerHeight,
                 text: col.title, htmlContent: `<div>${col.title}</div>`,
                 fontSize: 18, fontWeight: "bold", color: "#ffffff",
-                alignment: "center", opacity: 1.0
+                alignment: "center", opacity: 1.0,
+                locked: true
             });
 
             // 3. Column Body (Gri Gövde)
@@ -55,7 +57,8 @@ const KANBAN_TEMPLATE = {
                 x: currentX, y: config.startY + config.headerHeight,
                 width: config.columnWidth, height: config.columnHeight,
                 color: config.borderColor, fillColor: config.bodyColor, filled: true,
-                opacity: 0.6, strokeWidth: 1, lineStyle: "solid"
+                opacity: 0.6, strokeWidth: 1, lineStyle: "solid",
+                locked: true
             });
 
             // 4. Column Text (Sütun İçeriği)
@@ -66,7 +69,8 @@ const KANBAN_TEMPLATE = {
                 width: config.columnWidth, height: config.columnHeight,
                 text: col.bodyText, htmlContent: `<div>${col.bodyText}</div>`,
                 fontSize: 14, fontWeight: "normal", color: "#000000",
-                alignment: "center", opacity: 1.0
+                alignment: "center", opacity: 1.0,
+                locked: true
             });
         });
     }
