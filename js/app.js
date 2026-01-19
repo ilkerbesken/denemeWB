@@ -391,6 +391,16 @@ class WhiteboardApp {
         const closeBtn = document.getElementById('btnCloseSettings');
         if (closeBtn) closeBtn.onclick = () => this.canvasSettings.togglePanel();
 
+        // Backdrop'a tıklayınca kapat
+        const modal = document.getElementById('canvasSettingsModal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    this.canvasSettings.togglePanel();
+                }
+            });
+        }
+
         if (openBtn) openBtn.onclick = toggleSettings;
         if (menuBtn) menuBtn.onclick = toggleSettings;
 

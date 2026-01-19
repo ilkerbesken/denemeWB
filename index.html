@@ -485,112 +485,114 @@
             </div>
         </div>
 
-        <!-- Canvas Settings Panel -->
-        <div id="canvasSettingsPanel" class="settings-sidebar">
-            <div class="sidebar-header">
-                <span>Tuval Ayarları</span>
-                <button id="btnCloseSettings" class="close-sidebar-btn" title="Kapat">×</button>
-            </div>
-
-            <div class="sidebar-content">
-                <div class="setting-item-vertical">
-                    <label>Sayfa Boyutu</label>
-                    <select id="canvasSizeSelect">
-                        <option value="a6">A6 (105x148mm)</option>
-                        <option value="a5">A5 (148x210mm)</option>
-                        <option value="a4" selected>A4 (210x297mm)</option>
-                        <option value="a3">A3 (297x420mm)</option>
-                        <option value="letter">Letter (8.5x11in)</option>
-                        <option value="full">Tam Ekran (Esnek)</option>
-                    </select>
+        <!-- Canvas Settings Modal -->
+        <div id="canvasSettingsModal" class="modal-backdrop">
+            <div id="canvasSettingsPanel" class="settings-modal">
+                <div class="sidebar-header">
+                    <span>Tuval Ayarları</span>
+                    <button id="btnCloseSettings" class="close-sidebar-btn" title="Kapat">×</button>
                 </div>
 
-                <div class="setting-item-vertical">
-                    <label>Yönlendirme</label>
-                    <div class="segmented-control">
-                        <label class="segment">
-                            <input type="radio" name="orientation" value="portrait" checked>
-                            <span>Dikey</span>
-                        </label>
-                        <label class="segment">
-                            <input type="radio" name="orientation" value="landscape">
-                            <span>Yatay</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="setting-item-vertical">
-                    <label>Arkaplan Rengi</label>
-                    <div class="color-grid-small">
-                        <button class="color-option-rect active" data-color="white" style="background: #ffffff;"
-                            title="Beyaz"></button>
-                        <button class="color-option-rect" data-color="cream" style="background: #fffef0;"
-                            title="Krem"></button>
-                        <button class="color-option-rect" data-color="green" style="background: #e8f5e9;"
-                            title="Yeşil"></button>
-                        <button class="color-option-rect custom-add" id="btnCustomBackground"
-                            title="Özel Renk">+</button>
-                    </div>
-                </div>
-
-                <div class="setting-item-vertical">
-                    <label>Sayfa Deseni</label>
-                    <div class="pattern-grid-sidebar ">
-                        <button class="pattern-item active" data-pattern="none" title="Yok">
-                            <span>Boş</span>
-                        </button>
-                        <button class="pattern-item" data-pattern="dots" title="Noktalı">
-                            <img src="assets/icons/pattern-dots.svg" alt="dots" class="icon-tiny">
-                            <span>Noktalı</span>
-                        </button>
-                        <button class="pattern-item" data-pattern="grid" title="Kareli">
-                            <img src="assets/icons/pattern-grid.svg" alt="grid" class="icon-tiny">
-                            <span>Kareli</span>
-                        </button>
-                        <button class="pattern-item" data-pattern="lines" title="Çizgili">
-                            <img src="assets/icons/pattern-lines.svg" alt="lines" class="icon-tiny">
-                            <span>Çizgili</span>
-                        </button>
-                    </div>
-                </div>
-
-                <div id="patternOptionsGroup"
-                    style="display: none; border-top: 1px dashed #eee; padding-top: 15px; margin-top: 10px;">
+                <div class="sidebar-content">
                     <div class="setting-item-vertical">
-                        <label>Desen Rengi</label>
+                        <label>Sayfa Boyutu</label>
+                        <select id="canvasSizeSelect">
+                            <option value="a6">A6 (105x148mm)</option>
+                            <option value="a5">A5 (148x210mm)</option>
+                            <option value="a4" selected>A4 (210x297mm)</option>
+                            <option value="a3">A3 (297x420mm)</option>
+                            <option value="letter">Letter (8.5x11in)</option>
+                            <option value="full">Tam Ekran (Esnek)</option>
+                        </select>
+                    </div>
+
+                    <div class="setting-item-vertical">
+                        <label>Yönlendirme</label>
+                        <div class="segmented-control">
+                            <label class="segment">
+                                <input type="radio" name="orientation" value="portrait" checked>
+                                <span>Dikey</span>
+                            </label>
+                            <label class="segment">
+                                <input type="radio" name="orientation" value="landscape">
+                                <span>Yatay</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="setting-item-vertical">
+                        <label>Arkaplan Rengi</label>
                         <div class="color-grid-small">
-                            <button class="color-option-rect active" data-pattern-color="rgba(0,0,0,0.15)"
-                                style="background: rgba(0,0,0,0.15);" title="Gri"></button>
-                            <button class="color-option-rect" data-pattern-color="rgba(0,0,255,0.1)"
-                                style="background: rgba(0,0,255,0.1);" title="Mavi"></button>
-                            <button class="color-option-rect" data-pattern-color="rgba(255,0,0,0.1)"
-                                style="background: rgba(255,0,0,0.1);" title="Kırmızı"></button>
-                            <button class="color-option-rect custom-add" id="btnCustomPatternColor"
+                            <button class="color-option-rect active" data-color="white" style="background: #ffffff;"
+                                title="Beyaz"></button>
+                            <button class="color-option-rect" data-color="cream" style="background: #fffef0;"
+                                title="Krem"></button>
+                            <button class="color-option-rect" data-color="green" style="background: #e8f5e9;"
+                                title="Yeşil"></button>
+                            <button class="color-option-rect custom-add" id="btnCustomBackground"
                                 title="Özel Renk">+</button>
                         </div>
                     </div>
 
-                    <div class="aSeparator"></div>
-
                     <div class="setting-item-vertical">
-                        <label style="display: flex; justify-content: space-between;">
-                            Aralık <span id="patternSpacingVal" class="val-badge">20px</span>
-                        </label>
-                        <input type="range" id="patternSpacingSlider" min="10" max="100" value="20" step="5">
+                        <label>Sayfa Deseni</label>
+                        <div class="pattern-grid-sidebar ">
+                            <button class="pattern-item active" data-pattern="none" title="Yok">
+                                <span>Boş</span>
+                            </button>
+                            <button class="pattern-item" data-pattern="dots" title="Noktalı">
+                                <img src="assets/icons/pattern-dots.svg" alt="dots" class="icon-tiny">
+                                <span>Noktalı</span>
+                            </button>
+                            <button class="pattern-item" data-pattern="grid" title="Kareli">
+                                <img src="assets/icons/pattern-grid.svg" alt="grid" class="icon-tiny">
+                                <span>Kareli</span>
+                            </button>
+                            <button class="pattern-item" data-pattern="lines" title="Çizgili">
+                                <img src="assets/icons/pattern-lines.svg" alt="lines" class="icon-tiny">
+                                <span>Çizgili</span>
+                            </button>
+                        </div>
                     </div>
 
+                    <div id="patternOptionsGroup"
+                        style="display: none; border-top: 1px dashed #eee; padding-top: 15px; margin-top: 10px;">
+                        <div class="setting-item-vertical">
+                            <label>Desen Rengi</label>
+                            <div class="color-grid-small">
+                                <button class="color-option-rect active" data-pattern-color="rgba(0,0,0,0.15)"
+                                    style="background: rgba(0,0,0,0.15);" title="Gri"></button>
+                                <button class="color-option-rect" data-pattern-color="rgba(0,0,255,0.1)"
+                                    style="background: rgba(0,0,255,0.1);" title="Mavi"></button>
+                                <button class="color-option-rect" data-pattern-color="rgba(255,0,0,0.1)"
+                                    style="background: rgba(255,0,0,0.1);" title="Kırmızı"></button>
+                                <button class="color-option-rect custom-add" id="btnCustomPatternColor"
+                                    title="Özel Renk">+</button>
+                            </div>
+                        </div>
 
-                    <div class="setting-item-vertical">
-                        <label style="display: flex; justify-content: space-between;">
-                            Kalınlık <span id="patternThicknessVal" class="val-badge">1px</span>
-                        </label>
-                        <input type="range" id="patternThicknessSlider" min="0.5" max="3" value="1" step="0.5">
+                        <div class="aSeparator"></div>
+
+                        <div class="setting-item-vertical">
+                            <label style="display: flex; justify-content: space-between;">
+                                Aralık <span id="patternSpacingVal" class="val-badge">20px</span>
+                            </label>
+                            <input type="range" id="patternSpacingSlider" min="10" max="100" value="20" step="5">
+                        </div>
+
+
+                        <div class="setting-item-vertical">
+                            <label style="display: flex; justify-content: space-between;">
+                                Kalınlık <span id="patternThicknessVal" class="val-badge">1px</span>
+                            </label>
+                            <input type="range" id="patternThicknessSlider" min="0.5" max="3" value="1" step="0.5">
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="sidebar-footer">
-                <button class="btn btn-primary" id="applySettingsBtn" style="width: 100%;">Ayarları Uygula</button>
+                <div class="sidebar-footer">
+                    <button class="btn btn-primary" id="applySettingsBtn" style="width: 100%;">Ayarları Uygula</button>
+                </div>
             </div>
         </div>
 

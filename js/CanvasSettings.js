@@ -33,9 +33,12 @@ class CanvasSettings {
     }
 
     togglePanel() {
+        const modal = document.getElementById('canvasSettingsModal');
         const panel = document.getElementById('canvasSettingsPanel');
         this.isPanelOpen = !this.isPanelOpen;
-        panel.classList.toggle('show', this.isPanelOpen);
+
+        if (modal) modal.classList.toggle('show', this.isPanelOpen);
+        if (panel) panel.classList.toggle('show', this.isPanelOpen);
     }
 
     loadSettingsToPanel() {
