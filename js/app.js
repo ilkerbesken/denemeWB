@@ -85,6 +85,13 @@ class WhiteboardApp {
         // Device detection for Smart Gestures
         this.deviceType = this.detectDeviceType();
 
+        // Long press for context menu on mobile
+        this.longPressTimer = null;
+        this.longPressThreshold = 600; // ms
+        this.longPressTriggered = false;
+        this.pressStartPos = null;
+        this.moveThreshold = 10; // px-hareket toleransı
+
         this.renderLoop = this.renderLoop.bind(this);
         requestAnimationFrame(this.renderLoop);
 
@@ -962,6 +969,11 @@ class WhiteboardApp {
         if (e.pointerType === 'touch') {
             this.zoomManager.handleTouchDown(e);
 
+            // Start Long Press Timer for Context Menu
+            if (this.state.currentTool === 'select' && !this.zoomManager.isPinching) {
+                this.startLongPress(e);
+            }
+
             // Smart Gesture: On phone, 1-finger touch should be mouse-like (draw/select) 
             // EXCEPT when the hand tool is active.
             // On tablets, we keep the previous behavior (1-finger touch = pan).
@@ -1122,6 +1134,17 @@ class WhiteboardApp {
         if (e.pointerType === 'touch') {
             this.zoomManager.handleTouchMove(e);
 
+            // Check if we moved enough to cancel long press
+            if (this.pressStartPos && !this.longPressTriggered) {
+                const dx = Math.abs(e.clientX - this.pressStartPos.x);
+                const dy = Math.abs(e.clientY - this.pressStartPos.y);
+                if (dx > this.moveThreshold || dy > this.moveThreshold) {
+                    this.cancelLongPress();
+                }
+            }
+
+            if (this.longPressTriggered) return;
+
             if (this.deviceType === 'phone' && this.state.currentTool !== 'hand' && !this.zoomManager.isPinching) {
                 // Let fall through to processPointerMove (drawing)
             } else {
@@ -1206,6 +1229,12 @@ class WhiteboardApp {
         if (e.pointerType === 'touch') {
             const wasPanningOrPinching = this.zoomManager.isPanning || this.zoomManager.isPinching;
             this.zoomManager.handleTouchUp(e);
+
+            this.cancelLongPress();
+            if (this.longPressTriggered) {
+                this.longPressTriggered = false;
+                return;
+            }
 
             if (this.deviceType === 'phone' && this.state.currentTool !== 'hand' && !wasPanningOrPinching) {
                 // Fall through to tool logic (handlePointerUp)
@@ -1458,6 +1487,39 @@ class WhiteboardApp {
                 this.setTool(toolName);
             }
         }
+    }
+
+    startLongPress(e) {
+        this.cancelLongPress();
+        this.pressStartPos = { x: e.clientX, y: e.clientY };
+        this.longPressTriggered = false;
+
+        this.longPressTimer = setTimeout(() => {
+            this.longPressTriggered = true;
+
+            // Eğer çizim/pan modundaysak bitir
+            if (this.state.currentTool && this.tools[this.state.currentTool] && this.tools[this.state.currentTool].handlePointerUp) {
+                this.tools[this.state.currentTool].handlePointerUp(e, this.canvas, this.state);
+            }
+
+            // Context Menu Göster
+            if (this.state.currentTool === 'select') {
+                this.tools.select.handleContextMenu(e, this.canvas, this.state);
+
+                // Haptic feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+            }
+        }, this.longPressThreshold);
+    }
+
+    cancelLongPress() {
+        if (this.longPressTimer) {
+            clearTimeout(this.longPressTimer);
+            this.longPressTimer = null;
+        }
+        this.pressStartPos = null;
     }
 
     handleKeyUp(e) {

@@ -64,18 +64,38 @@ class Dashboard {
                 };
             }
 
+            // Mobile New Board
+            const btnNewBoardMobile = document.getElementById('btnNewBoardMobile');
+            if (btnNewBoardMobile) {
+                btnNewBoardMobile.onclick = () => this.createNewBoard();
+            }
+
             // PDF Upload
             this.btnUploadPDF = document.getElementById('btnUploadPDF');
+            const btnUploadPDFMobile = document.getElementById('btnUploadPDFMobile');
             this.pdfInput = document.getElementById('pdfInput');
+
+            const triggerPDF = () => this.pdfInput.click();
+
             if (this.btnUploadPDF && this.pdfInput) {
-                this.btnUploadPDF.onclick = () => this.pdfInput.click();
+                this.btnUploadPDF.onclick = triggerPDF;
                 this.pdfInput.onchange = (e) => this.handlePDFUpload(e);
+            }
+            if (btnUploadPDFMobile) {
+                btnUploadPDFMobile.onclick = triggerPDF;
             }
 
             // Template Gallery
             this.btnOpenTemplates = document.getElementById('btnOpenTemplates');
+            const btnOpenTemplatesMobile = document.getElementById('btnOpenTemplatesMobile');
+
+            const triggerTemplates = () => this.openTemplateGallery();
+
             if (this.btnOpenTemplates) {
-                this.btnOpenTemplates.onclick = () => this.openTemplateGallery();
+                this.btnOpenTemplates.onclick = triggerTemplates;
+            }
+            if (btnOpenTemplatesMobile) {
+                btnOpenTemplatesMobile.onclick = triggerTemplates;
             }
             if (this.btnEmptyTrash) {
                 this.btnEmptyTrash.onclick = () => this.emptyTrash();
@@ -1120,11 +1140,18 @@ class Dashboard {
     }
 
     setupSearch() {
+        const handleSearch = (e) => {
+            this.searchTerm = e.target.value.toLowerCase().trim();
+            this.renderBoards();
+        };
+
         if (this.searchInput) {
-            this.searchInput.oninput = (e) => {
-                this.searchTerm = e.target.value.toLowerCase().trim();
-                this.renderBoards();
-            };
+            this.searchInput.oninput = handleSearch;
+        }
+
+        const mobileSearch = document.getElementById('mobileSearchInput');
+        if (mobileSearch) {
+            mobileSearch.oninput = handleSearch;
         }
     }
 
