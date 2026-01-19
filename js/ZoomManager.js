@@ -290,7 +290,14 @@ class ZoomManager {
         this.activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
         if (this.activePointers.size === 1) {
-            this.startPan(e);
+            const isPhone = this.app.deviceType === 'phone';
+            const isDrawingMode = this.app.state.currentTool !== 'hand';
+
+            if (isPhone && isDrawingMode) {
+                this.isPanning = false;
+            } else {
+                this.startPan(e);
+            }
         } else if (this.activePointers.size === 2) {
             const distance = this.getGestureDistance();
 
@@ -343,9 +350,15 @@ class ZoomManager {
             this.endPan();
         } else if (this.activePointers.size === 1) {
             // If one finger remains, resume panning from its current position
-            const remainingPointer = this.activePointers.values().next().value;
-            this.lastMousePos = { x: remainingPointer.x, y: remainingPointer.y };
-            this.isPanning = true;
+            // ONLY if we are in panning mode (not drawing mode on phone)
+            const isPhone = this.app.deviceType === 'phone';
+            const isDrawingMode = this.app.state.currentTool !== 'hand';
+
+            if (!isPhone || !isDrawingMode) {
+                const remainingPointer = this.activePointers.values().next().value;
+                this.lastMousePos = { x: remainingPointer.x, y: remainingPointer.y };
+                this.isPanning = true;
+            }
         }
     }
 

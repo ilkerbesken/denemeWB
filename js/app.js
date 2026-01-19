@@ -82,9 +82,8 @@ class WhiteboardApp {
         this.needsRender = false;
         this.needsRedrawOffscreen = false;
 
-        // Device detection for Palm Rejection
-        this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        // Device detection for Smart Gestures
+        this.deviceType = this.detectDeviceType();
 
         this.renderLoop = this.renderLoop.bind(this);
         requestAnimationFrame(this.renderLoop);
@@ -109,8 +108,29 @@ class WhiteboardApp {
         requestAnimationFrame(this.renderLoop);
     }
 
+    detectDeviceType() {
+        const ua = navigator.userAgent;
+        // iPad detection (including iPadOS)
+        if (/iPad/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+            return 'tablet';
+        }
+        // Android Tablet
+        if (/Android/.test(ua) && !/Mobile/.test(ua)) {
+            return 'tablet';
+        }
+        // Phone
+        if (/iPhone|iPod/.test(ua) || (/Android/.test(ua) && /Mobile/.test(ua))) {
+            return 'phone';
+        }
+        // Fallback for smaller touch screens
+        if (window.innerWidth < 1024 && ('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+            return 'phone';
+        }
+        return 'desktop';
+    }
+
     isDrawingTool(toolName) {
-        const drawingTools = ['pen', 'highlighter', 'eraser', 'line', 'rectangle', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'shape', 'arrow', 'tape'];
+        const drawingTools = ['pen', 'highlighter', 'eraser', 'line', 'rectangle', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'shape', 'arrow', 'tape', 'text', 'sticker', 'table'];
         return drawingTools.includes(toolName);
     }
 
@@ -931,7 +951,15 @@ class WhiteboardApp {
         // 1. TOUCH NAVIGATION (1-Finger Pan, 2-Finger Zoom)
         if (e.pointerType === 'touch') {
             this.zoomManager.handleTouchDown(e);
-            return;
+
+            // Smart Gesture: On phone, 1-finger touch should be mouse-like (draw/select) 
+            // EXCEPT when the hand tool is active.
+            // On tablets, we keep the previous behavior (1-finger touch = pan).
+            if (this.deviceType === 'phone' && this.state.currentTool !== 'hand' && !this.zoomManager.isPinching) {
+                // Let fall through to tool logic
+            } else {
+                return;
+            }
         }
 
         // 2. SPACEBAR PAN (For Mouse/Pencil)
@@ -1083,8 +1111,13 @@ class WhiteboardApp {
 
         if (e.pointerType === 'touch') {
             this.zoomManager.handleTouchMove(e);
-            this.needsRender = true;
-            return;
+
+            if (this.deviceType === 'phone' && this.state.currentTool !== 'hand' && !this.zoomManager.isPinching) {
+                // Let fall through to processPointerMove (drawing)
+            } else {
+                this.needsRender = true;
+                return;
+            }
         }
 
         if (!this.moveQueue) this.moveQueue = [];
@@ -1161,8 +1194,14 @@ class WhiteboardApp {
         }
 
         if (e.pointerType === 'touch') {
+            const wasPanningOrPinching = this.zoomManager.isPanning || this.zoomManager.isPinching;
             this.zoomManager.handleTouchUp(e);
-            return;
+
+            if (this.deviceType === 'phone' && this.state.currentTool !== 'hand' && !wasPanningOrPinching) {
+                // Fall through to tool logic (handlePointerUp)
+            } else {
+                return;
+            }
         }
 
         if (this.zoomManager.isPanning) {
