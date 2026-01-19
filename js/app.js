@@ -81,6 +81,11 @@ class WhiteboardApp {
 
         this.needsRender = false;
         this.needsRedrawOffscreen = false;
+
+        // Device detection for Palm Rejection
+        this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
         this.renderLoop = this.renderLoop.bind(this);
         requestAnimationFrame(this.renderLoop);
 
@@ -88,7 +93,6 @@ class WhiteboardApp {
     }
 
     renderLoop() {
-        // Flush move queue before rendering
         if (this.moveQueue && this.moveQueue.length > 0) {
             this.flushMoveQueue();
         }
@@ -103,6 +107,15 @@ class WhiteboardApp {
             this.needsRender = false;
         }
         requestAnimationFrame(this.renderLoop);
+    }
+
+    isDrawingTool(toolName) {
+        const drawingTools = ['pen', 'highlighter', 'eraser', 'line', 'rectangle', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'shape', 'arrow', 'tape'];
+        return drawingTools.includes(toolName);
+    }
+
+    shouldIgnorePointer(e) {
+        return this.isIOS && e.pointerType === 'touch' && this.isDrawingTool(this.state.currentTool);
     }
 
     simplifyEvent(e) {
@@ -911,6 +924,12 @@ class WhiteboardApp {
 
     handlePointerDown(e) {
         this.flushMoveQueue();
+
+        // PALM REJECTION (iPad / Stylus Optimization)
+        if (this.shouldIgnorePointer(e)) {
+            return;
+        }
+
         if (this.isSpacePressed) {
             this.zoomManager.startPan(e);
             return;
@@ -1072,6 +1091,10 @@ class WhiteboardApp {
     }
 
     processPointerMove(e) {
+        if (this.shouldIgnorePointer(e)) {
+            return;
+        }
+
         if (this.zoomManager.isPanning) {
             this.zoomManager.updatePan(e);
             this.needsRender = true;
@@ -1115,6 +1138,11 @@ class WhiteboardApp {
 
     handlePointerUp(e) {
         this.flushMoveQueue();
+
+        if (this.shouldIgnorePointer(e)) {
+            return;
+        }
+
         if (this.zoomManager.isPanning) {
             this.zoomManager.endPan();
             // Restore cursor based on space key and current tool

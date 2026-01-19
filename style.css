@@ -18,6 +18,13 @@ body {
     overscroll-behavior: none;
 }
 
+input,
+textarea,
+[contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
 #app {
     width: 100vw;
     height: 100vh;
@@ -814,6 +821,9 @@ input[type="range"] {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     transform: translateZ(0);
     will-change: transform;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 /* Status Bar */
