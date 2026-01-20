@@ -35,14 +35,14 @@ class Dashboard {
         this.expandedFolders = this.loadData('wb_expanded_folders', []);
 
         this.defaultCovers = [
-            { id: 'c1', bg: '#4a90e2', texture: 'linear' },
-            { id: 'c2', bg: '#fa5252', texture: 'linear' },
-            { id: 'c3', bg: '#40c057', texture: 'dots' },
-            { id: 'c4', bg: '#fab005', texture: 'dots' },
-            { id: 'c5', bg: '#862e9c', texture: 'linear' },
-            { id: 'c6', bg: '#15aabf', texture: 'dots' },
-            { id: 'c7', bg: '#495057', texture: 'linear' },
-            { id: 'c8', bg: '#e67e22', texture: 'linear' }
+            { id: 'c1', bg: '#ff5c5c', texture: 'dots' },
+            { id: 'c2', bg: '#ffb85c', texture: 'linear' },
+            { id: 'c3', bg: '#ffd900', texture: 'linear' },
+            { id: 'c4', bg: '#fab005', texture: 'linear' },
+            { id: 'c5', bg: '#5cbd62', texture: 'linear' },
+            { id: 'c6', bg: '#5c9bfe', texture: 'dots' },
+            { id: 'c7', bg: '#b45cff', texture: 'dots' },
+            { id: 'c8', bg: '#313131ff', texture: 'linear' }
         ];
         this.customCovers = this.loadData('wb_custom_covers', []);
 
@@ -1598,8 +1598,8 @@ class Dashboard {
     }
 
     /**
- * Show confirmation dialog
- */
+    * Show confirmation dialog
+    */
     showConfirmDialog({ title, message, confirmText = 'Onayla', confirmClass = 'btn-danger', onConfirm, onCancel }) {
         const overlay = document.createElement('div');
         overlay.className = 'confirm-dialog-overlay';
