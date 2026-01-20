@@ -32,6 +32,7 @@
                 <div class="search-bar">
                     <img src="assets/icons/select.svg" class="search-icon" style="opacity: 0.5;">
                     <input type="text" placeholder="Notlarda ara..." id="mobileSearchInput">
+                    <button class="search-clear-btn" id="mobileSearchClear" style="display: none;">✕</button>
                 </div>
                 <div class="mobile-action-buttons">
                     <button id="btnUploadPDFMobile" class="mobile-action-btn" title="PDF Yükle">
@@ -88,7 +89,8 @@
                 <div class="header-actions">
                     <div class="search-bar">
                         <img src="assets/icons/select.svg" class="search-icon" style="opacity: 0.5;">
-                        <input type="text" placeholder="Ara...">
+                        <input type="text" placeholder="Ara..." id="searchInput">
+                        <button class="search-clear-btn" id="searchClear" style="display: none;">✕</button>
                     </div>
 
                     <div class="view-options-container">
@@ -113,17 +115,48 @@
                     </div>
                 </div>
 
-                <button id="btnEmptyTrash" class="btn btn-danger"
-                    style="display: none; background-color: #fa5252; color: white;">Çöp Kutusunu Boşalt</button>
-                <button id="btnUploadPDF" class="btn btn-secondary">PDF'i içe aktar</button>
-                <button id="btnOpenTemplates" class="btn btn-secondary"
-                    style="background: white; color: #1971c2; border: 1px solid #1971c2;">
-                    <img src="assets/icons/table.svg" alt="template">
-                    Şablondan Oluştur
-                </button>
-                <button id="btnNewBoard" class="btn btn-primary">Yeni Not</button>
+                <div class="header-action-group">
+                    <button id="btnEmptyTrash" class="btn btn-danger"
+                        style="display: none; background-color: #fa5252; color: white;">Çöp Kutusunu Boşalt</button>
+
+                    <div class="secondary-actions">
+                        <button id="btnUploadPDF" class="btn-icon" title="PDF İçe Aktar">
+                            <img src="assets/icons/pdf.svg" alt="pdf">
+                        </button>
+                        <button id="btnOpenTemplates" class="btn-icon" title="Şablonlar">
+                            <img src="assets/icons/table.svg" alt="templates">
+                        </button>
+                    </div>
+
+                    <button id="btnNewBoard" class="btn btn-primary btn-large">
+                        <span class="btn-icon-text">+</span> Yeni Not
+                    </button>
+                </div>
                 <input type="file" id="pdfInput" accept="application/pdf" style="display: none;">
             </header>
+
+            <!-- Bulk Actions Toolbar -->
+            <div id="bulkActionsToolbar" class="bulk-actions-toolbar" style="display: none;">
+                <span class="selected-count">0 not seçildi</span>
+                <button id="btnBulkChangeCover" title="Kapak Değiştir">
+                    <img src="assets/icons/highlighter.svg">
+                    <span>Kapak</span>
+                </button>
+                <button id="btnBulkMove" title="Klasöre Taşı">
+                    <img src="assets/icons/subfolder.svg">
+                    <span>Taşı</span>
+                </button>
+                <button id="btnBulkFavorite" title="Favorile">
+                    <img src="assets/icons/star.svg">
+                    <span>Favorile</span>
+                </button>
+                <button id="btnBulkDelete" title="Sil">
+                    <img src="assets/icons/trash.svg">
+                    <span>Sil</span>
+                </button>
+                <div class="bulk-divider"></div>
+                <button id="btnBulkCancel" title="İptal">✕</button>
+            </div>
 
             <div class="dashboard-content">
                 <div class="board-grid" id="boardGrid">
@@ -131,6 +164,12 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Dashboard Loader -->
+    <div id="dashboardLoader" class="dashboard-loader" style="display: none;">
+        <div class="spinner"></div>
+        <p>Yükleniyor...</p>
     </div>
 
     <div id="app" style="display: none;">
@@ -1132,52 +1171,33 @@
         <div class="template-modal-overlay"></div>
         <div class="template-modal-content">
             <div class="template-modal-header">
-                <h2>Şablon Galerisi</h2>
-                <button class="template-modal-close" id="btnCloseTemplateModal">×</button>
-            </div>
-
-            <div class="template-modal-body">
-                <div class="template-sidebar">
-                    <div class="template-search">
-                        <img src="assets/icons/select.svg" class="search-icon" style="opacity: 0.5;">
-                        <input type="text" id="templateSearchInput" placeholder="Şablon ara...">
-                    </div>
-
-                    <div class="template-categories">
-                        <div class="category-title">Kategoriler</div>
-                        <div class="category-item active" data-category="Tümü">
-                            <span>Tümü</span>
-                        </div>
-                        <div class="category-item" data-category="Kendi Şablonlarım">
-                            <span>Kendi Şablonlarım</span>
-                        </div>
-                        <div class="category-item" data-category="İş Planlama">
-                            <span>İş Planlama</span>
-                        </div>
-                        <div class="category-item" data-category="Eğitim">
-                            <span>Eğitim</span>
-                        </div>
-                        <div class="category-item" data-category="Yazılım">
-                            <span>Yazılım</span>
-                        </div>
-                        <div class="category-item" data-category="Tasarım">
-                            <span>Tasarım</span>
-                        </div>
-                        <div class="category-item" data-category="Diğer">
-                            <span>Diğer</span>
-                        </div>
-                    </div>
-
-                    <div class="template-favorites">
-                        <div class="category-title">Favoriler</div>
-                        <div id="favoritesCount" class="favorites-count">0 favori şablon</div>
-                    </div>
+                <div class="template-header-top">
+                    <h2>Şablon Galerisi</h2>
+                    <button class="template-modal-close" id="btnCloseTemplateModal">×</button>
                 </div>
 
-                <div class="template-grid-container">
-                    <div class="template-grid" id="templateGrid">
-                        <!-- Templates will be rendered here by JavaScript -->
-                    </div>
+                <!-- Tabs Navigation -->
+                <div class="template-tabs" id="templateTabs">
+                    <button class="template-tab active" data-category="Tümü">Tümü</button>
+                    <button class="template-tab" data-category="Favoriler">⭐ Favoriler</button>
+                    <button class="template-tab" data-category="Kendi Şablonlarım">Şablonlarım</button>
+                    <button class="template-tab" data-category="İş Planlama">İş</button>
+                    <button class="template-tab" data-category="Eğitim">Eğitim</button>
+                    <button class="template-tab" data-category="Yazılım">Yazılım</button>
+                    <button class="template-tab" data-category="Tasarım">Tasarım</button>
+                    <button class="template-tab" data-category="Diğer">Diğer</button>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="template-search">
+                <input type="text" id="templateSearchInput" placeholder="Şablon ara...">
+            </div>
+
+            <!-- Grid Container -->
+            <div class="template-grid-container">
+                <div class="template-grid" id="templateGrid">
+                    <!-- Templates will be rendered here by JavaScript -->
                 </div>
             </div>
         </div>

@@ -286,7 +286,9 @@ class Dashboard {
                     dropdown.querySelector('[data-action="delete"]').onclick = (e) => {
                         e.stopPropagation();
                         dropdown.classList.remove('show');
-                        this.deleteBoardConfirmation(note.id);
+                        if (confirm(`'${note.name}' notunu silmek istediğinize emin misiniz?`)) {
+                            this.deleteBoard(note.id);
+                        }
                     };
 
                     orphanSection.appendChild(noteItem);
@@ -440,7 +442,9 @@ class Dashboard {
             dropdown.querySelector('[data-action="delete"]').onclick = (e) => {
                 e.stopPropagation();
                 dropdown.classList.remove('show');
-                this.deleteFolderConfirmation(folder.id);
+                if (confirm(`'${folder.name}' klasörünü silmek istediğinize emin misiniz? (İçindeki notlar ve alt klasörler silinmez)`)) {
+                    this.deleteFolder(folder.id);
+                }
             };
 
             container.appendChild(item);
@@ -515,7 +519,9 @@ class Dashboard {
                         dropdown.querySelector('[data-action="delete"]').onclick = (e) => {
                             e.stopPropagation();
                             dropdown.classList.remove('show');
-                            this.deleteBoardConfirmation(note.id);
+                            if (confirm(`'${note.name}' notunu silmek istediğinize emin misiniz?`)) {
+                                this.deleteBoard(note.id);
+                            }
                         };
 
                         childContainer.appendChild(noteItem);
@@ -583,10 +589,9 @@ class Dashboard {
                 <div class="empty-state">
                     <div class="empty-state-icon">🔍</div>
                     <h3>"${this.searchTerm}" ile eşleşen not bulunamadı</h3>
-                    <button class="btn btn-secondary" id="btnClearSearchGeneric">Aramayı Temizle</button>
+                    <button class="btn btn-secondary" onclick="dashboard.clearSearch()">Aramayı Temizle</button>
                 </div>
             `;
-            this.boardGrid.querySelector('#btnClearSearchGeneric').onclick = () => this.clearSearch();
             return;
         }
 
@@ -596,18 +601,16 @@ class Dashboard {
                     <div class="empty-state-icon">📁</div>
                     <h3>Henüz not yok</h3>
                     <p>Yeni bir not oluşturmak için + butonuna tıklayın</p>
-                    <button class="btn btn-primary" id="btnCreateFirstNote">
+                    <button class="btn btn-primary" onclick="dashboard.createNewBoard()">
                         İlk Notunu Oluştur
                     </button>
                 </div>
             `;
-            this.boardGrid.querySelector('#btnCreateFirstNote').onclick = () => this.createNewBoard();
             return;
         }
 
 
         filtered.forEach(board => {
-            const card = document.createElement('div');
             card.className = `board-card ${this.selectedBoards.has(board.id) ? 'selected' : ''}`;
             card.dataset.id = board.id;
 
@@ -624,7 +627,8 @@ class Dashboard {
             card.innerHTML = `
                 <div class="board-selection" onclick="event.stopPropagation()">
                     <input type="checkbox" class="board-checkbox" 
-                           ${this.selectedBoards.has(board.id) ? 'checked' : ''}>
+                           ${this.selectedBoards.has(board.id) ? 'checked' : ''} 
+                           onchange="dashboard.toggleBoardSelection('${board.id}', this.checked)">
                 </div>
 
                 <div class="notebook-container">
@@ -634,6 +638,27 @@ class Dashboard {
                     </div>
                 </div>
 
+                <div class="board-settings-btn" title="İşlemler">
+                    <img src="assets/icons/settings.svg" style="width: 14px; opacity: 0.6;">
+                </div>
+                <div class="board-actions">
+                    <select class="folder-select" title="Klasöre Taşı">
+                        <option value="">Klasör Yok</option>
+                        ${this.folders.map(f => `<option value="${f.id}" ${board.folderId === f.id ? 'selected' : ''}>${f.name}</option>`).join('')}
+                    </select>
+                    <div style="display: flex; gap: 4px;">
+                        <button class="action-btn" data-action="favorite" title="Favorilere Ekle">
+                            <img src="assets/icons/star.svg" style="width: 14px; opacity: 0.6; ${board.favorite ? 'filter: invert(86%) sepia(31%) saturate(6084%) hue-rotate(359deg) brightness(101%) contrast(106%);' : ''}">
+                        </button>
+                        <button class="action-btn" data-action="change-cover" title="Kapağı Değiştir">
+                        <img src="assets/icons/highlighter.svg" style="width: 14px; opacity: 0.6; margin-right: 6px;">
+                    </button>
+                        
+                    </div>
+                    <button class="action-btn" data-action="delete" style="width: 100%;" title="Sil">
+                            <img src="assets/icons/trash.svg" style="width: 14px; opacity: 0.6;">
+                        </button>
+                </div>
                 <div class="board-info">
                     <div class="board-title" contenteditable="true" spellcheck="false">${board.name}</div>
                     <div class="board-meta">
@@ -642,16 +667,8 @@ class Dashboard {
                 </div>
             `;
 
-            card.querySelector('.board-checkbox').onchange = (e) => {
-                this.toggleBoardSelection(board.id, e.target.checked);
-            };
-
             card.onclick = (e) => {
-                // Ignore clicks on title and selection
-                if (e.target.classList.contains('board-title') ||
-                    e.target.closest('.board-selection')) {
-                    return;
-                }
+                if (e.target.closest('.board-actions') || e.target.classList.contains('board-title') || e.target.closest('.board-settings-btn') || e.target.closest('.board-selection')) return;
 
                 // If in bulk mode (at least one selected), clicking card selects it
                 if (this.selectedBoards.size > 0 || e.shiftKey) {
@@ -665,6 +682,7 @@ class Dashboard {
             // Long Press for Mobile Selection
             let pressTimer;
             card.addEventListener('touchstart', (e) => {
+                if (e.target.closest('.board-actions') || e.target.closest('.board-settings-btn')) return;
                 pressTimer = setTimeout(() => {
                     this.toggleBoardSelection(board.id, true);
                     navigator.vibrate?.(50); // Haptic feedback
@@ -674,11 +692,48 @@ class Dashboard {
             card.addEventListener('touchend', () => clearTimeout(pressTimer));
             card.addEventListener('touchmove', () => clearTimeout(pressTimer));
 
-            // Title editing
+            card.querySelector('[data-action="change-cover"]').onclick = (e) => {
+                e.stopPropagation();
+                // Close menu first
+                actionsPanel.classList.remove('show');
+                card.classList.remove('actions-open');
+                this.openCoverPicker(board.id);
+            };
+
+            const settingsBtn = card.querySelector('.board-settings-btn');
+            const actionsPanel = card.querySelector('.board-actions');
+            settingsBtn.onclick = (e) => {
+                e.stopPropagation();
+
+                // Close other open panels
+                document.querySelectorAll('.board-actions.show').forEach(d => {
+                    if (d !== actionsPanel) {
+                        d.classList.remove('show');
+                        const c = d.closest('.board-card');
+                        if (c) c.classList.remove('actions-open');
+                    }
+                });
+
+                actionsPanel.classList.toggle('show');
+                if (actionsPanel.classList.contains('show')) {
+                    card.classList.add('actions-open');
+                } else {
+                    card.classList.remove('actions-open');
+                }
+            };
+
             const titleEl = card.querySelector('.board-title');
             titleEl.onblur = () => this.renameBoard(board.id, titleEl.textContent);
             titleEl.onkeydown = (e) => {
                 if (e.key === 'Enter') { e.preventDefault(); titleEl.blur(); }
+            };
+
+            card.querySelector('[data-action="delete"]').onclick = (e) => { e.stopPropagation(); this.deleteBoardConfirmation(board.id); };
+            card.querySelector('[data-action="favorite"]').onclick = (e) => { e.stopPropagation(); this.toggleFavorite(board.id); };
+
+            const folderSelect = card.querySelector('.folder-select');
+            folderSelect.onchange = (e) => {
+                this.moveBoardToFolder(board.id, e.target.value);
             };
 
             this.boardGrid.appendChild(card);
@@ -1305,26 +1360,12 @@ class Dashboard {
                         this.saveData('wb_boards', this.boards);
                         this.renderBoards();
                     }
-                } else if (this.selectedBoards && this.selectedBoards.size > 0) {
-                    // Bulk mode custom color apply
-                    this.selectedBoards.forEach(selId => {
-                        const board = (this.boards || []).find(b => b.id === selId);
-                        if (board) {
-                            board.coverBg = color;
-                            board.coverTexture = 'linear';
-                            delete board.coverImage;
-                        }
-                    });
-                    this.saveData('wb_boards', this.boards);
-                    this.renderBoards();
-                    this.clearSelection();
                 }
                 modal.classList.remove('show');
             } catch (err) {
                 console.error('Error in addBtn click handler:', err);
                 modal.classList.remove('show');
             }
-
         };
 
         if (uploadBtn && fileInput) {
@@ -1352,24 +1393,11 @@ class Dashboard {
                                 this.saveData('wb_boards', this.boards);
                                 this.renderBoards();
                             }
-                        } else if (this.selectedBoards && this.selectedBoards.size > 0) {
-                            // Bulk mode custom image apply
-                            this.selectedBoards.forEach(selId => {
-                                const board = (this.boards || []).find(b => b.id === selId);
-                                if (board) {
-                                    board.coverBg = '#ffffff';
-                                    board.coverImage = compressedUrl;
-                                }
-                            });
-                            this.saveData('wb_boards', this.boards);
-                            this.renderBoards();
-                            this.clearSelection();
                         }
                         modal.classList.remove('show');
                         fileInput.value = ''; // Reset
                     });
                 };
-
                 reader.readAsDataURL(file);
             };
         }
@@ -1409,30 +1437,16 @@ class Dashboard {
     openCoverPicker(boardId) {
         this.activeBoardForCover = boardId;
         const modal = document.getElementById('coverModal');
-
         if (modal) {
             modal.classList.add('show');
             this.renderCoverGrid(boardId);
-        } else {
-            console.error('Notebook cover modal not found');
         }
     }
 
-
     renderCoverGrid(boardId) {
         const grid = document.getElementById('coverGrid');
-        const isBulk = !boardId;
-
-        let board = null;
-        if (!isBulk) {
-            // Use == for type safety (string vs number)
-            board = (this.boards || []).find(b => b.id == boardId);
-            if (!board) return;
-        }
-        // Note: In bulk mode, we allow rendering even if selectedBoards is empty
-        // User might select boards after opening the modal
-
-        if (!grid) return;
+        const board = (this.boards || []).find(b => b.id === boardId);
+        if (!board || !grid) return;
         grid.innerHTML = '';
 
         const allCovers = [
@@ -1457,65 +1471,37 @@ class Dashboard {
                 item.style.backgroundColor = cover.bg;
             }
 
-            // Check active state
-            if (!isBulk && board) {
-                if (isImage) {
-                    if (board.coverImage === cover.image) item.classList.add('active');
-                } else {
-                    if (board.coverBg === cover.bg && !board.coverImage) item.classList.add('active');
-                }
+            if (isImage) {
+                if (board.coverImage === cover.image) item.classList.add('active');
+            } else {
+                if (board.coverBg === cover.bg && !board.coverImage) item.classList.add('active');
             }
 
-            item.innerHTML = '<div class="mini-spine"></div>' +
-                (!cover.isDefault ? `<div class="cover-item-delete" title="Sil">×</div>` : '');
+            let innerHTML = '<div class="mini-spine"></div>';
+
+            // Add delete button for custom covers
+            if (!cover.isDefault) {
+                innerHTML += `<div class="cover-item-delete" title="Sil">×</div>`;
+            }
+
+            item.innerHTML = innerHTML;
 
             item.onclick = (e) => {
                 // If it's a delete click, the handler below will deal with it
                 if (e.target.classList.contains('cover-item-delete')) return;
 
-                console.log('Cover clicked:', cover);
-                console.log('isBulk:', isBulk);
-                console.log('selectedBoards:', this.selectedBoards);
-
-                const applyCoverToBoard = (target) => {
-                    console.log('Applying cover to board:', target.id, 'Cover:', cover);
-                    if (isImage) {
-                        target.coverBg = '#ffffff';
-                        target.coverImage = cover.image;
-                        target.coverTexture = 'none';
-                    } else {
-                        target.coverBg = cover.bg;
-                        target.coverTexture = cover.texture || 'linear';
-                        target.coverImage = null;
-                    }
-                    console.log('Board after cover applied:', target);
-                };
-
-                if (isBulk) {
-                    console.log('Bulk mode - applying to selected boards');
-                    this.selectedBoards.forEach(selId => {
-                        const targetBoard = this.boards.find(b => b.id == selId);
-                        console.log('Found board for ID', selId, ':', targetBoard);
-                        if (targetBoard) applyCoverToBoard(targetBoard);
-                    });
+                if (isImage) {
+                    board.coverBg = '#ffffff';
+                    board.coverImage = cover.image;
+                    board.coverTexture = 'none';
                 } else {
-                    console.log('Single mode - applying to board:', board);
-                    if (board) applyCoverToBoard(board);
+                    board.coverBg = cover.bg;
+                    board.coverTexture = cover.texture || 'linear';
+                    delete board.coverImage;
                 }
-
-                // CRITICAL: Save BEFORE clearing selection (which triggers render)
-                console.log('Saving boards:', this.boards);
                 this.saveData('wb_boards', this.boards);
-
-                // Close modal
                 document.getElementById('coverModal').classList.remove('show');
-
-                // Clear selection (this will call renderBoards internally)
-                if (isBulk) {
-                    this.clearSelection();
-                } else {
-                    this.renderBoards();
-                }
+                this.renderBoards();
             };
 
             // Set up delete handler
@@ -1564,15 +1550,12 @@ class Dashboard {
             overlay.onclick = () => this.closeTemplateGallery();
         }
 
-        // Tab filtering
-        document.querySelectorAll('.template-tab').forEach(tab => {
-            tab.onclick = () => {
-                // Remove active from all tabs
-                document.querySelectorAll('.template-tab').forEach(t => t.classList.remove('active'));
-                // Add active to clicked tab
-                tab.classList.add('active');
-
-                const category = tab.dataset.category;
+        // Category filtering
+        document.querySelectorAll('.category-item').forEach(item => {
+            item.onclick = () => {
+                document.querySelectorAll('.category-item').forEach(i => i.classList.remove('active'));
+                item.classList.add('active');
+                const category = item.dataset.category;
                 this.renderTemplateGallery(category);
             };
         });
@@ -1582,8 +1565,7 @@ class Dashboard {
         if (searchInput) {
             searchInput.oninput = (e) => {
                 const query = e.target.value;
-                // If searching, show all categories
-                this.renderTemplateGallery('Tümü', query);
+                this.renderTemplateGallery(null, query);
             };
         }
 
@@ -1597,79 +1579,6 @@ class Dashboard {
         document.addEventListener('keydown', escHandler);
     }
 
-    /**
- * Show confirmation dialog
- */
-    showConfirmDialog({ title, message, confirmText = 'Onayla', confirmClass = 'btn-danger', onConfirm, onCancel }) {
-        const overlay = document.createElement('div');
-        overlay.className = 'confirm-dialog-overlay';
-        overlay.innerHTML = `
-            <div class="confirm-dialog">
-                <h3>${title}</h3>
-                <p>${message}</p>
-                <div class="confirm-dialog-actions">
-                    <button class="btn-cancel">İptal</button>
-                    <button class="${confirmClass}">${confirmText}</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(overlay);
-
-        const dialog = overlay.querySelector('.confirm-dialog');
-        const cancelBtn = overlay.querySelector('.btn-cancel');
-        const confirmBtn = overlay.querySelector(`.${confirmClass}`);
-
-        cancelBtn.onclick = () => {
-            overlay.remove();
-            if (onCancel) onCancel();
-        };
-
-        confirmBtn.onclick = () => {
-            overlay.remove();
-            if (onConfirm) onConfirm();
-        };
-
-        overlay.onclick = (e) => {
-            if (e.target === overlay) {
-                overlay.remove();
-                if (onCancel) onCancel();
-            }
-        };
-    }
-
-    /**
-     * Show undo toast notification
-     */
-    showUndoToast(message, undoCallback) {
-        const toast = document.createElement('div');
-        toast.className = 'undo-toast';
-        toast.innerHTML = `
-            <span>${message}</span>
-            <button class="btn-undo">Geri Al</button>
-        `;
-        document.body.appendChild(toast);
-
-        const undoBtn = toast.querySelector('.btn-undo');
-        let undoClicked = false;
-
-        undoBtn.onclick = () => {
-            undoClicked = true;
-            undoCallback();
-            toast.classList.remove('show');
-            setTimeout(() => toast.remove(), 300);
-        };
-
-        setTimeout(() => toast.classList.add('show'), 10);
-
-        setTimeout(() => {
-            if (!undoClicked) {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 300);
-            }
-        }, 5000);
-    }
-
     renderTemplateGallery(category = 'Tümü', searchQuery = '') {
         const grid = document.getElementById('templateGrid');
         if (!grid || !this.app.templateManager) return;
@@ -1678,11 +1587,7 @@ class Dashboard {
 
         if (searchQuery) {
             templates = this.app.templateManager.searchTemplates(searchQuery);
-        } else if (category === 'Favoriler') {
-            // Show only favorite templates
-            const favoriteIds = this.app.templateManager.favoriteTemplates || [];
-            templates = this.app.templateManager.templates.filter(t => favoriteIds.includes(t.id));
-        } else if (category && category !== 'Tümü') {
+        } else if (category) {
             templates = this.app.templateManager.getTemplatesByCategory(category);
         } else {
             templates = this.app.templateManager.templates;
@@ -1691,49 +1596,12 @@ class Dashboard {
         grid.innerHTML = '';
 
         if (templates.length === 0) {
-            let emptyMessage, emptyHint, emptyIcon, showButton = false, buttonText = '', buttonAction = null;
-
-            if (category === 'Favoriler') {
-                emptyIcon = '⭐';
-                emptyMessage = 'Henüz favori şablon eklemediniz';
-                emptyHint = 'Şablonları favorilere eklemek için kalp ikonuna tıklayın';
-                showButton = true;
-                buttonText = 'Tüm Şablonları Gör';
-                buttonAction = () => {
-                    document.querySelector('[data-category="Tümü"]')?.click();
-                };
-            } else if (category === 'Kendi Şablonlarım') {
-                emptyIcon = '📝';
-                emptyMessage = 'Henüz kayıtlı şablonunuz yok';
-                emptyHint = 'Bir şablon oluşturmak için:<br>1. İstediğiniz bir notu açın<br>2. Menüden "Şablon Olarak Kaydet" seçin';
-                showButton = true;
-                buttonText = 'Hazır Şablonlara Göz At';
-                buttonAction = () => {
-                    document.querySelector('[data-category="Tümü"]')?.click();
-                };
-            } else if (searchQuery) {
-                emptyIcon = '🔍';
-                emptyMessage = `"${searchQuery}" ile eşleşen şablon bulunamadı`;
-                emptyHint = 'Arama kriterlerinizi değiştirmeyi deneyin';
-            } else {
-                emptyIcon = '📋';
-                emptyMessage = 'Şablon bulunamadı';
-                emptyHint = 'Bu kategoride henüz şablon bulunmuyor';
-            }
-
             grid.innerHTML = `
                 <div class="template-empty-state">
-                    <div class="empty-icon">${emptyIcon}</div>
-                    <h3>${emptyMessage}</h3>
-                    <p>${emptyHint}</p>
-                    ${showButton ? `<button class="btn" id="emptyStateAction">${buttonText}</button>` : ''}
+                    <h3>Şablon bulunamadı</h3>
+                    <p>Arama kriterlerinizi değiştirmeyi deneyin</p>
                 </div>
             `;
-
-            if (showButton && buttonAction) {
-                const btn = grid.querySelector('#emptyStateAction');
-                if (btn) btn.onclick = buttonAction;
-            }
             return;
         }
 
@@ -1778,45 +1646,34 @@ class Dashboard {
                 e.stopPropagation();
                 this.app.templateManager.toggleFavorite(template.id);
                 this.renderTemplateGallery(category, searchQuery);
+                this.updateFavoritesCount();
             };
 
-            // Delete button (for user templates) - WITH CONFIRMATION
+            // Delete button (for user templates)
             const deleteBtn = card.querySelector('.template-delete-btn');
             if (deleteBtn) {
                 deleteBtn.onclick = (e) => {
                     e.stopPropagation();
-
-                    // Show confirmation dialog
-                    this.showConfirmDialog({
-                        title: 'Şablonu Sil',
-                        message: `"${template.name}" şablonunu silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`,
-                        confirmText: 'Sil',
-                        confirmClass: 'btn-danger',
-                        onConfirm: () => {
-                            // Store template data for undo
-                            const templateData = { ...template };
-
-                            const success = this.app.templateManager.deleteUserTemplate(template.id);
-                            if (success) {
-                                // Show undo toast
-                                this.showUndoToast('Şablon silindi', () => {
-                                    // Restore template
-                                    this.app.templateManager.templates.push(templateData);
-                                    this.app.templateManager.saveTemplates();
-                                    this.renderTemplateGallery(category, searchQuery);
-                                });
-
-                                this.renderTemplateGallery(category, searchQuery);
-                            }
-                        }
-                    });
+                    const success = this.app.templateManager.deleteUserTemplate(template.id);
+                    if (success) {
+                        this.renderTemplateGallery(category, searchQuery);
+                    }
                 };
             }
 
             grid.appendChild(card);
         });
+
+        this.updateFavoritesCount();
     }
 
+    updateFavoritesCount() {
+        const countEl = document.getElementById('favoritesCount');
+        if (countEl && this.app.templateManager) {
+            const count = this.app.templateManager.favoriteTemplates.length;
+            countEl.textContent = `${count} favori şablon`;
+        }
+    }
 
     applyTemplateAndCreateBoard(templateId) {
         // Create a new board first
@@ -1869,15 +1726,20 @@ class Dashboard {
             this.clearSelection();
         });
 
-        // Kapak Değiştir - Opens cover picker modal immediately
-        document.getElementById('btnBulkChangeCover')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.openCoverPicker(null); // Null indicates bulk mode
-        });
+        document.getElementById('btnBulkMove')?.addEventListener('click', () => {
+            // Simple prompt for folder ID or name implementation - could be better with a modal
+            // For now, let's just use a prompt which expects folder View ID or we can list folder names
+            // Actually, showing a custom modal is better. Let's reuse a simple prompt mechanism or implement a picker.
+            // Simplified: Just ask user to ensure they are inside the target folder, then "Move Selection Here"?
+            // No, that's confusing.
 
-        // Taşı - Opens folder picker modal immediately
-        document.getElementById('btnBulkMove')?.addEventListener('click', (e) => {
-            e.stopPropagation();
+            // Minimal Folder Picker using prompt for now:
+            const folderNames = this.folders.map(f => `${f.name} (View ID: ${f.id})`).join('\n');
+            // This is too complex for prompt. 
+            // Better behavior: Move to current view if it's a folder? 
+            // Or just a simple alert for now as generic implementation:
+
+            // Let's create a temporary simple modal for folder selection
             this.showFolderPicker((folderId) => {
                 this.selectedBoards.forEach(id => this.moveBoardToFolder(id, folderId));
                 this.clearSelection();
@@ -1920,59 +1782,49 @@ class Dashboard {
     }
 
     showFolderPicker(callback) {
+        // Quick & Dirty prompt replacement with a dynamic modal overlay
         const overlay = document.createElement('div');
-        overlay.className = 'confirm-dialog-overlay';
+        overlay.style.cssText = `
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 6000;
+            display: flex; align-items: center; justify-content: center;
+        `;
 
         const modal = document.createElement('div');
-        modal.className = 'confirm-dialog';
-        modal.style.maxWidth = '400px';
+        modal.className = 'settings-modal'; // Reuse existing style
+        modal.style.cssText = 'width: 300px; max-height: 80vh; display: flex; flex-direction: column; background: white; padding: 20px; border-radius: 12px;';
 
         let html = `
             <h3>Klasör Seç</h3>
-            <p style="margin-bottom: 16px; color: #666;">Notları taşımak istediğiniz klasörü seçin</p>
-            <div style="max-height: 300px; overflow-y: auto; margin-bottom: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
-                <div class="folder-picker-item" data-id="" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s; display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 18px;">📁</span>
-                    <span>Ana Sayfa (Klasör Yok)</span>
+            <div style="overflow-y: auto; flex: 1; margin: 15px 0; border: 1px solid #eee; border-radius: 8px;">
+                <div class="folder-picker-item" data-id="" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f1f1f1;">
+                    📁 Ana Sayfa (Klasör Yok)
                 </div>
         `;
 
         this.folders.forEach(f => {
             html += `
-                <div class="folder-picker-item" data-id="${f.id}" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s; display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 18px;">📁</span>
-                    <span>${f.name}</span>
+                <div class="folder-picker-item" data-id="${f.id}" style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f1f1f1;">
+                    📁 ${f.name}
                 </div>
             `;
         });
 
-        html += `
-            </div>
-            <div class="confirm-dialog-actions">
-                <button class="btn-cancel">İptal</button>
-            </div>
-        `;
-
+        html += `</div><button class="btn btn-secondary" id="cancelPicker">İptal</button>`;
         modal.innerHTML = html;
+
         overlay.appendChild(modal);
         document.body.appendChild(overlay);
 
-        // Add hover effects
         modal.querySelectorAll('.folder-picker-item').forEach(item => {
-            item.onmouseover = () => item.style.background = '#f8f9fa';
-            item.onmouseout = () => item.style.background = 'white';
             item.onclick = () => {
                 callback(item.dataset.id || null);
-                overlay.remove();
+                document.body.removeChild(overlay);
             };
+            item.onmouseover = () => item.style.background = '#f8f9fa';
+            item.onmouseout = () => item.style.background = 'white';
         });
 
-        // Cancel button
-        modal.querySelector('.btn-cancel').onclick = () => overlay.remove();
-
-        // Click outside to close
-        overlay.onclick = (e) => {
-            if (e.target === overlay) overlay.remove();
-        };
+        document.getElementById('cancelPicker').onclick = () => document.body.removeChild(overlay);
     }
 }

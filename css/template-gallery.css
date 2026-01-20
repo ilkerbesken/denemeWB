@@ -26,9 +26,8 @@
 
 .template-modal-content {
     position: relative;
-    width: 90vw;
-    max-width: 1200px;
-    height: 85vh;
+    width: min(1200px, 95vw);
+    max-height: 90vh;
     background: white;
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
@@ -49,15 +48,22 @@
     }
 }
 
+/* Header with Tabs */
 .template-modal-header {
+    padding: 20px 24px 0;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.template-header-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 24px 32px;
-    border-bottom: 1px solid #e0e0e0;
 }
 
-.template-modal-header h2 {
+.template-header-top h2 {
     font-size: 24px;
     font-weight: 700;
     color: #1a1a1a;
@@ -70,7 +76,7 @@
     border: none;
     background: #f5f5f5;
     border-radius: 8px;
-    font-size: 24px;
+    font-size: 20px;
     color: #666;
     cursor: pointer;
     transition: all 0.2s;
@@ -84,39 +90,52 @@
     color: #333;
 }
 
-.template-modal-body {
+/* Tabs Navigation */
+.template-tabs {
     display: flex;
-    flex: 1;
-    overflow: hidden;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 12px;
+    scrollbar-width: none;
 }
 
-.template-sidebar {
-    width: 260px;
-    background: #f9f9f9;
-    border-right: 1px solid #e0e0e0;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
+.template-tabs::-webkit-scrollbar {
+    display: none;
 }
 
+.template-tab {
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: transparent;
+    border: 1px solid #e0e0e0;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #666;
+}
+
+.template-tab:hover {
+    background: #f5f5f5;
+    border-color: #d0d0d0;
+}
+
+.template-tab.active {
+    background: #1971c2;
+    color: white;
+    border-color: #1971c2;
+}
+
+/* Search Bar */
 .template-search {
     position: relative;
-}
-
-.template-search .search-icon {
-    position: absolute;
-    left: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 16px;
-    height: 16px;
-    pointer-events: none;
+    padding: 0 24px 16px;
 }
 
 .template-search input {
     width: 100%;
-    padding: 10px 12px 10px 36px;
+    padding: 10px 16px;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     font-size: 14px;
@@ -125,76 +144,46 @@
 }
 
 .template-search input:focus {
-    border-color: #2196f3;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    border-color: #1971c2;
+    box-shadow: 0 0 0 3px rgba(25, 113, 194, 0.1);
 }
 
-.template-categories {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-.category-title {
-    font-size: 12px;
-    font-weight: 600;
-    color: #999;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 8px;
-}
-
-.category-item {
-    padding: 10px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-size: 14px;
-    color: #444;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.category-item:hover {
-    background: #f0f0f0;
-}
-
-.category-item.active {
-    background: #e3f2fd;
-    color: #1971c2;
-    font-weight: 600;
-}
-
-.template-favorites {
-    margin-top: auto;
-    padding-top: 20px;
-    border-top: 1px solid #e0e0e0;
-}
-
-.favorites-count {
-    font-size: 13px;
-    color: #666;
-    padding: 8px 12px;
-    background: white;
-    border-radius: 6px;
-}
-
+/* Grid Container */
 .template-grid-container {
     flex: 1;
     overflow-y: auto;
-    padding: 32px;
+    padding: 24px;
 }
 
 .template-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 24px;
+    gap: 20px;
 }
 
+/* Responsive Grid */
+@media (min-width: 1200px) {
+    .template-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+    .template-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 767px) {
+    .template-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+}
+
+/* Template Cards */
 .template-card {
     background: white;
-    border: 1px solid #e0e0e0;
+    border: 2px solid #f0f0f0;
     border-radius: 12px;
     overflow: hidden;
     cursor: pointer;
@@ -204,8 +193,12 @@
 
 .template-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
-    border-color: #2196f3;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+    border-color: #1971c2;
+}
+
+.template-card:hover .template-thumbnail {
+    transform: scale(1.05);
 }
 
 .template-thumbnail {
@@ -217,6 +210,7 @@
     justify-content: center;
     position: relative;
     overflow: hidden;
+    transition: transform 0.3s ease;
 }
 
 .template-thumbnail img {
@@ -236,42 +230,49 @@
 }
 
 .template-info {
-    padding: 16px;
+    padding: 14px;
 }
 
 .template-name {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     color: #1a1a1a;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
+    line-height: 1.3;
 }
 
 .template-description {
-    font-size: 13px;
+    font-size: 12px;
     color: #666;
     line-height: 1.4;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .template-category-badge {
     display: inline-block;
-    padding: 4px 10px;
+    padding: 3px 8px;
     background: #e3f2fd;
     color: #1971c2;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
-    border-radius: 12px;
+    border-radius: 10px;
     text-transform: uppercase;
     letter-spacing: 0.3px;
 }
 
+/* Action Buttons */
 .template-favorite-btn {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: 10px;
+    right: 10px;
     width: 32px;
     height: 32px;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
     border: none;
     border-radius: 50%;
@@ -281,16 +282,24 @@
     justify-content: center;
     transition: all 0.2s;
     z-index: 10;
+    opacity: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.template-card:hover .template-favorite-btn {
+    opacity: 1;
 }
 
 .template-favorite-btn:hover {
     background: white;
-    transform: scale(1.1);
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .template-favorite-btn.active {
     background: #ff6b6b;
     color: white;
+    opacity: 1 !important;
 }
 
 .template-favorite-btn svg {
@@ -301,11 +310,11 @@
 
 .template-delete-btn {
     position: absolute;
-    top: 12px;
-    left: 12px;
+    top: 10px;
+    left: 10px;
     width: 32px;
     height: 32px;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
     border: none;
     border-radius: 50%;
@@ -316,12 +325,19 @@
     transition: all 0.2s;
     z-index: 10;
     color: #666;
+    opacity: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.template-card:hover .template-delete-btn {
+    opacity: 1;
 }
 
 .template-delete-btn:hover {
     background: #ff6b6b;
     color: white;
-    transform: scale(1.1);
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
 }
 
 .template-delete-btn svg {
@@ -329,15 +345,16 @@
     height: 16px;
 }
 
+/* Empty State */
 .template-empty-state {
     grid-column: 1 / -1;
     text-align: center;
     padding: 60px 20px;
 }
 
-.template-empty-state img {
-    width: 120px;
-    height: 120px;
+.template-empty-state img,
+.template-empty-state .empty-icon {
+    font-size: 64px;
     opacity: 0.3;
     margin-bottom: 20px;
 }
@@ -351,6 +368,164 @@
 .template-empty-state p {
     font-size: 14px;
     color: #999;
+    margin-bottom: 20px;
+    line-height: 1.6;
+}
+
+.template-empty-state .btn {
+    margin-top: 16px;
+    padding: 10px 24px;
+    background: #1971c2;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.template-empty-state .btn:hover {
+    background: #1864ab;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(25, 113, 194, 0.3);
+}
+
+/* Undo Toast Notification */
+.undo-toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #2d3748;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 10001;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 14px;
+}
+
+.undo-toast.show {
+    transform: translateX(-50%) translateY(0);
+}
+
+.undo-toast .btn-undo {
+    background: #4299e1;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.undo-toast .btn-undo:hover {
+    background: #3182ce;
+}
+
+/* Confirmation Dialog */
+.confirm-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 10002;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+.confirm-dialog {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 400px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.confirm-dialog h3 {
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.confirm-dialog p {
+    margin: 0 0 24px 0;
+    font-size: 14px;
+    color: #666;
+    line-height: 1.5;
+}
+
+.confirm-dialog-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}
+
+.confirm-dialog-actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.confirm-dialog-actions .btn-cancel {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.confirm-dialog-actions .btn-cancel:hover {
+    background: #e0e0e0;
+}
+
+.confirm-dialog-actions .btn-danger {
+    background: #fa5252;
+    color: white;
+}
+
+.confirm-dialog-actions .btn-danger:hover {
+    background: #e03131;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(250, 82, 82, 0.3);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Save Template Modal */
@@ -448,27 +623,75 @@
     .template-modal-content {
         width: 100vw;
         height: 100vh;
+        max-height: 100vh;
         border-radius: 0;
     }
 
-    .template-modal-body {
-        flex-direction: column;
+    .template-modal-header {
+        padding: 16px 16px 0;
     }
 
-    .template-sidebar {
-        width: 100%;
-        border-right: none;
-        border-bottom: 1px solid #e0e0e0;
-        padding: 16px;
-        max-height: 200px;
-        overflow-y: auto;
+    .template-header-top h2 {
+        font-size: 20px;
     }
 
-    .template-grid {
-        grid-template-columns: 1fr;
+    .template-tabs {
+        gap: 6px;
+        padding-bottom: 10px;
+    }
+
+    .template-tab {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
+    .template-search {
+        padding: 0 16px 12px;
     }
 
     .template-grid-container {
-        padding: 20px;
+        padding: 16px;
+    }
+
+    .template-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    /* Mobilde butonlar her zaman görünür */
+    .template-favorite-btn,
+    .template-delete-btn {
+        opacity: 1 !important;
+        width: 28px;
+        height: 28px;
+    }
+
+    .template-favorite-btn svg,
+    .template-delete-btn svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .template-thumbnail {
+        height: 140px;
+    }
+
+    .template-info {
+        padding: 10px;
+    }
+
+    .template-name {
+        font-size: 13px;
+    }
+
+    .template-description {
+        font-size: 11px;
+        -webkit-line-clamp: 1;
+        line-clamp: 1;
+    }
+
+    .template-category-badge {
+        font-size: 9px;
+        padding: 2px 6px;
     }
 }
