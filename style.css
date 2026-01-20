@@ -5002,3 +5002,90 @@ input[type="range"] {
     transform: scale(1.05);
     transition: all 0.2s ease;
 }
+/* Update Toast */
+.update-toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 10px rgba(0, 0, 0, 0.05);
+    padding: 12px 16px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    z-index: 9999;
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    max-width: 90vw;
+    width: max-content;
+}
+
+.update-toast.show {
+    transform: translateX(-50%) translateY(0);
+}
+
+.update-toast-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.update-toast-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+}
+
+.update-toast-message {
+    font-size: 12px;
+    color: #666;
+}
+
+.update-toast-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-update {
+    background: #1971c2;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-update:hover {
+    background: #1864ab;
+}
+
+.btn-later {
+    background: transparent;
+    color: #666;
+    border: 1px solid #e0e0e0;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-later:hover {
+    background: #f8f9fa;
+    border-color: #d0d0d0;
+}
+
+@media (max-width: 768px) {
+    .update-toast {
+        bottom: 80px; /* Above mobile bottom bar if any */
+        padding: 10px 14px;
+    }
+}

@@ -36,3 +36,10 @@ self.addEventListener('fetch', (event) => {
         })
     );
 });
+
+// Message listener for Skip Waiting
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
+    }
+});
