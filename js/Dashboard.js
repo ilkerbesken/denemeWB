@@ -334,11 +334,13 @@ class Dashboard {
             item.dataset.view = folder.id;
             item.style.paddingLeft = `${12 + level * 20}px`; // Indentation for subfolders
 
+            const folderColor = folder.color || '#ccc';
             item.innerHTML = `
                 <div class="folder-content">
-                    <img src="assets/icons/arrow-dashboard.svg" class="folder-chevron ${isExpanded ? 'rotated' : ''}" style="width: 6px; opacity: 0.4; transition: transform 0.2s; margin: 4px; ${hasChildren ? '' : 'visibility: hidden;'}">
-                    <img src="assets/icons/rectangle.svg" class="nav-icon" style="opacity: 0.5;">
-                    <span class="folder-name" spellcheck="false">${folder.name}</span>
+                    <img src="assets/icons/arrow-dashboard.svg" class="folder-chevron ${isExpanded ? 'rotated' : ''}" style="width: 6px; opacity: 0.4; transition: transform 0.2s; margin-right: 4px; ${hasChildren ? '' : 'visibility: hidden;'}">
+                    <div class="folder-color-bar" style="background: ${folderColor};"></div>
+                    <img src="assets/icons/folder.svg" class="folder-icon">
+                    <span class="folder-name" spellcheck="false" style="color: ${folderColor === '#ccc' ? 'inherit' : folderColor};">${folder.name}</span>
                 </div>
                 <div class="folder-menu-trigger">⋮</div>
                 <div class="folder-dropdown">
@@ -359,6 +361,11 @@ class Dashboard {
                     <div class="dropdown-item" data-action="delete" style="color: #fa5252;">
                         <img src="assets/icons/trash.svg" style="width: 12px; opacity: 0.6; filter: invert(36%) sepia(84%) saturate(1450%) hue-rotate(338deg) brightness(98%) contrast(98%);">
                         Klasörü Sil
+                    </div>
+                    <div class="folder-color-palette">
+                        ${['#ccc', '#b8e994', '#ffbe76', '#ff7979', '#4a90e2', '#862e9c', '#f1c40f', '#1abc9c', '#34495e', '#7f8c8d'].map(c => `
+                            <div class="color-option" style="background: ${c}" data-color="${c}" title="Renk Değiştir"></div>
+                        `).join('')}
                     </div>
                 </div>
             `;
@@ -442,6 +449,14 @@ class Dashboard {
                 dropdown.classList.remove('show');
                 this.deleteFolderConfirmation(folder.id);
             };
+
+            dropdown.querySelectorAll('.color-option').forEach(opt => {
+                opt.onclick = (e) => {
+                    e.stopPropagation();
+                    this.changeFolderColor(folder.id, opt.dataset.color);
+                    dropdown.classList.remove('show');
+                };
+            });
 
             container.appendChild(item);
 
@@ -785,6 +800,15 @@ class Dashboard {
             }
         } else {
             this.renderSidebar(); // Revert UI
+        }
+    }
+
+    changeFolderColor(id, color) {
+        const folder = this.folders.find(f => f.id === id);
+        if (folder) {
+            folder.color = color;
+            this.saveData('wb_folders', this.folders);
+            this.renderSidebar();
         }
     }
 
@@ -1933,18 +1957,27 @@ class Dashboard {
             <div style="max-height: 300px; overflow-y: auto; margin-bottom: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
                 <div class="folder-picker-item" data-id="" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s; display: flex; align-items: center; gap: 8px;">
                     <span style="font-size: 18px;">📁</span>
-                    <span>Ana Sayfa (Klasör Yok)</span>
+                    <span>Kök Dizin</span>
                 </div>
         `;
 
-        this.folders.forEach(f => {
-            html += `
-                <div class="folder-picker-item" data-id="${f.id}" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s; display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 18px;">📁</span>
-                    <span>${f.name}</span>
-                </div>
-            `;
-        });
+        const renderOptions = (parentId = null, level = 0) => {
+            const children = this.folders.filter(f => f.parentId === parentId);
+            children.forEach(f => {
+                const paddingLeft = 16 + (level * 24);
+                html += `
+                    <div class="folder-picker-item" data-id="${f.id}" style="padding: 12px 16px; padding-left: ${paddingLeft}px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s; display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 18px; ${level > 0 ? 'opacity: 0.7;' : ''}">${level > 0 ? '↳ 📁' : '📁'}</span>
+                        <div style="display: flex; flex-direction: column; overflow: hidden;">
+                            <span style="font-weight: ${level === 0 ? '600' : '500'}; font-size: ${14 - (level * 0.5)}px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${f.name}</span>
+                        </div>
+                    </div>
+                `;
+                renderOptions(f.id, level + 1);
+            });
+        };
+
+        renderOptions();
 
         html += `
             </div>

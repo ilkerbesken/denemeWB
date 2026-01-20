@@ -2911,8 +2911,26 @@ input[type="range"] {
 .folder-content {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
+    /* Slightly reduced gap as per mockup */
     overflow: hidden;
+    flex: 1;
+}
+
+.folder-color-bar {
+    width: 4px;
+    height: 18px;
+    border-radius: 2px;
+    background: #ccc;
+    /* Default gray */
+    flex-shrink: 0;
+}
+
+.folder-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.6;
+    flex-shrink: 0;
 }
 
 .folder-name {
@@ -2922,6 +2940,7 @@ input[type="range"] {
     outline: none;
     padding: 2px 4px;
     border-radius: 4px;
+    font-weight: 500;
 }
 
 .folder-name[contenteditable="true"] {
@@ -2936,6 +2955,7 @@ input[type="range"] {
     border-radius: 4px;
     font-size: 16px;
     line-height: 1;
+    margin-left: 4px;
 }
 
 .folder-item:hover .folder-menu-trigger {
@@ -2945,6 +2965,29 @@ input[type="range"] {
 .folder-menu-trigger:hover {
     opacity: 1 !important;
     background: rgba(0, 0, 0, 0.05);
+}
+
+/* Color Palette in Dropdown */
+.folder-color-palette {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    padding: 8px;
+    border-top: 1px solid #efefef;
+    margin-top: 4px;
+}
+
+.color-option {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+}
+
+.color-option:hover {
+    transform: scale(1.2);
 }
 
 .folder-dropdown {
