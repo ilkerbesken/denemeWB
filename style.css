@@ -5045,10 +5045,13 @@ input[type="range"] {
     display: flex;
     align-items: center;
     gap: 16px;
-    z-index: 9999;
+    z-index: 11000;
+    /* Higher than everything else */
     transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     max-width: 90vw;
     width: max-content;
+    pointer-events: auto;
+    /* Ensure it receives touches */
 }
 
 .update-toast.show {
@@ -5081,12 +5084,15 @@ input[type="range"] {
     background: #1971c2;
     color: white;
     border: none;
-    padding: 6px 14px;
-    border-radius: 8px;
-    font-size: 12px;
+    padding: 8px 16px;
+    /* Increased for mobile touch */
+    border-radius: 10px;
+    font-size: 13px;
+    /* Slightly larger */
     font-weight: 600;
     cursor: pointer;
     transition: background 0.2s;
+    touch-action: manipulation;
 }
 
 .btn-update:hover {
@@ -5097,12 +5103,15 @@ input[type="range"] {
     background: transparent;
     color: #666;
     border: 1px solid #e0e0e0;
-    padding: 6px 14px;
-    border-radius: 8px;
-    font-size: 12px;
+    padding: 8px 16px;
+    /* Increased for mobile touch */
+    border-radius: 10px;
+    font-size: 13px;
+    /* Slightly larger */
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
+    touch-action: manipulation;
 }
 
 .btn-later:hover {

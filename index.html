@@ -1296,65 +1296,7 @@
     <script src="./js/TemplateManager.js?v=0.7.3"></script>
     <script src="./js/app.js?v=0.7.3"></script>
 
-    <script>
-        if ('serviceWorker' in navigator) {
-            let newWorker;
-
-            function showUpdateToast(reg) {
-                const toast = document.getElementById('updateToast');
-                const btnUpdate = document.getElementById('btnUpdateNow');
-                const btnLater = document.getElementById('btnUpdateLater');
-
-                toast.classList.add('show');
-
-                btnUpdate.addEventListener('click', () => {
-                    if (newWorker) {
-                        newWorker.postMessage({ type: 'SKIP_WAITING' });
-                    }
-                    toast.classList.remove('show');
-                });
-
-                btnLater.addEventListener('click', () => {
-                    toast.classList.remove('show');
-                });
-            }
-
-            navigator.serviceWorker.register('./sw.js').then(reg => {
-                // Check for updates every hour
-                setInterval(() => {
-                    reg.update();
-                }, 1000 * 60 * 60);
-
-                // Check for update on window focus
-                window.addEventListener('focus', () => {
-                    reg.update();
-                });
-
-                // Check if there is already a waiting worker
-                if (reg.waiting) {
-                    newWorker = reg.waiting;
-                    showUpdateToast(reg);
-                }
-
-                reg.addEventListener('updatefound', () => {
-                    newWorker = reg.installing;
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            showUpdateToast(reg);
-                        }
-                    });
-                });
-            });
-
-            // Reload when the new service worker takes over
-            let refreshing = false;
-            navigator.serviceWorker.addEventListener('controllerchange', () => {
-                if (refreshing) return;
-                window.location.reload();
-                refreshing = true;
-            });
-        }
-    </script>
+    <script src="./js/pwa-updates.js?v=0.7.3"></script>
 </body>
 
 </html>

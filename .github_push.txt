@@ -1,0 +1,3 @@
+git add .
+git commit -m "İlk tertemiz yükleme"
+git push -u origin main       ----YA DA----      git push -u origin main --force
