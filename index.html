@@ -13,7 +13,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Whiteboard">
     <link rel="apple-touch-icon" href="assets/favicon/favicon.svg">
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="./manifest.json">
 
     <link rel="stylesheet" href="style.css?v=0.7.3">
     <link rel="stylesheet" href="css/template-gallery.css?v=0.7.3">
@@ -1138,6 +1138,13 @@
     </div>
 
     <div class="app-menu-dropdown" id="appMenuDropdown">
+        <div class="menu-item" id="menuUpdateApp"
+            style="display: none; background: #fff4f2; color: #e03131; font-weight: 600;">
+            <img src="assets/icons/undo.svg" class="icon-small"
+                style="filter: invert(24%) sepia(85%) saturate(2466%) hue-rotate(346deg) brightness(91%) contrast(92%);">
+            <span>Güncelleme Hazır</span>
+        </div>
+        <div class="menu-separator" id="menuUpdateSeparator" style="display: none;"></div>
         <div class="menu-item" id="menuSave">
             <img src="assets/icons/save.svg" class="icon-small">
             <span>Kaydet</span>
@@ -1252,17 +1259,7 @@
         </div>
     </div>
 
-    <!-- Update Notification Toast -->
-    <div id="updateToast" class="update-toast">
-        <div class="update-toast-content">
-            <div class="update-toast-title">Güncelleme Hazır</div>
-            <div class="update-toast-message">Yeni özellikler ve iyileştirmeler eklendi.</div>
-        </div>
-        <div class="update-toast-actions">
-            <button id="btnUpdateLater" class="btn-later">Sonra</button>
-            <button id="btnUpdateNow" class="btn-update">Güncelle</button>
-        </div>
-    </div>
+
 
     <script src="./js/constants.js?v=0.7.3"></script>
     <script src="./js/utils.js?v=0.7.3"></script>

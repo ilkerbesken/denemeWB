@@ -1,10 +1,10 @@
 const CACHE_NAME = 'whiteboard-v1';
 const ASSETS_TO_CACHE = [
-    '/',
-    '/index.html',
-    '/style.css',
-    '/css/template-gallery.css',
-    '/assets/favicon/favicon.svg'
+    './',
+    './index.html',
+    './style.css',
+    './css/template-gallery.css',
+    './assets/favicon/favicon.svg'
 ];
 
 // Install Event

@@ -1,24 +1,18 @@
 /**
  * PWA Update Manager
- * Handles Service Worker registration and update notifications
+ * Handles Service Worker registration and update notifications inside the App Menu
  */
 function initPWAUpdates() {
     console.log('PWA: Initializing update manager...');
 
     if ('serviceWorker' in navigator) {
         let newWorker;
-        const toast = document.getElementById('updateToast');
-        const btnUpdate = document.getElementById('btnUpdateNow');
-        const btnLater = document.getElementById('btnUpdateLater');
+        const menuUpdate = document.getElementById('menuUpdateApp');
+        const menuSeparator = document.getElementById('menuUpdateSeparator');
 
-        if (!toast || !btnUpdate || !btnLater) {
-            console.warn('PWA: Update toast elements not found!');
+        if (!menuUpdate) {
+            console.warn('PWA: Update menu item not found!');
             return;
-        }
-
-        function hideToast() {
-            console.log('PWA: Hiding update toast');
-            toast.classList.remove('show');
         }
 
         function handleUpdate(e) {
@@ -32,39 +26,18 @@ function initPWAUpdates() {
                 newWorker.postMessage({ type: 'SKIP_WAITING' });
             } else {
                 console.warn('PWA: No new worker found to skip waiting');
-                // If no worker but toast is shown, maybe it's a stale state, just hide it
-                hideToast();
+                menuUpdate.style.display = 'none';
+                if (menuSeparator) menuSeparator.style.display = 'none';
             }
         }
 
-        function handleLater(e) {
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            console.log('PWA: Later button clicked');
-            hideToast();
-        }
+        // Attach events to menu item
+        menuUpdate.addEventListener('click', handleUpdate);
 
-        // Use pointerdown for immediate response, but track if we already handled it
-        let handled = false;
-        const wrapHandler = (fn) => (e) => {
-            if (handled) return;
-            handled = true;
-            fn(e);
-            setTimeout(() => { handled = false; }, 500);
-        };
-
-        // Attach events
-        btnUpdate.addEventListener('pointerdown', wrapHandler(handleUpdate));
-        btnUpdate.addEventListener('click', wrapHandler(handleUpdate));
-
-        btnLater.addEventListener('pointerdown', wrapHandler(handleLater));
-        btnLater.addEventListener('click', wrapHandler(handleLater));
-
-        function showUpdateToast() {
-            console.log('PWA: Showing update toast');
-            toast.classList.add('show');
+        function showUpdateOption() {
+            console.log('PWA: Showing update option in menu');
+            menuUpdate.style.display = 'flex';
+            if (menuSeparator) menuSeparator.style.display = 'block';
         }
 
         navigator.serviceWorker.register('./sw.js').then(reg => {
@@ -74,7 +47,7 @@ function initPWAUpdates() {
             if (reg.waiting) {
                 console.log('PWA: Found waiting worker');
                 newWorker = reg.waiting;
-                showUpdateToast();
+                showUpdateOption();
             }
 
             reg.addEventListener('updatefound', () => {
@@ -84,7 +57,7 @@ function initPWAUpdates() {
                     console.log('PWA: Worker state changed to:', newWorker.state);
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                         console.log('PWA: Update fully installed and ready');
-                        showUpdateToast();
+                        showUpdateOption();
                     }
                 });
             });
