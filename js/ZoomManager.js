@@ -13,6 +13,7 @@ class ZoomManager {
         // Touch gesture state
         this.activePointers = new Map();
         this.lastPinchDistance = 0;
+        this.lastPinchCenter = null;
         this.isPinching = false;
 
         // Palm Rejection / Stylus Tracking
@@ -309,6 +310,7 @@ class ZoomManager {
             this.isPinching = true;
             this.isPanning = false; // Stop one-finger pan when second finger arrives
             this.lastPinchDistance = distance;
+            this.lastPinchCenter = this.getGestureCenter();
         }
     }
 
@@ -344,6 +346,7 @@ class ZoomManager {
         if (this.activePointers.size < 2) {
             this.isPinching = false;
             this.lastPinchDistance = 0;
+            this.lastPinchCenter = null;
         }
 
         if (this.activePointers.size === 0) {
@@ -369,32 +372,51 @@ class ZoomManager {
         return Math.sqrt(dx * dx + dy * dy);
     }
 
+    getGestureCenter() {
+        const pts = Array.from(this.activePointers.values());
+        if (pts.length < 2) return null;
+        return {
+            x: (pts[0].x + pts[1].x) / 2,
+            y: (pts[0].y + pts[1].y) / 2
+        };
+    }
+
     handlePinch(e) {
         const currentDistance = this.getGestureDistance();
+        const currentCenter = this.getGestureCenter();
 
         // 3. Minimum Distance Check during move
         if (currentDistance < this.MIN_PINCH_DISTANCE) return;
 
-        if (this.lastPinchDistance > 0 && currentDistance > 0) {
+        if (this.lastPinchCenter && this.lastPinchDistance > 0 && currentDistance > 0) {
+            // Calculate Pan Delta
+            const dx = currentCenter.x - this.lastPinchCenter.x;
+            const dy = currentCenter.y - this.lastPinchCenter.y;
+
+            // Apply Pan Translation
+            // clientX/Y'dan delta aldiğimiz için doğrudan CSS pikselleriyle pan yapabiliriz
+            this.pan.x += dx;
+            this.pan.y += dy;
+
             const factor = currentDistance / this.lastPinchDistance;
 
             // 4. Zoom Sensitivity Threshold: Ignore micro-jitters
-            if (Math.abs(factor - 1) < this.ZOOM_THRESHOLD) {
-                return;
+            if (Math.abs(factor - 1) >= this.ZOOM_THRESHOLD) {
+                // Zoom center point (current center of two touches)
+                const rect = this.app.canvas.getBoundingClientRect();
+                const localX = currentCenter.x - rect.left;
+                const localY = currentCenter.y - rect.top;
+
+                this.zoomAtPoint(localX, localY, factor);
+                this.lastPinchDistance = currentDistance;
             }
 
-            // Zoom center point (average of two touches)
-            const pts = Array.from(this.activePointers.values());
-            const centerX = (pts[0].x + pts[1].x) / 2;
-            const centerY = (pts[0].y + pts[1].y) / 2;
-
-            const rect = this.app.canvas.getBoundingClientRect();
-            const localX = centerX - rect.left;
-            const localY = centerY - rect.top;
-
-            this.zoomAtPoint(localX, localY, factor);
-            this.lastPinchDistance = currentDistance;
+            this.updateUI();
+            this.clampPan();
+            this.syncActivePageByScroll();
         }
+
+        this.lastPinchCenter = currentCenter;
     }
 
     startPan(e) {
