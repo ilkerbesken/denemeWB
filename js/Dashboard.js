@@ -686,8 +686,8 @@ class Dashboard {
                 }, 600);
             }, { passive: true });
 
-            card.addEventListener('touchend', () => clearTimeout(pressTimer));
-            card.addEventListener('touchmove', () => clearTimeout(pressTimer));
+            card.addEventListener('touchend', () => clearTimeout(pressTimer), { passive: true });
+            card.addEventListener('touchmove', () => clearTimeout(pressTimer), { passive: true });
 
             // Title editing
             const titleEl = card.querySelector('.board-title');

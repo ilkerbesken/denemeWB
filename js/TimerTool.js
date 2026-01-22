@@ -201,25 +201,30 @@ class TimerTool {
         const header = this.container.querySelector('.timer-header');
         let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
 
-        header.onmousedown = dragMouseDown;
-        header.ontouchstart = dragMouseDown;
+        header.addEventListener('mousedown', dragMouseDown);
+        header.addEventListener('touchstart', dragMouseDown, { passive: false });
 
         const self = this;
 
         function dragMouseDown(e) {
-            e.preventDefault();
+            if (e.type === 'touchstart') {
+                // We need preventDefault for drag to work correctly on many mobile browsers
+                // but we must not be passive.
+                e.preventDefault();
+            }
             const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
             const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
             pos3 = clientX;
             pos4 = clientY;
-            document.onmouseup = closeDragElement;
-            document.ontouchend = closeDragElement;
-            document.onmousemove = elementDrag;
-            document.ontouchmove = elementDrag;
+
+            document.addEventListener('mouseup', closeDragElement);
+            document.addEventListener('touchend', closeDragElement, { passive: true });
+            document.addEventListener('mousemove', elementDrag);
+            document.addEventListener('touchmove', elementDrag, { passive: false });
         }
 
         function elementDrag(e) {
-            e.preventDefault();
+            if (e.cancelable) e.preventDefault();
             const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
             const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
             pos1 = pos3 - clientX;
@@ -231,10 +236,10 @@ class TimerTool {
         }
 
         function closeDragElement() {
-            document.onmouseup = null;
-            document.ontouchend = null;
-            document.onmousemove = null;
-            document.ontouchmove = null;
+            document.removeEventListener('mouseup', closeDragElement);
+            document.removeEventListener('touchend', closeDragElement);
+            document.removeEventListener('mousemove', elementDrag);
+            document.removeEventListener('touchmove', elementDrag);
         }
     }
 }

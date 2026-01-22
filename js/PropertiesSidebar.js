@@ -1490,16 +1490,16 @@ class PropertiesSidebar {
 
                 // Mobile support: Long press for context menu
                 let longPressTimer;
-                item.ontouchstart = (e) => {
+                item.addEventListener('touchstart', (e) => {
                     longPressTimer = setTimeout(() => {
                         this.app.colorPalette.showContextMenu({
                             clientX: e.touches[0].clientX,
                             clientY: e.touches[0].clientY
                         }, idx);
                     }, 500);
-                };
-                item.ontouchend = () => clearTimeout(longPressTimer);
-                item.ontouchmove = () => clearTimeout(longPressTimer);
+                }, { passive: true });
+                item.addEventListener('touchend', () => clearTimeout(longPressTimer), { passive: true });
+                item.addEventListener('touchmove', () => clearTimeout(longPressTimer), { passive: true });
 
                 grid.appendChild(item);
             });
