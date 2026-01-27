@@ -104,7 +104,7 @@ class TableTool {
             data: Array(rowCount).fill(null).map(() => Array(colCount).fill("")),
             cellStyles: Array(rowCount).fill(null).map(() => Array(colCount).fill(null).map(() => ({}))),
             borderColor: state.strokeColor || '#000000',
-            borderWidth: state.strokeWidth || 1,
+            borderWidth: state.strokeWidth || 0.5,
             backgroundColor: 'transparent',
             locked: false
         };
@@ -412,7 +412,7 @@ class TableTool {
             borderStyle = Utils.getRainbowGradientForRect(ctx, 0, 0, totalW, totalH);
         }
         ctx.strokeStyle = borderStyle;
-        ctx.lineWidth = obj.borderWidth || 1;
+        ctx.lineWidth = obj.borderWidth || 0.5;
 
         // Setup Caches
         if (!obj._cellCaches) obj._cellCaches = {};

@@ -1,44 +1,48 @@
 const DOTTED_NOTES_TEMPLATE = {
-    id: "dotted-notes-template",
-    name: "Noktalı Not Kağıdı",
-    category: "Eğitim",
-    description: "Tamamen JS ile oluşturulmuş dinamik şablon.",
-    objects: [
-        {
-            type: "oval",
-            x: 50, y: 50, width: 690, height: 1000,
-            color: "#e0e0e0", filled: false, borderRadius: 30, strokeWidth: 1,
-            locked: true
-        },
-        {
-            type: "text",
-            x: 90, y: 100, text: "NOTLAR", color: "#424242",
-            locked: true
-        },
-        {
-            type: "text",
-            x: 460, y: 100, text: "tarih : ...../...../.......", fontWeight: "bold", color: "#424242", alignment: "right",
-            locked: true
-        }
-    ],
-    /**
-     * Şablon nesnelerini dinamik olarak üretir/günceller
-     */
+    id: "dotted-notes",
+    name: "Noktalı Notlar (Dotted Notes)",
+    category: "Temel Şablonlar",
+    description: "Not almak için başlık alanı ve noktalı ızgara içeren şablon.",
+    objects: [],
     generate: function () {
-        // Noktaları döngü ile ekle
-        for (let y = 160; y <= 1000; y += 20) { // Dikey aralık
-            for (let x = 100; x <= 700; x += 20) { // Yatay aralık
+        this.objects = [];
+        const width = 794;
+        const height = 1123;
+
+        // Sayfa Kenarlığı
+        this.objects.push({
+            type: "rectangle",
+            x: 0, y: 0, width: width, height: height,
+            color: "#f0f0f0", filled: false, strokeWidth: 1,
+            locked: true, persistent: true
+        });
+
+        // Başlık Alanı
+        this.objects.push({
+            type: "text",
+            x: 50, y: 40, width: width - 100, height: 60,
+            text: "NOTLAR",
+            htmlContent: "<div>NOTLAR</div>",
+            fontSize: 24, fontWeight: "bold", color: "#34495e", alignment: "left",
+            locked: true, persistent: true
+        });
+
+        this.objects.push({
+            type: "line",
+            x1: 50, y1: 100, x2: width - 50, y2: 100,
+            color: "#3498db", strokeWidth: 2,
+            locked: true, persistent: true
+        });
+
+        // Noktalı Izgara
+        const step = 25;
+        for (let y = 140; y < height - 50; y += step) {
+            for (let x = 50; x < width - 50; x += step) {
                 this.objects.push({
                     type: "ellipse",
-                    x: x,
-                    y: y,
-                    width: 2,
-                    height: 2,
-                    color: "#bdbdbd",
-                    fillColor: "#bdbdbd",
-                    filled: true,
-                    opacity: 0.6,
-                    locked: true
+                    x: x - 1, y: y - 1, width: 2, height: 2,
+                    color: "#cccccc", fillColor: "#cccccc", filled: true,
+                    locked: true, persistent: true
                 });
             }
         }

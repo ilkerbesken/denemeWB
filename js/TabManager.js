@@ -44,17 +44,17 @@ class TabManager {
     /**
      * Open a board as a new tab
      */
-    openBoard(boardId, boardTitle) {
+    async openBoard(boardId, boardTitle) {
         const existingTab = this.tabs.find(t => t.boardId === boardId);
 
         if (existingTab) {
-            this.switchToBoard(boardId);
+            await this.switchToBoard(boardId);
         } else {
             this.tabs.push({
                 boardId: boardId,
                 title: boardTitle
             });
-            this.switchToBoard(boardId);
+            await this.switchToBoard(boardId);
         }
 
         this.renderTabs();

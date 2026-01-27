@@ -45,7 +45,8 @@ textarea,
 .tab-selector-container {
     position: relative;
     margin-right: 8px;
-    z-index: 2000;
+    z-index: 5001;
+    /* Higher than toolbar */
 }
 
 .current-tab-btn {
@@ -101,6 +102,8 @@ textarea,
     flex-direction: column;
     padding: 6px;
     backdrop-filter: blur(15px);
+    z-index: 10000;
+    /* Extremely high */
     animation: dropdownFade 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -257,10 +260,12 @@ textarea,
     position: relative;
     align-items: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    z-index: 1000;
+    z-index: 5000;
+    /* Higher than canvas and other layers */
     min-height: 48px;
     gap: 12px;
-    overflow-x: auto;
+    overflow: visible;
+    /* Crucial for dropdowns to not be clipped */
     scrollbar-width: none;
 }
 
@@ -2722,19 +2727,23 @@ input[type="range"] {
     right: 5px;
     opacity: 0;
     transition: opacity 0.2s;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .page-item:hover .page-actions {
     opacity: 1;
 }
 
-.btn-delete-page {
+.btn-delete-page,
+.btn-duplicate-page {
     background: rgba(255, 255, 255, 0.9);
-    border: 1px solid #ffc9c9;
-    color: #fa5252;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
+    border: 1px solid #e0e0e0;
+    color: #666;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2743,9 +2752,19 @@ input[type="range"] {
     transition: all 0.2s;
 }
 
+.btn-delete-page {
+    border-color: #ffc9c9;
+    color: #fa5252;
+}
+
 .btn-delete-page:hover {
     background: #fa5252;
     color: white;
+}
+
+.btn-duplicate-page:hover {
+    background: #f1f3f5;
+    border-color: #adb5bd;
 }
 
 .sidebar-footer {
@@ -3878,6 +3897,12 @@ input[type="range"] {
     font-family: sans-serif;
     line-height: 1.4;
     overflow: hidden;
+}
+
+.rich-text-editor:empty::before {
+    content: attr(data-placeholder);
+    color: #9ca3af;
+    pointer-events: none;
 }
 
 .rich-text-toolbar {
@@ -5125,4 +5150,433 @@ input[type="range"] {
         /* Above mobile bottom bar if any */
         padding: 10px 14px;
     }
+}
+
+/* ========================================
+   RICH TEXT TOOL ENHANCEMENTS
+   ======================================== */
+.text-toolbar-btn {
+    height: 28px;
+    min-width: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background-color: transparent;
+    outline: none;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    padding: 0 6px;
+    font-size: 13px;
+}
+
+.text-toolbar-btn:hover {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+.text-toolbar-btn.active {
+    background-color: #eff6ff;
+    color: #3b82f6;
+    border-color: #bfdbfe;
+}
+
+.text-toolbar-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.text-toolbar-separator {
+    height: 20px;
+    width: 1px;
+    background-color: #e5e7eb;
+    margin: 0 6px;
+}
+
+.text-toolbar-color-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.text-toolbar-btn.toggled {
+    background-color: #fef3c7;
+    color: #d97706;
+    border-color: #fde68a;
+}
+
+.text-toolbar-select {
+    padding: 4px 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    background-color: #ffffff;
+    color: #374151;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    outline: none;
+}
+
+/* Side Menu - Block drag handle */
+.text-side-menu {
+    position: fixed;
+    z-index: 9998;
+    display: none;
+    width: 24px;
+    height: 48px;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    opacity: 0;
+    transition: opacity 0.15s;
+    background-color: transparent;
+}
+
+.text-side-menu.visible {
+    display: flex;
+    opacity: 1;
+}
+
+.text-side-menu:hover {
+    opacity: 1;
+}
+
+.text-side-menu svg {
+    width: 16px;
+    height: 16px;
+    color: #9ca3af;
+}
+
+.text-side-menu:hover svg {
+    color: #6b7280;
+}
+
+/* Editor Area Styles */
+.text-editor-area h1,
+.rich-text-editor h1 {
+    font-size: 2em;
+    font-weight: 700;
+    margin: 0.5em 0;
+    color: #111827;
+}
+
+.text-editor-area h2,
+.rich-text-editor h2 {
+    font-size: 1.5em;
+    font-weight: 600;
+    margin: 0.4em 0;
+    color: #1f2937;
+}
+
+.text-editor-area h3,
+.rich-text-editor h3 {
+    font-size: 1.25em;
+    font-weight: 600;
+    margin: 0.3em 0;
+    color: #374151;
+}
+
+.text-editor-area ul,
+.text-editor-area ol,
+.rich-text-editor ul,
+.rich-text-editor ol {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+}
+
+.text-editor-area li,
+.rich-text-editor li {
+    margin: 0.25em 0;
+}
+
+.text-editor-area blockquote,
+.rich-text-editor blockquote {
+    border-left: 3px solid #f59e0b;
+    margin: 0.5em 0;
+    padding: 0.5em 1em;
+    background-color: #fffbeb;
+    color: #92400e;
+    border-radius: 0 6px 6px 0;
+}
+
+.text-editor-area .callout,
+.rich-text-editor .callout {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    border-left: 3px solid #3b82f6;
+    margin: 0.5em 0;
+    padding: 0.75em 1em;
+    background-color: #eff6ff;
+    color: #1e40af;
+    border-radius: 0 6px 6px 0;
+}
+
+.text-editor-area .callout-icon,
+.rich-text-editor .callout-icon {
+    font-size: 16px;
+    line-height: 1;
+}
+
+.text-editor-area code,
+.rich-text-editor code {
+    background-color: #f3f4f6;
+    padding: 0.2em 0.4em;
+    border-radius: 4px;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 0.9em;
+    color: #dc2626;
+}
+
+.text-editor-area pre,
+.rich-text-editor pre {
+    background-color: #1f2937;
+    color: #f3f4f6;
+    padding: 1em;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: 'Cascadia Code', 'Fira Code', monospace;
+    font-size: 14px;
+}
+
+.text-editor-area .checklist-item,
+.rich-text-editor .checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 6px 0;
+}
+
+.text-editor-area .checklist-item .checkbox,
+.rich-text-editor .checklist-item .checkbox {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 3px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background-color: #fff;
+    user-select: none;
+}
+
+.text-editor-area .checklist-item.checked .checkbox,
+.rich-text-editor .checklist-item.checked .checkbox {
+    background-color: #10b981;
+    border-color: #10b981;
+}
+
+.text-editor-area .checklist-item.checked .checkbox::after,
+.rich-text-editor .checklist-item.checked .checkbox::after {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 1px;
+    width: 5px;
+    height: 9px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.text-editor-area .checklist-item.checked,
+.rich-text-editor .checklist-item.checked {
+    text-decoration: line-through;
+    color: #9ca3af;
+    opacity: 0.8;
+}
+
+.text-editor-area .checklist-item.checked span:not(.checkbox),
+.rich-text-editor .checklist-item.checked span:not(.checkbox) {
+    text-decoration: line-through;
+}
+
+.text-editor-area .checklist-item.checked,
+.rich-text-editor .checklist-item.checked {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+/* Toolbar wrapper */
+.text-toolbar-wrapper {
+    position: fixed;
+    z-index: 9999;
+    display: none;
+}
+
+.text-toolbar-wrapper.visible {
+    display: block;
+    animation: toolbarFadeIn 0.2s ease;
+}
+
+.text-toolbar-container {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 10px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: visible;
+    max-width: 800px;
+}
+
+/* Editor wrapper */
+.text-editor-wrapper {
+    position: fixed;
+    z-index: 9998;
+    display: none;
+}
+
+.text-editor-wrapper.visible {
+    display: block;
+}
+
+/* Placeholder styles */
+.text-editor-area:empty::before {
+    content: attr(data-placeholder);
+    color: #9ca3af;
+    pointer-events: none;
+}
+
+/* Animation for toolbar */
+@keyframes toolbarFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Block Type Dropdown Styles */
+.text-toolbar-block-selector {
+    position: relative;
+}
+
+.block-type-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 8px 0;
+    min-width: 180px;
+    z-index: 10000;
+    margin-top: 4px;
+}
+
+.block-type-dropdown.visible {
+    display: block;
+    animation: toolbarFadeIn 0.15s ease;
+}
+
+.block-type-option {
+    padding: 8px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #374151;
+    transition: background-color 0.1s;
+}
+
+.block-type-option:hover {
+    background-color: #f3f4f6;
+}
+
+.block-type-option svg {
+    width: 14px;
+    height: 14px;
+    color: #6b7280;
+}
+
+.block-type-option span {
+    color: #6b7280;
+}
+
+/* Toggle elements styles */
+.text-editor-area .toggle-heading,
+.text-editor-area .toggle-list {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin: 8px 0;
+    background-color: #fafafa;
+}
+
+.text-editor-area .toggle-header {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    user-select: none;
+    min-height: 24px;
+}
+
+.text-editor-area .toggle-arrow {
+    font-size: 10px;
+    color: #6b7280;
+    transition: transform 0.2s;
+    width: 12px;
+    display: inline-block;
+    text-align: center;
+}
+
+.text-editor-area .collapsed .toggle-content {
+    display: none;
+}
+
+.text-editor-area .toggle-content {
+    padding-left: 24px;
+    margin-top: 4px;
+    color: #4b5563;
+}
+
+.text-editor-area h4,
+.rich-text-editor h4 {
+    font-size: 1.125em;
+    font-weight: 600;
+    margin: 0.3em 0;
+    color: #4b5563;
+}
+
+.text-editor-area h5,
+.rich-text-editor h5 {
+    font-size: 1em;
+    font-weight: 600;
+    margin: 0.25em 0;
+    color: #6b7280;
+}
+
+.text-editor-area h6,
+.rich-text-editor h6 {
+    font-size: 0.875em;
+    font-weight: 600;
+    margin: 0.25em 0;
+    color: #9ca3af;
+}
+
+.text-editor-area mark {
+    background-color: #fef08a;
+    padding: 0.1em 0.2em;
+    border-radius: 2px;
+}
+
+.text-editor-area a {
+    color: #3b82f6;
+    text-decoration: underline;
 }

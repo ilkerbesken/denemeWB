@@ -10,6 +10,9 @@ class WhiteboardApp {
         // Canvas ayarları
         this.canvasSettings = new CanvasSettings();
 
+        // Araçlar - shapeTool'u state'de kullanabilmek için önce tanımlıyoruz
+        const shapeTool = new ShapeTool(() => { this.needsRender = true; });
+
         // Durum
         this.state = {
             currentTool: 'pen',
@@ -28,14 +31,13 @@ class WhiteboardApp {
             fillEnabled: false, // Live fill toggle
             objects: [],
             tableRows: 3,
-            tableCols: 3
+            tableCols: 3,
+            shapeTool: shapeTool // EraserTool access
         };
 
         this.zoomManager = new ZoomManager(this);
         this.fillManager = new FillManager();
 
-        // Araçlar
-        const shapeTool = new ShapeTool(() => { this.needsRender = true; });
         this.tools = {
             pen: new PenTool(() => { this.needsRender = true; }),
             highlighter: new PenTool(() => { this.needsRender = true; }), // Re-use PenTool
@@ -655,7 +657,8 @@ class WhiteboardApp {
         });
         safeBind('clearBtn', () => {
             this.saveHistory();
-            this.state.objects = [];
+            // persistent: true olan nesneleri tut, diğerlerini sil
+            this.state.objects = this.state.objects.filter(obj => obj.persistent);
             this.needsRedrawOffscreen = true;
             this.needsRender = true;
         });

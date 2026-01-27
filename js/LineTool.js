@@ -51,18 +51,27 @@ class LineTool {
         ctx.save();
         ctx.globalAlpha = object.opacity !== undefined ? object.opacity : 1.0;
         let color = object.color;
+        // Support for both {start, end} and {x1, y1, x2, y2} formats
+        const start = object.start || (object.x1 !== undefined ? { x: object.x1, y: object.y1 } : null);
+        const end = object.end || (object.x2 !== undefined ? { x: object.x2, y: object.y2 } : null);
+
         if (color === 'rainbow') {
             color = Utils.getRainbowGradientForRect(
                 ctx,
-                Math.min(object.start.x, object.end.x),
-                Math.min(object.start.y, object.end.y),
-                Math.max(1, Math.abs(object.end.x - object.start.x)),
-                Math.max(1, Math.abs(object.end.y - object.start.y))
+                Math.min(start.x, end.x),
+                Math.min(start.y, end.y),
+                Math.max(1, Math.abs(end.x - start.x)),
+                Math.max(1, Math.abs(end.y - start.y))
             );
         }
         ctx.strokeStyle = color;
 
-        const avgPressure = (object.start.pressure + object.end.pressure) / 2;
+        if (!start || !end) return;
+
+        const startPressure = start.pressure !== undefined ? start.pressure : 0.5;
+        const endPressure = end.pressure !== undefined ? end.pressure : 0.5;
+        const avgPressure = (startPressure + endPressure) / 2;
+
         const lineWidth = Utils.getPressureWidth(object.width, avgPressure);
         ctx.lineWidth = lineWidth;
         ctx.lineCap = 'round';
@@ -84,8 +93,8 @@ class LineTool {
         }
 
         ctx.beginPath();
-        ctx.moveTo(object.start.x, object.start.y);
-        ctx.lineTo(object.end.x, object.end.y);
+        ctx.moveTo(start.x, start.y);
+        ctx.lineTo(end.x, end.y);
         ctx.stroke();
 
         ctx.restore();

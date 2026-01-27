@@ -239,53 +239,13 @@ class SelectTool {
 
             if (selectedObj) {
                 if (this.activeHandle === 'curveControl') {
-                    // Kontrol noktasını sürükle - HAREKET KISITLAMASI + AMPLIFIED DRAGGING
-                    // Nokta sadece Orta Dikme üzerinde hareket eder VE mouse hareketinden daha hızlı tepki verir.
+                    // Free movement for the control point (LeaderLine behavior)
                     if (selectedObj.curveControlPoint && this.initialCurveControlPoint) {
-                        const start = selectedObj.start;
-                        const end = selectedObj.end;
+                        const mouseDeltaX = currentPoint.x - this.dragStartPoint.x;
+                        const mouseDeltaY = currentPoint.y - this.dragStartPoint.y;
 
-                        // 1. Orta Nokta (Midpoint)
-                        const midX = (start.x + end.x) / 2;
-                        const midY = (start.y + end.y) / 2;
-
-                        // 2. Doğru Parçası Vektörü
-                        const dx = end.x - start.x;
-                        const dy = end.y - start.y;
-
-                        // 3. Orta Dikme Vektörü (-dy, dx)
-                        const perpX = -dy;
-                        const perpY = dx;
-
-                        // 4. Uzunluk normalizasyonu
-                        const len = Math.sqrt(perpX * perpX + perpY * perpY);
-
-                        if (len > 0.001) {
-                            const unitPerpX = perpX / len;
-                            const unitPerpY = perpY / len;
-
-                            // 5. Başlangıçtaki Mesafe (Initial Projection)
-                            const initialVecX = this.initialCurveControlPoint.x - midX;
-                            const initialVecY = this.initialCurveControlPoint.y - midY;
-                            const initialDist = initialVecX * unitPerpX + initialVecY * unitPerpY;
-
-                            // 6. Mouse Hareketi (Delta)
-                            const mouseDeltaX = currentPoint.x - this.dragStartPoint.x;
-                            const mouseDeltaY = currentPoint.y - this.dragStartPoint.y;
-
-                            // 7. Mouse Hareketinin Dik Vektör Üzerindeki İzdüşümü
-                            const deltaProj = mouseDeltaX * unitPerpX + mouseDeltaY * unitPerpY;
-
-                            // 8. Çarpan (Multiplier) - Hassasiyet
-                            const multiplier = 4.0; // Daha da artırdım ki hissedilsin
-
-                            // 9. Yeni Mesafe
-                            const finalDist = initialDist + deltaProj * multiplier;
-
-                            // 10. Yeni Konum
-                            selectedObj.curveControlPoint.x = midX + finalDist * unitPerpX;
-                            selectedObj.curveControlPoint.y = midY + finalDist * unitPerpY;
-                        }
+                        selectedObj.curveControlPoint.x = this.initialCurveControlPoint.x + mouseDeltaX;
+                        selectedObj.curveControlPoint.y = this.initialCurveControlPoint.y + mouseDeltaY;
                     }
                     return true;
                 } else if (this.activeHandle === 'rotate') {
@@ -425,6 +385,22 @@ class SelectTool {
         }
 
         if (this.isDragging) {
+            // Case: Simple click on a selected object (no significant drag)
+            if (this.dragStartPoint) {
+                const dist = Math.sqrt(Math.pow(pos.x - this.dragStartPoint.x, 2) + Math.pow(pos.y - this.dragStartPoint.y, 2));
+                if (dist < 5 && this.selectedObjects.length === 1) {
+                    const idx = this.selectedObjects[0];
+                    const obj = state.objects[idx];
+                    if (obj && obj.type === 'text') {
+                        // Forward to TextTool for interactive hit-testing
+                        if (window.app.tools.text.handleInteractiveClick(obj, pos)) {
+                            window.app.saveHistory();
+                            window.app.needsRedrawOffscreen = true;
+                            window.app.needsRender = true;
+                        }
+                    }
+                }
+            }
             this.isDragging = false;
             this.dragStartPoint = null;
             this.dragCurrentPoint = null;
@@ -975,11 +951,19 @@ class SelectTool {
 
             case 'line':
             case 'arrow':
-                // ... (unchanged)
-                const dist = this.pointToLineDistance(
-                    point, obj.start, obj.end
-                );
-                return dist < threshold;
+                const pathType = obj.pathType || 'straight';
+                let distanceToPath = Infinity;
+
+                if (pathType === 'curved' && obj.curveControlPoint) {
+                    distanceToPath = this.pointToBezierDistance(point, obj.start, obj.curveControlPoint, obj.end);
+                } else if (pathType === 'elbow') {
+                    distanceToPath = this.pointToElbowDistance(point, obj.start, obj.end);
+                } else {
+                    // Straight path
+                    distanceToPath = this.pointToLineDistance(point, obj.start, obj.end);
+                }
+
+                return distanceToPath < threshold;
 
             case 'table':
                 if (point.x >= obj.x - threshold && point.x <= obj.x + obj.width + threshold &&
@@ -1113,14 +1097,14 @@ class SelectTool {
     pointToLineDistance(point, lineStart, lineEnd) {
         const dx = lineEnd.x - lineStart.x;
         const dy = lineEnd.y - lineStart.y;
-        const length = Math.sqrt(dx * dx + dy * dy);
+        const lengthSq = dx * dx + dy * dy;
 
-        if (length === 0) {
+        if (lengthSq === 0) {
             return Utils.distance(point, lineStart);
         }
 
         const t = Math.max(0, Math.min(1,
-            ((point.x - lineStart.x) * dx + (point.y - lineStart.y) * dy) / (length * length)
+            ((point.x - lineStart.x) * dx + (point.y - lineStart.y) * dy) / lengthSq
         ));
 
         const projection = {
@@ -1129,6 +1113,50 @@ class SelectTool {
         };
 
         return Utils.distance(point, projection);
+    }
+
+    pointToBezierDistance(point, p1, m, p2) {
+        // Calculate Bezier Control Point from the midpoint handle m
+        const cp = {
+            x: 2 * m.x - 0.5 * p1.x - 0.5 * p2.x,
+            y: 2 * m.y - 0.5 * p1.y - 0.5 * p2.y
+        };
+
+        // Sampling approach for simplicity and performance
+        let minSquareDist = Infinity;
+        const steps = 15; // Enough samples for hit detection
+
+        let prevX = p1.x;
+        let prevY = p1.y;
+
+        for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            const invT = 1 - t;
+
+            // Quadratic Bezier Formula: (1-t)^2*P1 + 2(1-t)t*CP + t^2*P2
+            const x = invT * invT * p1.x + 2 * invT * t * cp.x + t * t * p2.x;
+            const y = invT * invT * p1.y + 2 * invT * t * cp.y + t * t * p2.y;
+
+            // Check distance to this segment of the curve
+            const d = this.pointToLineDistance(point, { x: prevX, y: prevY }, { x, y });
+            if (d < minSquareDist) minSquareDist = d;
+
+            prevX = x;
+            prevY = y;
+        }
+
+        return minSquareDist;
+    }
+
+    pointToElbowDistance(point, start, end) {
+        const midX = (start.x + end.x) / 2;
+
+        // Orthogonal path segments: (start.x, start.y) -> (midX, start.y) -> (midX, end.y) -> (end.x, end.y)
+        const d1 = this.pointToLineDistance(point, start, { x: midX, y: start.y });
+        const d2 = this.pointToLineDistance(point, { x: midX, y: start.y }, { x: midX, y: end.y });
+        const d3 = this.pointToLineDistance(point, { x: midX, y: end.y }, end);
+
+        return Math.min(d1, d2, d3);
     }
 
     draw(ctx, object) {

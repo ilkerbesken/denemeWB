@@ -275,6 +275,32 @@ class PageManager {
         this.renderPageList();
     }
 
+    duplicatePage(index, event) {
+        if (event) event.stopPropagation();
+
+        // Save current state if we are duplicatin current page
+        if (index === this.currentPageIndex) {
+            this.saveCurrentPageState();
+        }
+
+        const sourcePage = this.pages[index];
+        const newPage = {
+            id: Date.now() + Math.random(),
+            name: `${sourcePage.name} (Kopyası)`,
+            objects: Utils.deepClone(sourcePage.objects),
+            backgroundColor: sourcePage.backgroundColor,
+            backgroundPattern: sourcePage.backgroundPattern,
+            thumbnail: sourcePage.thumbnail,
+            pdfDimensions: sourcePage.pdfDimensions ? { ...sourcePage.pdfDimensions } : null
+        };
+
+        // Insert after the source page
+        this.pages.splice(index + 1, 0, newPage);
+
+        // Automatically switch to the new page
+        this.switchPage(index + 1);
+    }
+
     renderPageList() {
         if (!this.pageListContainer) return;
 
@@ -359,6 +385,14 @@ class PageManager {
                 deleteBtn.onclick = (e) => this.deletePage(index, e);
                 actions.appendChild(deleteBtn);
             }
+
+            // Duplicate Button
+            const duplicateBtn = document.createElement('button');
+            duplicateBtn.className = 'btn-duplicate-page';
+            duplicateBtn.innerHTML = `<img src="assets/icons/duplicate.svg" style="width: 14px; height: 14px; opacity: 0.6;">`;
+            duplicateBtn.title = 'Sayfayı Çoğalt';
+            duplicateBtn.onclick = (e) => this.duplicatePage(index, e);
+            actions.appendChild(duplicateBtn);
 
             item.appendChild(thumb);
             info.appendChild(name);

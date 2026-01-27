@@ -6,7 +6,16 @@
 const TemplateLibrary = {
     kanban: typeof KANBAN_TEMPLATE !== 'undefined' ? KANBAN_TEMPLATE : null,
     dottedNotes: typeof DOTTED_NOTES_TEMPLATE !== 'undefined' ? DOTTED_NOTES_TEMPLATE : null,
-    swot: typeof SWOT_TEMPLATE !== 'undefined' ? SWOT_TEMPLATE : null
+    swot: typeof SWOT_TEMPLATE !== 'undefined' ? SWOT_TEMPLATE : null,
+    ruled: typeof RULED_TEMPLATE !== 'undefined' ? RULED_TEMPLATE : null,
+    grid: typeof GRID_TEMPLATE !== 'undefined' ? GRID_TEMPLATE : null,
+    dotGrid: typeof DOT_GRID_TEMPLATE !== 'undefined' ? DOT_GRID_TEMPLATE : null,
+    cornell: typeof CORNELL_TEMPLATE !== 'undefined' ? CORNELL_TEMPLATE : null,
+    todoList: typeof TODO_LIST_TEMPLATE !== 'undefined' ? TODO_LIST_TEMPLATE : null,
+    calendar: typeof CALENDAR_TEMPLATE !== 'undefined' ? CALENDAR_TEMPLATE : null,
+    storyboard: typeof STORYBOARD_TEMPLATE !== 'undefined' ? STORYBOARD_TEMPLATE : null,
+    isometricGrid: typeof ISOMETRIC_GRID_TEMPLATE !== 'undefined' ? ISOMETRIC_GRID_TEMPLATE : null,
+    meetingNotes: typeof MEETING_NOTES_TEMPLATE !== 'undefined' ? MEETING_NOTES_TEMPLATE : null
 };
 
 class TemplateManager {
@@ -101,7 +110,16 @@ class TemplateManager {
                 }
             }
 
-            // 3. Ortak özellikler
+            // 3. Line ve Arrow Normalizasyonu (x1, y1 -> start, end)
+            if ((normalizedObj.type === 'line' || normalizedObj.type === 'arrow') && normalizedObj.x1 !== undefined) {
+                normalizedObj.start = { x: normalizedObj.x1, y: normalizedObj.y1, pressure: 0.5 };
+                normalizedObj.end = { x: normalizedObj.x2, y: normalizedObj.y2, pressure: 0.5 };
+                if (normalizedObj.type === 'arrow') normalizedObj.pressure = 0.5;
+                delete normalizedObj.x1; delete normalizedObj.y1;
+                delete normalizedObj.x2; delete normalizedObj.y2;
+            }
+
+            // 4. Ortak özellikler
             if (normalizedObj.opacity === undefined) normalizedObj.opacity = 1.0;
             if (normalizedObj.strokeWidth === undefined) normalizedObj.strokeWidth = 2;
             if (normalizedObj.lineStyle === undefined) normalizedObj.lineStyle = 'solid';
@@ -111,6 +129,11 @@ class TemplateManager {
 
             this.app.state.objects.push(normalizedObj);
         });
+
+        // If pageManager exists, save to ensure it's synced with the board data
+        if (this.app.pageManager) {
+            this.app.pageManager.saveCurrentPageState();
+        }
 
         // Canvas'ı yeniden çiz
         if (this.app.redrawOffscreen) this.app.redrawOffscreen();

@@ -45,13 +45,20 @@ class ArrowTool {
     }
 
     draw(ctx, object) {
-        const dx = object.end.x - object.start.x;
-        const dy = object.end.y - object.start.y;
+        // Support for both {start, end} and {x1, y1, x2, y2} formats
+        const start = object.start || (object.x1 !== undefined ? { x: object.x1, y: object.y1 } : null);
+        const end = object.end || (object.x2 !== undefined ? { x: object.x2, y: object.y2 } : null);
+
+        if (!start || !end) return;
+
+        const dx = end.x - start.x;
+        const dy = end.y - start.y;
         const angle = Math.atan2(dy, dx);
         const length = Math.sqrt(dx * dx + dy * dy);
 
         // Calculate dynamic width based on pressure
-        const lineWidth = Utils.getPressureWidth(object.width, object.pressure);
+        const pressure = object.pressure !== undefined ? object.pressure : 0.5;
+        const lineWidth = Utils.getPressureWidth(object.width, pressure);
         const halfWidth = lineWidth / 2;
 
         ctx.save();
@@ -59,10 +66,10 @@ class ArrowTool {
 
         let color = object.color;
         if (color === 'rainbow') {
-            const minX = Math.min(object.start.x, object.end.x);
-            const minY = Math.min(object.start.y, object.end.y);
-            const width = Math.abs(object.end.x - object.start.x);
-            const height = Math.abs(object.end.y - object.start.y);
+            const minX = Math.min(start.x, end.x);
+            const minY = Math.min(start.y, end.y);
+            const width = Math.abs(end.x - start.x);
+            const height = Math.abs(end.y - start.y);
             color = Utils.getRainbowGradientForRect(ctx, minX, minY, Math.max(1, width), Math.max(1, height));
         }
 
@@ -73,7 +80,7 @@ class ArrowTool {
         // If line is too short, just draw a dot
         if (length < 1) {
             ctx.beginPath();
-            ctx.arc(object.start.x, object.start.y, halfWidth, 0, Math.PI * 2);
+            ctx.arc(start.x, start.y, halfWidth, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
             return;
@@ -92,13 +99,13 @@ class ArrowTool {
         const uy = dy / length;
 
         const shaftStart = {
-            x: object.start.x,
-            y: object.start.y
+            x: start.x,
+            y: start.y
         };
 
         const shaftEnd = {
-            x: object.end.x,
-            y: object.end.y
+            x: end.x,
+            y: end.y
         };
 
         // Draw shaft line with line style and path type
@@ -129,8 +136,8 @@ class ArrowTool {
                 // Auto-calculate control point at midpoint, offset perpendicular
                 const midX = (shaftStart.x + shaftEnd.x) / 2;
                 const midY = (shaftStart.y + shaftEnd.y) / 2;
-                const perpX = -(shaftEnd.y - shaftStart.y) * 0.05;  // Very subtle curve
-                const perpY = (shaftEnd.x - shaftStart.x) * 0.05;   // Very subtle curve
+                const perpX = -(shaftEnd.y - shaftStart.y) * 10;  // Slightly more pronounced but clean arc
+                const perpY = (shaftEnd.x - shaftStart.x) * 10;   // to ensure it feels like a 'bow' from the start
 
                 object.curveControlPoint = {
                     x: midX + perpX,
@@ -138,13 +145,24 @@ class ArrowTool {
                 };
             }
 
-            // Curved path with circular arc (like tldraw)
+            // Curved path with Quadratic Bezier (Fluid/LeaderLine style)
             if (lineStyle === 'wavy') {
-                // Pass control point to wavy curve drawer
                 this.drawWavyCurve(ctx, shaftStart, shaftEnd, lineWidth, object.curveControlPoint);
             } else {
-                // Draw circular arc through three points: start, control, end
-                this.drawCircularArc(ctx, shaftStart, object.curveControlPoint, shaftEnd);
+                // Calculate actual Bezier Control Point so the curve passes through object.curveControlPoint
+                // Handle M is the midpoint of the curve B(0.5)
+                // B(0.5) = 0.25*P1 + 0.5*CP + 0.25*P2
+                // CP = 2*M - 0.5*P1 - 0.5*P2
+                const cp = {
+                    x: 2 * object.curveControlPoint.x - 0.5 * shaftStart.x - 0.5 * shaftEnd.x,
+                    y: 2 * object.curveControlPoint.y - 0.5 * shaftStart.y - 0.5 * shaftEnd.y
+                };
+
+                ctx.beginPath();
+                ctx.moveTo(shaftStart.x, shaftStart.y);
+                ctx.quadraticCurveTo(cp.x, cp.y, shaftEnd.x, shaftEnd.y);
+                ctx.lineCap = 'round';
+                ctx.stroke();
             }
         } else if (pathType === 'elbow') {
             // Elbow (orthogonal) path
@@ -184,24 +202,26 @@ class ArrowTool {
         let startAngle, endAngle;
 
         if (pathType === 'curved' && object.curveControlPoint) {
-            // For curved path, use tangent at endpoints
-            startAngle = Math.atan2(
-                object.curveControlPoint.y - object.start.y,
-                object.curveControlPoint.x - object.start.x
-            );
-            endAngle = Math.atan2(
-                object.end.y - object.curveControlPoint.y,
-                object.end.x - object.curveControlPoint.x
-            );
+            // For Quadratic Bezier, tagents at start/end point towards the control point
+            // CP = 2*M - 0.5*P1 - 0.5*P2
+            const cp = {
+                x: 2 * object.curveControlPoint.x - 0.5 * start.x - 0.5 * end.x,
+                y: 2 * object.curveControlPoint.y - 0.5 * start.y - 0.5 * end.y
+            };
+
+            // Start arrow head points away from the control point
+            startAngle = Math.atan2(start.y - cp.y, start.x - cp.x);
+            // End arrow head points towards the end following the tangent
+            endAngle = Math.atan2(end.y - cp.y, end.x - cp.x);
         } else if (pathType === 'elbow') {
             // For elbow path, use direction of first/last segment
-            const midX = (object.start.x + object.end.x) / 2;
+            const midX = (start.x + end.x) / 2;
 
             // Start arrow points along first horizontal segment
-            startAngle = object.end.x > object.start.x ? 0 : Math.PI;
+            startAngle = end.x > start.x ? 0 : Math.PI;
 
             // End arrow points along last horizontal segment  
-            endAngle = object.end.x > object.start.x ? 0 : Math.PI;
+            endAngle = end.x > start.x ? 0 : Math.PI;
         } else {
             // Straight path - use direct angle
             startAngle = angle + Math.PI;
@@ -210,11 +230,11 @@ class ArrowTool {
 
         // Draw arrow heads with correct angles
         if (startStyle !== 'none') {
-            this.drawArrowHead(ctx, object.start, startAngle, headLength, headWidth, lineWidth, startStyle, lineStyle);
+            this.drawArrowHead(ctx, start, startAngle, headLength, headWidth, lineWidth, startStyle, lineStyle);
         }
 
         if (endStyle !== 'none') {
-            this.drawArrowHead(ctx, object.end, endAngle, headLength, headWidth, lineWidth, endStyle, lineStyle);
+            this.drawArrowHead(ctx, end, endAngle, headLength, headWidth, lineWidth, endStyle, lineStyle);
         }
 
         ctx.restore();
@@ -398,17 +418,13 @@ class ArrowTool {
     }
 
     getCircleCenter(p1, p2, p3) {
-        // Find circle center from three points using perpendicular bisectors
+        // Keeps it for backward compatibility or other uses if any
         const ax = p1.x, ay = p1.y;
         const bx = p2.x, by = p2.y;
         const cx = p3.x, cy = p3.y;
 
         const d = 2 * (ax * (by - cy) + bx * (cy - ay) + cx * (ay - by));
-
-        if (Math.abs(d) < 0.0001) {
-            // Points are collinear
-            return null;
-        }
+        if (Math.abs(d) < 0.0001) return null;
 
         const ux = ((ax * ax + ay * ay) * (by - cy) +
             (bx * bx + by * by) * (cy - ay) +

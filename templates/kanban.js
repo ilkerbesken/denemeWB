@@ -18,11 +18,10 @@ const KANBAN_TEMPLATE = {
             borderColor: "#e0e0e0"
         };
 
-        // Verileri tek bir dizide topladık (Hata buradaydı)
         const columns = [
             { title: "Yapılacak", bodyText: "Yapılacaklar" },
             { title: "Devam Eden", bodyText: "Devam Edenler" },
-            { title: "Tamamlandı", bodyText: "Tamamlanmışlar" }
+            { title: "Tamamlandı", bodyText: "Tamamlandı" }
         ];
 
         this.objects = [];
@@ -37,7 +36,7 @@ const KANBAN_TEMPLATE = {
                 width: config.columnWidth, height: config.headerHeight,
                 color: config.headerColor, fillColor: config.headerColor, filled: true,
                 opacity: 1.0, strokeWidth: 2, lineStyle: "solid",
-                locked: true
+                locked: true, persistent: true
             });
 
             // 2. Header Text (Sütun Başlığı)
@@ -48,7 +47,7 @@ const KANBAN_TEMPLATE = {
                 text: col.title, htmlContent: `<div>${col.title}</div>`,
                 fontSize: 18, fontWeight: "bold", color: "#ffffff",
                 alignment: "center", opacity: 1.0,
-                locked: true
+                locked: true, persistent: true
             });
 
             // 3. Column Body (Gri Gövde)
@@ -58,19 +57,18 @@ const KANBAN_TEMPLATE = {
                 width: config.columnWidth, height: config.columnHeight,
                 color: config.borderColor, fillColor: config.bodyColor, filled: true,
                 opacity: 0.6, strokeWidth: 1, lineStyle: "solid",
-                locked: true
+                locked: true, persistent: true
             });
 
             // 4. Column Text (Sütun İçeriği)
-            // col.text yerine yeni tanımladığımız col.bodyText kullanıldı.
             this.objects.push({
                 type: "text",
-                x: currentX, y: config.startY + config.headerHeight,
-                width: config.columnWidth, height: config.columnHeight,
+                x: currentX, y: config.startY + config.headerHeight + 20,
+                width: config.columnWidth, height: 30,
                 text: col.bodyText, htmlContent: `<div>${col.bodyText}</div>`,
-                fontSize: 14, fontWeight: "normal", color: "#000000",
+                fontSize: 14, fontWeight: "normal", color: "#7f8c8d",
                 alignment: "center", opacity: 1.0,
-                locked: true
+                locked: true, persistent: true
             });
         });
     }

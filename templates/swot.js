@@ -9,28 +9,33 @@ const SWOT_TEMPLATE = {
     generate: function () {
         const config = {
             startX: 100,
-            startY: 100,
-            size: 250,
-            gap: 20,
-            titleOffset: 30
+            startY: 120,
+            size: 300,
+            gap: 15,
+            titleOffset: 25
         };
 
         const quadrants = [
-            { label: "Güçlü Yönler", color: "#4caf50", row: 0, col: 0 },
-            { label: "Zayıf Yönler", color: "#f44336", row: 0, col: 1 },
-            { label: "Fırsatlar", color: "#2196f3", row: 1, col: 0 },
-            { label: "Tehditler", color: "#ff9800", row: 1, col: 1 }
+            { label: "GÜÇLÜ YÖNLER (Strengths)", color: "#2ecc71", row: 0, col: 0 },
+            { label: "ZAYIF YÖNLER (Weaknesses)", color: "#e74c3c", row: 0, col: 1 },
+            { label: "FIRSATLAR (Opportunities)", color: "#3498db", row: 1, col: 0 },
+            { label: "TEHDİTLER (Threats)", color: "#f39c12", row: 1, col: 1 }
         ];
 
+        this.objects = [];
+
         // 1. Ana Başlığı Ekle
-        this.objects = [{
+        this.objects.push({
             type: "text",
-            x: config.startX + config.size + (config.gap / 2),
-            y: 60,
-            text: "SWOT Analizi",
-            fontSize: 24, fontWeight: "bold", color: "#2d3436", textAlign: "center",
-            locked: true
-        }];
+            x: config.startX,
+            y: 50,
+            width: config.size * 2 + config.gap,
+            height: 50,
+            text: "SWOT ANALİZİ",
+            htmlContent: "<div>SWOT ANALİZİ</div>",
+            fontSize: 32, fontWeight: "bold", color: "#2c3e50", alignment: "center",
+            locked: true, persistent: true
+        });
 
         // 2. Çeyrekleri Döngü ile Oluştur
         quadrants.forEach(q => {
@@ -42,18 +47,30 @@ const SWOT_TEMPLATE = {
                 type: "rectangle",
                 x: posX, y: posY, width: config.size, height: config.size,
                 color: q.color, fillColor: q.color, filled: true,
-                opacity: 0.2, strokeWidth: 2, lineStyle: "solid",
-                locked: true
+                opacity: 0.1, strokeWidth: 2, lineStyle: "solid",
+                locked: true, persistent: true
+            });
+
+            // Üst kenar çizgisi (daha belirgin olması için)
+            this.objects.push({
+                type: "rectangle",
+                x: posX, y: posY, width: config.size, height: 40,
+                color: q.color, fillColor: q.color, filled: true,
+                opacity: 0.8, strokeWidth: 0,
+                locked: true, persistent: true
             });
 
             // Bölüm başlığı
             this.objects.push({
                 type: "text",
-                x: posX + (config.size / 2), // Yatayda kutunun ortası
-                y: posY + config.titleOffset,
+                x: posX,
+                y: posY,
+                width: config.size,
+                height: 40,
                 text: q.label,
-                fontSize: 16, fontWeight: "bold", color: q.color, textAlign: "center",
-                locked: true
+                htmlContent: `<div>${q.label}</div>`,
+                fontSize: 14, fontWeight: "bold", color: "#ffffff", alignment: "center",
+                locked: true, persistent: true
             });
         });
     }

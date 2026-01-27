@@ -974,7 +974,7 @@ class Dashboard {
         }
     }
 
-    loadBoard(id) {
+    async loadBoard(id) {
         const board = this.boards.find(b => b.id === id);
         if (!board) return;
 
@@ -989,11 +989,11 @@ class Dashboard {
 
         // Use TabManager to open this board as a tab
         if (this.app.tabManager) {
-            this.app.tabManager.openBoard(id, board.name);
+            await this.app.tabManager.openBoard(id, board.name);
         } else {
             // Fallback to old behavior if TabManager not available
             this.currentBoardId = id;
-            this.loadBoardContent(id);
+            await this.loadBoardContent(id);
         }
 
         // Fit to width by default as requested
@@ -1842,7 +1842,7 @@ class Dashboard {
     }
 
 
-    applyTemplateAndCreateBoard(templateId) {
+    async applyTemplateAndCreateBoard(templateId) {
         // Create a new board first
         const id = 'b_' + Date.now();
         const template = this.app.templateManager.templates.find(t => t.id === templateId);
@@ -1866,15 +1866,13 @@ class Dashboard {
         // Close template gallery
         this.closeTemplateGallery();
 
-        // Load the board
-        this.loadBoard(id);
+        // Load the board (now async)
+        await this.loadBoard(id);
 
-        // Apply template after a short delay to ensure board is loaded
-        setTimeout(() => {
-            if (this.app.templateManager) {
-                this.app.templateManager.applyTemplate(templateId);
-            }
-        }, 100);
+        // Apply template immediately after board is loaded
+        if (this.app.templateManager) {
+            this.app.templateManager.applyTemplate(templateId);
+        }
     }
     setupBulkActions() {
         this.bulkToolbar = document.getElementById('bulkActionsToolbar');

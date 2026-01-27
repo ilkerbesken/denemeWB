@@ -177,9 +177,8 @@ class EraserTool {
             case 'heart':
             case 'cloud': {
                 // For modern shapes, we use a hybrid approach:
-                // 1. Check if either eraser point is inside the shape
-                if (app.tools.shape && app.tools.shape.isPointInside) {
-                    if (app.tools.shape.isPointInside(obj, p1) || app.tools.shape.isPointInside(obj, p2)) {
+                if (state.shapeTool && state.shapeTool.isPointInside) {
+                    if (state.shapeTool.isPointInside(obj, p1) || state.shapeTool.isPointInside(obj, p2)) {
                         return true;
                     }
                 }
@@ -191,7 +190,7 @@ class EraserTool {
                     { x: obj.x + obj.width, y: obj.y },
                     { x: obj.x + obj.width, y: obj.y + obj.height },
                     { x: obj.x, y: obj.y + obj.height }
-                ] : (app.tools.shape ? app.tools.shape.getVertices(obj) : []);
+                ] : (state.shapeTool ? state.shapeTool.getVertices(obj) : []);
 
                 // Apply rotation to vertices if shape is rotated
                 if (obj.rotation && vertices.length > 0) {
