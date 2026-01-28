@@ -3,6 +3,7 @@ const ISOMETRIC_GRID_TEMPLATE = {
     name: "İzometrik Grid",
     category: "Tasarım",
     description: "3B çizimler için izometrik ızgara şablonu.",
+    thumbnail: "assets/templates/isometric-grid.png",
     objects: [],
     generate: function () {
         const width = 794;

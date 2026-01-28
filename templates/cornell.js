@@ -3,6 +3,7 @@ const CORNELL_TEMPLATE = {
     name: "Cornell Not Sistemi",
     category: "Eğitim",
     description: "Etkili not alma tekniği için Cornell düzeni.",
+    thumbnail: "assets/templates/cornell.png",
     objects: [
         // Dış Çerçeve
         { type: "rectangle", x: 40, y: 40, width: 714, height: 1043, color: "#333333", filled: false, strokeWidth: 2, locked: true, persistent: true },

@@ -3,6 +3,7 @@ const MEETING_NOTES_TEMPLATE = {
     name: "Toplantı Notları",
     category: "İş Planlama",
     description: "Profesyonel toplantı kayıtları için düzeltilmiş şablon.",
+    thumbnail: "assets/templates/meeting-notes.png",
     objects: [
         { type: "text", x: 60, y: 50, text: "TOPLANTI NOTLARI", fontSize: 28, fontWeight: "bold", color: "#2c3e50", locked: true, persistent: true },
         { type: "line", x1: 60, y1: 90, x2: 734, y2: 90, color: "#2c3e50", strokeWidth: 3, locked: true, persistent: true },

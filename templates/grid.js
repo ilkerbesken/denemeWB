@@ -3,6 +3,7 @@ const GRID_TEMPLATE = {
     name: "Kareli (Grid/Graph)",
     category: "Temel Şablonlar",
     description: "Matematik ve grafik çalışmaları için kareli şablon.",
+    thumbnail: "assets/templates/grid.png",
     objects: [],
     generate: function () {
         this.objects = [];

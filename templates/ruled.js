@@ -3,6 +3,7 @@ const RULED_TEMPLATE = {
     name: "Çizgili (Ruled/Lined)",
     category: "Temel Şablonlar",
     description: "Yazı yazmak için yatay çizgili şablon.",
+    thumbnail: "assets/templates/ruled.png",
     objects: [],
     generate: function () {
         this.objects = [];

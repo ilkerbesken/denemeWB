@@ -3,6 +3,7 @@ const STORYBOARD_TEMPLATE = {
     name: "Storyboard",
     category: "Tasarım",
     description: "Video ve animasyon planlama için storyboard şablonu.",
+    thumbnail: "assets/templates/storyboard.png",
     objects: [
         { type: "text", x: 60, y: 50, text: "PROJE: ........................................", fontSize: 20, fontWeight: "bold", color: "#333333", locked: true, persistent: true }
     ],

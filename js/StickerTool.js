@@ -21,7 +21,33 @@ class StickerTool {
     loadStickers() {
         try {
             const saved = localStorage.getItem('whiteboard_stickers');
-            return saved ? JSON.parse(saved) : [];
+            const userStickers = saved ? JSON.parse(saved) : [];
+
+            // Define default stickers
+            this.defaultStickers = [
+                {
+                    id: 'math_set',
+                    name: 'Matematik',
+                    objects: [{ type: 'image', src: 'assets/stickers/math.png', x: 0, y: 0, width: 100, height: 100 }]
+                },
+                {
+                    id: 'physics_set',
+                    name: 'Fizik',
+                    objects: [{ type: 'image', src: 'assets/stickers/physics.png', x: 0, y: 0, width: 100, height: 100 }]
+                },
+                {
+                    id: 'chemistry_set',
+                    name: 'Kimya',
+                    objects: [{ type: 'image', src: 'assets/stickers/chemistry.png', x: 0, y: 0, width: 100, height: 100 }]
+                },
+                {
+                    id: 'biology_set',
+                    name: 'Biyoloji',
+                    objects: [{ type: 'image', src: 'assets/stickers/biology.png', x: 0, y: 0, width: 100, height: 100 }]
+                }
+            ];
+
+            return [...this.defaultStickers, ...userStickers];
         } catch (e) {
             console.error('Error loading stickers:', e);
             return [];
@@ -33,7 +59,9 @@ class StickerTool {
      */
     saveStickers() {
         try {
-            localStorage.setItem('whiteboard_stickers', JSON.stringify(this.stickers));
+            // Only save user stickers (filter out defaults)
+            const userStickers = this.stickers.filter(s => !this.isDefaultSticker(s));
+            localStorage.setItem('whiteboard_stickers', JSON.stringify(userStickers));
         } catch (e) {
             console.error('Error saving stickers:', e);
         }
@@ -138,16 +166,20 @@ class StickerTool {
 
             stickerItem.appendChild(canvas);
 
-            // Delete button
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'sticker-delete-btn';
-            deleteBtn.innerHTML = '×';
-            deleteBtn.title = 'Sil';
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.deleteSticker(index);
-            });
-            stickerItem.appendChild(deleteBtn);
+            stickerItem.appendChild(canvas);
+
+            // Delete button (only for user stickers)
+            if (!this.isDefaultSticker(sticker)) {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'sticker-delete-btn';
+                deleteBtn.innerHTML = '×';
+                deleteBtn.title = 'Sil';
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.deleteSticker(index);
+                });
+                stickerItem.appendChild(deleteBtn);
+            }
 
             // Click to place sticker
             stickerItem.addEventListener('click', () => {
@@ -227,6 +259,19 @@ class StickerTool {
     }
 
     /**
+     * Helper to draw object (delegates to app)
+     */
+    drawObject(ctx, obj) {
+        if (this.app.drawObject) {
+            this.app.drawObject(ctx, obj);
+        }
+    }
+
+    isDefaultSticker(sticker) {
+        return this.defaultStickers.some(s => s.id === sticker.id);
+    }
+
+    /**
      * Calculate bounds of objects
      */
     calculateBounds(objects) {
@@ -290,7 +335,7 @@ class StickerTool {
                 }
             });
         } else if (obj.x !== undefined && obj.y !== undefined) {
-            // Shapes
+            // Shapes & Images
             minX = obj.x;
             minY = obj.y;
             maxX = obj.x + (obj.width || 0);

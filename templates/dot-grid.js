@@ -3,6 +3,7 @@ const DOT_GRID_TEMPLATE = {
     name: "Noktalı (Dot Grid)",
     category: "Temel Şablonlar",
     description: "Noktalı defter düzeninde şablon.",
+    thumbnail: "assets/templates/dot-grid.png",
     objects: [],
     generate: function () {
         this.objects = [];

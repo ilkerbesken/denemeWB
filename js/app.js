@@ -60,7 +60,8 @@ class WhiteboardApp {
             select: new SelectTool(),
             sticker: null,
             text: new TextTool(() => { this.needsRedrawOffscreen = true; this.needsRender = true; }),
-            table: new TableTool()
+            table: new TableTool(),
+            image: new ImageTool(this)
         };
 
         // Initialize sticker tool after this is available

@@ -389,11 +389,40 @@ class TextTool {
         const blockSelector = toolbar.querySelector('#blockTypeSelector');
         const blockDropdown = toolbar.querySelector('#blockTypeDropdown');
         const currentBlockTypeLabel = toolbar.querySelector('#currentBlockType');
+        const toolbarContainer = toolbar.querySelector('.text-toolbar-container');
 
         if (blockSelector && blockDropdown) {
+            // Function to position dropdown dynamically
+            const positionDropdown = () => {
+                const rect = blockSelector.getBoundingClientRect();
+                const isMobile = window.innerWidth <= 480;
+
+                blockDropdown.style.position = 'fixed';
+                blockDropdown.style.left = `${rect.left}px`;
+
+                if (isMobile) {
+                    // On mobile, open upward
+                    blockDropdown.style.bottom = `${window.innerHeight - rect.top}px`;
+                    blockDropdown.style.top = 'auto';
+                } else {
+                    // On desktop, open downward
+                    blockDropdown.style.top = `${rect.bottom + 4}px`;
+                    blockDropdown.style.bottom = 'auto';
+                }
+            };
+
             blockSelector.onclick = (e) => {
                 e.preventDefault(); e.stopPropagation();
-                blockDropdown.classList.toggle('visible');
+
+                const isVisible = blockDropdown.classList.contains('visible');
+
+                if (!isVisible) {
+                    // Position before showing
+                    positionDropdown();
+                    blockDropdown.classList.add('visible');
+                } else {
+                    blockDropdown.classList.remove('visible');
+                }
             };
 
             const blockOptions = blockDropdown.querySelectorAll('.block-type-option');
@@ -407,6 +436,28 @@ class TextTool {
                     editor.focus();
                 };
             });
+
+            // Close dropdown when scrolling the toolbar
+            if (toolbarContainer) {
+                const closeOnScroll = () => {
+                    if (blockDropdown.classList.contains('visible')) {
+                        blockDropdown.classList.remove('visible');
+                    }
+                };
+                toolbarContainer.addEventListener('scroll', closeOnScroll);
+
+                // Store reference for cleanup
+                toolbar._scrollHandler = closeOnScroll;
+            }
+
+            // Close dropdown on window resize
+            const closeOnResize = () => {
+                if (blockDropdown.classList.contains('visible')) {
+                    blockDropdown.classList.remove('visible');
+                }
+            };
+            window.addEventListener('resize', closeOnResize);
+            toolbar._resizeHandler = closeOnResize;
         }
 
         // Formatting buttons
@@ -604,10 +655,16 @@ class TextTool {
         };
         document.addEventListener('mousedown', closeDropdown);
 
-        // Clean up event listener when toolbar is removed
+        // Clean up event listeners when toolbar is removed
         const originalRemove = toolbar.remove.bind(toolbar);
         toolbar.remove = () => {
             document.removeEventListener('mousedown', closeDropdown);
+            if (toolbar._scrollHandler && toolbarContainer) {
+                toolbarContainer.removeEventListener('scroll', toolbar._scrollHandler);
+            }
+            if (toolbar._resizeHandler) {
+                window.removeEventListener('resize', toolbar._resizeHandler);
+            }
             originalRemove();
         };
     }

@@ -3,6 +3,7 @@ const TODO_LIST_TEMPLATE = {
     name: "Yapılacaklar Listesi (To-Do List)",
     category: "İş Planlama",
     description: "Günlük işleri takip etmek için yapılacaklar listesi.",
+    thumbnail: "assets/templates/to-do-list.png",
     objects: [
         { type: "text", x: 60, y: 60, text: "YAPILACAKLAR LİSTESİ", fontSize: 32, fontWeight: "bold", color: "#333333", locked: true, persistent: true },
         { type: "line", x1: 60, y1: 110, x2: 734, y2: 110, color: "#333333", strokeWidth: 3, locked: true, persistent: true }

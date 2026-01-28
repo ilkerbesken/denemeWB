@@ -61,7 +61,7 @@ class SelectTool {
                 // Orijinal bounds'u (döndürülmemiş) kullanmak için
                 // getBoundingBox döndürülmüş AABB veriyor.
                 // Bize resize için "unrotated" bounds lazım.
-                const allShapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'text'];
+                const allShapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'text', 'image'];
                 let unrotatedBounds = bounds;
                 if (allShapes.includes(selectedObj.type) && (selectedObj.rotation || selectedObj.angle)) {
                     if (selectedObj.x !== undefined) {
@@ -537,7 +537,7 @@ class SelectTool {
 
         let objPoints = [];
         let isClosedShape = false;
-        const shapeTypes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'tape', 'sticker'];
+        const shapeTypes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'tape', 'sticker', 'image'];
 
         if (shapeTypes.includes(obj.type)) {
             objPoints = this.getRotatedCorners(obj);
@@ -795,6 +795,7 @@ class SelectTool {
             case 'heart':
             case 'cloud':
             case 'sticker':
+            case 'image':
             case 'tape':
             case 'table':
                 // Support both start/end (OLD) and x/y (NEW) formats
@@ -882,7 +883,7 @@ class SelectTool {
             minY = obj.y;
             maxX = obj.x + obj.width;
             maxY = obj.y + obj.height;
-        } else if (['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'text', 'sticker', 'tape'].includes(obj.type)) {
+        } else if (['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'text', 'sticker', 'tape', 'image'].includes(obj.type)) {
             const rotation = obj.rotation !== undefined ? obj.rotation : (obj.angle || 0);
             if (rotation !== 0 && obj.type !== 'tape') {
                 const corners = this.getRotatedCorners(obj);
@@ -1006,6 +1007,7 @@ class SelectTool {
 
             case 'text':
             case 'sticker':
+            case 'image':
                 // Only consider bounding box for sticker and text
                 if (obj.x !== undefined && obj.width !== undefined) {
                     if (point.x >= obj.x - threshold && point.x <= obj.x + obj.width + threshold &&
@@ -2263,8 +2265,9 @@ class SelectTool {
             case 'oval':
             case 'heart':
             case 'cloud':
+            case 'image':
                 // Use standard content bounds (un-padded)
-                const shapes = ['text', 'rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
+                const shapes = ['text', 'rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'image'];
                 const sw = obj.strokeWidth || (shapes.includes(obj.type) ? 0 : (obj.width || 0));
                 const padS = sw / 2;
                 const cMinX = minX + padS;
@@ -2420,7 +2423,7 @@ class SelectTool {
         // Açı farkı (radyan)
         const deltaAngle = currentAngle - startAngle;
 
-        const allShapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
+        const allShapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'image', 'sticker'];
 
         if (allShapes.includes(obj.type)) {
             // Primitive şekiller için açı özelliğini güncelle

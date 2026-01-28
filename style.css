@@ -1939,6 +1939,17 @@ input[type="range"] {
         opacity: 0.7;
     }
 
+    .mobile-action-btn.active {
+        background: #1971c2;
+        border-color: #1971c2;
+        color: white;
+    }
+
+    .mobile-action-btn.active img {
+        opacity: 1;
+        filter: brightness(0) invert(1);
+    }
+
     .mobile-action-btn.primary {
         background: #1971c2;
         color: white;
@@ -2195,12 +2206,64 @@ input[type="range"] {
         border-bottom: none !important;
         box-shadow: none !important;
         pointer-events: none;
-        /* Allow drawing through empty space */
+        display: flex;
+        width: 100%;
+        overflow: hidden;
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+        flex: 1;
+        min-width: 0 !important;
+        /* Allow shrinking below content size */
+        flex-basis: auto !important;
+    }
+
+    .toolbar-left {
+        display: flex;
+        justify-content: flex-start;
+        max-width: 65%;
+        /* Prevent left side from pushing right side off-screen */
+    }
+
+    .toolbar-right {
+        display: flex;
+        justify-content: flex-end;
+        max-width: 35%;
     }
 
     .toolbar>* {
         pointer-events: auto;
-        /* Buttons still need to be clickable */
+    }
+
+    /* Ensure the app menu button is consistent */
+    #btnAppMenu {
+        min-width: 32px !important;
+        width: 32px !important;
+        height: 32px !important;
+        padding: 0 !important;
+        justify-content: center;
+        background: white;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Hide some less critical buttons on very narrow screens if needed */
+    @media (max-width: 360px) {
+
+        #undoBtn,
+        #redoBtn {
+            display: none !important;
+        }
+
+        .toolbar-left {
+            max-width: 55%;
+        }
+
+        .toolbar-right {
+            max-width: 45%;
+        }
     }
 
     /* Move center tools to bottom (above status bar) */
@@ -2254,7 +2317,8 @@ input[type="range"] {
         border-radius: 14px;
         box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
         padding: 0 8px !important;
-        z-index: 1100;
+        z-index: 2600 !important;
+        /* Higher than toolbar-center (2500) so it appears above */
         justify-content: flex-start;
         display: none;
         transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -3175,6 +3239,17 @@ input[type="range"] {
 
 .btn-icon:hover img {
     opacity: 1;
+}
+
+.btn-icon.active {
+    background: #1971c2;
+    border-color: #1971c2;
+    color: white;
+}
+
+.btn-icon.active img {
+    opacity: 1;
+    filter: brightness(0) invert(1);
 }
 
 .btn-large {
@@ -4458,6 +4533,98 @@ input[type="range"] {
     }
 }
 
+/* --- Confirmation Dialogs & Folder Picker --- */
+.confirm-dialog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 11000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.confirm-dialog {
+    background: white;
+    padding: 24px;
+    border-radius: 20px;
+    width: 320px;
+    max-width: 90%;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transform: translateY(20px);
+    animation: slideUpCenter 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes slideUpCenter {
+    to {
+        transform: translateY(0);
+    }
+}
+
+.confirm-dialog h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a1a1a;
+}
+
+.confirm-dialog p {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+    line-height: 1.5;
+}
+
+.confirm-dialog-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.confirm-dialog-actions button {
+    flex: 1;
+    height: 40px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.confirm-dialog-actions .btn-cancel {
+    background: #f1f3f5;
+    color: #495057;
+}
+
+.confirm-dialog-actions .btn-cancel:hover {
+    background: #e9ecef;
+}
+
+.confirm-dialog-actions .btn-danger {
+    background: #fa5252;
+    color: white;
+}
+
+.confirm-dialog-actions .btn-danger:hover {
+    background: #f03e3e;
+}
+
+/* Folder Picker Specific */
+.folder-picker-item:last-child {
+    border-bottom: none !important;
+}
+
+
 /* --- Bulk Selection & Actions --- */
 .board-selection {
     position: absolute;
@@ -5405,6 +5572,7 @@ input[type="range"] {
     position: fixed;
     z-index: 9999;
     display: none;
+    overflow: visible;
 }
 
 .text-toolbar-wrapper.visible {
@@ -5424,8 +5592,23 @@ input[type="range"] {
     font-family: 'Segoe UI', Arial, sans-serif;
     font-size: 13px;
     white-space: nowrap;
-    overflow: visible;
+    overflow-x: auto;
+    /* Dropdown is now position: fixed, so no need for overflow-y: visible */
     max-width: 800px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.text-toolbar-container::-webkit-scrollbar {
+    height: 4px;
+}
+
+.text-toolbar-container::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+}
+
+.text-toolbar-container::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 /* Editor wrapper */
@@ -5466,16 +5649,15 @@ input[type="range"] {
 
 .block-type-dropdown {
     display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
+    position: fixed;
+    /* Position will be set dynamically by JavaScript */
     background: white;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     padding: 8px 0;
     min-width: 180px;
-    z-index: 10000;
-    margin-top: 4px;
+    z-index: 99999;
+    /* Very high z-index to appear above everything */
 }
 
 .block-type-dropdown.visible {

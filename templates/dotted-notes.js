@@ -3,6 +3,7 @@ const DOTTED_NOTES_TEMPLATE = {
     name: "Noktalı Notlar (Dotted Notes)",
     category: "Temel Şablonlar",
     description: "Not almak için başlık alanı ve noktalı ızgara içeren şablon.",
+    thumbnail: "assets/templates/dotted-notes.png",
     objects: [],
     generate: function () {
         this.objects = [];

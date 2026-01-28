@@ -3,6 +3,7 @@ const CALENDAR_TEMPLATE = {
     name: "Takvim Görünümü",
     category: "İş Planlama",
     description: "Aylık planlama için takvim ızgarası.",
+    thumbnail: "assets/templates/calendar.png",
     objects: [
         { type: "text", x: 300, y: 60, text: "AY / YIL: ....................", fontSize: 24, fontWeight: "bold", color: "#333333", locked: true, persistent: true }
     ],

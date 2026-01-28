@@ -13,6 +13,8 @@ class Dashboard {
         this.searchClearBtn = document.getElementById('searchClear');
         this.mobileSearchClearBtn = document.getElementById('mobileSearchClear');
         this.btnEmptyTrash = document.getElementById('btnEmptyTrash');
+        this.btnSelectAll = document.getElementById('btnSelectAll');
+        this.btnSelectAllMobile = document.getElementById('btnSelectAllMobile');
         this.loader = document.getElementById('dashboardLoader');
 
 
@@ -113,6 +115,7 @@ class Dashboard {
             this.setupViewOptions();
             this.setupSearch();
             this.setupCoverModal();
+            this.setupSelectAll();
 
             this.applyViewSettings();
 
@@ -146,6 +149,17 @@ class Dashboard {
                         this.clearSelection();
                     } else if (this.searchTerm) {
                         this.clearSearch();
+                    }
+                }
+
+                // Ctrl/Cmd + A: Select All (only if dashboard is visible)
+                if ((e.ctrlKey || e.metaKey) && e.key === 'a' && this.container.style.display !== 'none') {
+                    const activeElement = document.activeElement;
+                    const isInput = activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.contentEditable === 'true';
+
+                    if (!isInput) {
+                        e.preventDefault();
+                        this.toggleSelectAll();
                     }
                 }
             });
@@ -581,6 +595,8 @@ class Dashboard {
         if (this.searchTerm) {
             filtered = filtered.filter(b => b.name.toLowerCase().includes(this.searchTerm));
         }
+
+        this.updateSelectAllButtonState(filtered);
 
 
         if (filtered.length === 0 && this.currentView === 'trash') {
@@ -1901,7 +1917,12 @@ class Dashboard {
         document.getElementById('btnBulkMove')?.addEventListener('click', (e) => {
             e.stopPropagation();
             this.showFolderPicker((folderId) => {
-                this.selectedBoards.forEach(id => this.moveBoardToFolder(id, folderId));
+                const folderIdFinal = folderId === "" ? null : folderId;
+                this.selectedBoards.forEach(id => {
+                    const board = this.boards.find(b => b.id === id);
+                    if (board) board.folderId = folderIdFinal;
+                });
+                this.saveData('wb_boards', this.boards);
                 this.clearSelection();
             });
         });
@@ -1942,8 +1963,12 @@ class Dashboard {
     }
 
     showFolderPicker(callback) {
+        // Ensure folders are up to date
+        this.folders = this.loadData('wb_folders', []);
+
         const overlay = document.createElement('div');
         overlay.className = 'confirm-dialog-overlay';
+        overlay.style.zIndex = '10001'; // Ensure it's above dashboard (9000)
 
         const modal = document.createElement('div');
         modal.className = 'confirm-dialog';
@@ -1960,7 +1985,7 @@ class Dashboard {
         `;
 
         const renderOptions = (parentId = null, level = 0) => {
-            const children = this.folders.filter(f => f.parentId === parentId);
+            const children = this.folders.filter(f => (f.parentId || null) === parentId);
             children.forEach(f => {
                 const paddingLeft = 16 + (level * 24);
                 html += `
@@ -2005,5 +2030,103 @@ class Dashboard {
         overlay.onclick = (e) => {
             if (e.target === overlay) overlay.remove();
         };
+    }
+
+    setupSelectAll() {
+        if (this.btnSelectAll) {
+            this.btnSelectAll.onclick = () => this.toggleSelectAll();
+        }
+        if (this.btnSelectAllMobile) {
+            this.btnSelectAllMobile.onclick = () => this.toggleSelectAll();
+        }
+    }
+
+    getFilteredBoards() {
+        // Refresh data to ensure we have latest states
+        const loadedBoards = this.loadData('wb_boards', []);
+        this.boards = Array.isArray(loadedBoards) ? loadedBoards : [];
+
+        let filtered = [];
+
+        if (this.currentView === 'trash') {
+            filtered = this.boards.filter(b => b.deleted);
+        } else {
+            // Base filter: non-deleted
+            let base = this.boards.filter(b => !b.deleted);
+
+            if (this.currentView === 'all') {
+                filtered = base;
+            } else if (this.currentView === 'recent') {
+                filtered = [...base].sort((a, b) => b.lastModified - a.lastModified);
+            } else if (this.currentView === 'favorites') {
+                filtered = base.filter(b => b.favorite);
+            } else if (this.currentView.startsWith('f_')) {
+                filtered = base.filter(b => b.folderId === this.currentView);
+            } else {
+                filtered = base;
+            }
+        }
+
+        // Apply Search Filter
+        if (this.searchTerm) {
+            filtered = filtered.filter(b => b.name.toLowerCase().includes(this.searchTerm));
+        }
+
+        return filtered;
+    }
+
+    toggleSelectAll() {
+        const filtered = this.getFilteredBoards();
+        if (filtered.length === 0) return;
+
+        const allSelected = filtered.every(b => this.selectedBoards.has(b.id));
+
+        if (allSelected) {
+            this.clearSelection();
+        } else {
+            this.selectAll(filtered);
+        }
+    }
+
+    selectAll(boardsToSelect) {
+        boardsToSelect.forEach(b => this.selectedBoards.add(b.id));
+        this.renderBoards();
+        this.updateBulkToolbar();
+    }
+
+    updateSelectAllButtonState(filteredBoards) {
+        const desktopBtn = this.btnSelectAll;
+        const mobileBtn = this.btnSelectAllMobile;
+        if (!desktopBtn && !mobileBtn) return;
+
+        const filtered = filteredBoards || this.getFilteredBoards();
+        const noItems = filtered.length === 0;
+
+        [desktopBtn, mobileBtn].forEach(btn => {
+            if (!btn) return;
+            if (noItems) {
+                btn.style.opacity = '0.3';
+                btn.style.pointerEvents = 'none';
+                btn.title = "Seçilecek not yok";
+            } else {
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+            }
+        });
+
+        if (noItems) return;
+
+        const allSelected = filtered.every(b => this.selectedBoards.has(b.id));
+
+        [desktopBtn, mobileBtn].forEach(btn => {
+            if (!btn) return;
+            if (allSelected) {
+                btn.classList.add('active');
+                btn.title = "Seçimi Temizle (Ctrl+A)";
+            } else {
+                btn.classList.remove('active');
+                btn.title = "Tümünü Seç (Ctrl+A)";
+            }
+        });
     }
 }
