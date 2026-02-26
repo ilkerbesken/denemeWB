@@ -1244,11 +1244,21 @@ class WhiteboardApp {
                 this.state.currentTool === 'hand');
 
         if (isActiveDrawing) {
-            // Also drain coalesced events for high-frequency input (120Hz stylus)
+            // Also drain coalesced events for high-frequency input (120Hz stylus).
+            // Linux/Chromium bug: getCoalescedEvents() often returns pressure=0.
+            // Fix: if a coalesced event has no valid pressure, inherit it from the main event.
+            const mainPressure = e.pressure;
             if (e.getCoalescedEvents) {
                 const coalesced = e.getCoalescedEvents();
                 if (coalesced && coalesced.length > 0) {
-                    coalesced.forEach(ce => this.processPointerMove(this.simplifyEvent(ce)));
+                    coalesced.forEach(ce => {
+                        const simplified = this.simplifyEvent(ce);
+                        // Inherit pressure from main event if coalesced reports 0 or missing
+                        if (!simplified.pressure && mainPressure) {
+                            simplified.pressure = mainPressure;
+                        }
+                        this.processPointerMove(simplified);
+                    });
                 } else {
                     this.processPointerMove(this.simplifyEvent(e));
                 }
