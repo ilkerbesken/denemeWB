@@ -251,7 +251,7 @@ class Dashboard {
                         <div class="folder-menu-trigger">⋮</div>
                         <div class="folder-dropdown" style="width: 130px;">
                             <div class="dropdown-item" data-action="rename">
-                                <img src="assets/icons/rename.svg" style="width: 10px; opacity: 0.6;">
+                                <img src="assets/icons/text-cursor.svg" style="width: 12px; opacity: 0.6;">
                                 İsmi Değiştir
                             </div>
                             <div class="dropdown-item" data-action="delete" style="color: #fa5252;">
@@ -369,7 +369,7 @@ class Dashboard {
                     </div>
                     ` : ''}
                     <div class="dropdown-item" data-action="rename">
-                        <img src="assets/icons/rename.svg" style="width: 10px; opacity: 0.6;">
+                        <img src="assets/icons/text-cursor.svg" style="width: 12px; opacity: 0.6;">
                         İsmi Değiştir
                     </div>
                     <div class="dropdown-item" data-action="delete" style="color: #fa5252;">
@@ -495,7 +495,7 @@ class Dashboard {
                             <div class="folder-menu-trigger">⋮</div>
                             <div class="folder-dropdown" style="width: 130px;">
                                 <div class="dropdown-item" data-action="rename">
-                                    <img src="assets/icons/rename.svg" style="width: 10px; opacity: 0.6;">
+                                    <img src="assets/icons/text-cursor.svg" style="width: 10px; opacity: 0.6;">
                                     İsmi Değiştir
                                 </div>
                                 <div class="dropdown-item" data-action="delete" style="color: #fa5252;">

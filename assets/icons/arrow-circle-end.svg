@@ -51,7 +51,7 @@
     </style></defs><g
      transform="translate(3.9051069,-2.7594127)"
      id="g1170"
-     style="stroke:#262626;stroke-opacity:1"><path
+     style="stroke:#262626;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"><path
        id="path21326"
-       style="color:#000000;fill:#262626;stroke:#262626;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1;-inkscape-stroke:none"
+       style="color:#000000;fill:#262626;stroke:#262626;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
        d="M 13.960127,3.2601319 C 11.951544,3.286783 9.961105,4.0500396 8.3175494,5.5198975 6.9336988,6.7574971 6.1544229,8.530735 5.9503619,10.387085 h -8.3554688 a 1,1 0 0 0 -1,1 1,1 0 0 0 1,1 h 8.3554688 c 0.208871,1.891538 1.0060617,3.701869 2.3671875,4.951172 3.1752886,2.914424 7.8506346,2.853722 11.3906246,-0.101563 3.539991,-2.955285 3.426946,-8.8685885 0,-11.818359 C 17.994702,3.9434498 15.968711,3.2334808 13.960127,3.2601319 Z" /></g></svg>

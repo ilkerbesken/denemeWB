@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
-   width="6.3499999mm"
-   height="1.0583334mm"
-   viewBox="0 0 24 4.0000003"
+   width="5.4239583mm"
+   height="0.26458335mm"
+   viewBox="0 0 20.5 1.0000001"
    version="1.1"
    id="svg1172"
    xml:space="preserve"
@@ -48,10 +48,50 @@
         font-size: 10px;
         text-anchor: middle;
       }
+    </style><style
+       id="style818-2">
+      .icon-stroke {
+        fill: none;
+        stroke: #262626;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .icon-fill {
+        fill: #262626;
+        stroke: none;
+      }
+      .label {
+        fill: #999;
+        stroke: none;
+        font-family: Arial, sans-serif;
+        font-size: 10px;
+        text-anchor: middle;
+      }
+    </style><style
+       id="style818-7-9">
+      .icon-stroke {
+        fill: none;
+        stroke: #262626;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .icon-fill {
+        fill: #262626;
+        stroke: none;
+      }
+      .label {
+        fill: #999;
+        stroke: none;
+        font-family: Arial, sans-serif;
+        font-size: 10px;
+        text-anchor: middle;
+      }
     </style></defs><g
-     transform="translate(0,-10)"
+     transform="translate(-1.5,-11.5)"
      id="g1140"
-     style="stroke:#262626;stroke-opacity:1"><line
+     style="stroke:#262626;stroke-width:1;stroke-dasharray:2, 3, 0.5, 3;stroke-dashoffset:0;stroke-opacity:1"><line
        class="icon-stroke"
        x1="2"
        y1="12"
@@ -59,4 +99,4 @@
        y2="12"
        stroke-dasharray="6 2 1 2"
        id="line1136"
-       style="stroke:#262626;stroke-width:4;stroke-dasharray:16, 8, 4, 8;stroke-dashoffset:5.2;stroke-opacity:1" /></g></svg>
+       style="stroke:#262626;stroke-width:1;stroke-dasharray:2, 3, 0.5, 3;stroke-dashoffset:0;stroke-opacity:1" /></g></svg>

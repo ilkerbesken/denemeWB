@@ -1,4 +1,19 @@
 class WhiteboardApp {
+    deactivatePdfTextSelection() {
+        this.state.pdfTextSelectionActive = false;
+        if (this.pdfManager && this.pdfManager.textSelector) {
+            this.pdfManager.textSelector.isActive = false;
+            if (this.pdfManager.textSelector.layerContainer) {
+                this.pdfManager.textSelector.textLayers.forEach(div => {
+                    div.classList.remove('active');
+                });
+            }
+        }
+        const btnTextSelect = document.getElementById('btnTextSelect');
+        if (btnTextSelect) btnTextSelect.classList.remove('active');
+        this.propertiesSidebar.hide();
+    }
+
     constructor() {
         this.canvas = document.getElementById('canvas');
         this.ctx = this.canvas.getContext('2d', { desynchronized: true }); // Performance tip for drawing
@@ -32,7 +47,9 @@ class WhiteboardApp {
             objects: [],
             tableRows: 3,
             tableCols: 3,
-            shapeTool: shapeTool // EraserTool access
+            shapeTool: shapeTool, // EraserTool access
+            pdfTextSelectionActive: false,
+            pdfHighlightColor: '#ffff00'
         };
 
         this.zoomManager = new ZoomManager(this);
@@ -61,7 +78,8 @@ class WhiteboardApp {
             sticker: null,
             text: new TextTool(() => { this.needsRedrawOffscreen = true; this.needsRender = true; }),
             table: new TableTool(),
-            image: new ImageTool(this)
+            image: new ImageTool(this),
+            verticalSpace: new VerticalSpaceTool(() => { this.needsRender = true; })
         };
 
         // Initialize sticker tool after this is available
@@ -140,7 +158,7 @@ class WhiteboardApp {
     }
 
     isDrawingTool(toolName) {
-        const drawingTools = ['pen', 'highlighter', 'eraser', 'line', 'rectangle', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'shape', 'arrow', 'tape', 'text', 'sticker', 'table'];
+        const drawingTools = ['pen', 'highlighter', 'eraser', 'line', 'rectangle', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'shape', 'arrow', 'tape', 'text', 'sticker', 'table', 'verticalSpace'];
         return drawingTools.includes(toolName);
     }
 
@@ -276,15 +294,20 @@ class WhiteboardApp {
     setTool(tool) {
         const prevTool = this.state.currentTool;
 
+        // Deactivate PDF text selection when switching to another tool (except select tool)
+        if (this.state.pdfTextSelectionActive && tool !== 'select') {
+            this.deactivatePdfTextSelection();
+        }
+
+        // Always update tool state (even if tool is same, we need to update button state)
+        this.state.currentTool = tool;
+
         // Handle Mobile UX Toggle for 480px (User wants to toggle settings bar by clicking the active icon)
         if (tool === prevTool && window.innerWidth <= 480) {
             if (this.propertiesSidebar) {
                 this.propertiesSidebar.toggle();
-                return;
             }
         }
-
-        this.state.currentTool = tool;
 
         const shapeTypes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
         const isShape = shapeTypes.includes(tool);
@@ -329,6 +352,8 @@ class WhiteboardApp {
 
         // 1. Reset all active states in main toolbar
         document.querySelectorAll('.toolbar .tool-btn[data-tool], #shapePickerBtn').forEach(btn => {
+            // Don't remove active from PDF text selection button if it's active
+            if (btn.id === 'btnTextSelect' && this.state.pdfTextSelectionActive) return;
             btn.classList.remove('active');
         });
 
@@ -370,6 +395,8 @@ class WhiteboardApp {
             this.canvas.style.cursor = 'text';
         } else if (tool === 'tape') {
             this.canvas.style.cursor = dotCursor;
+        } else if (tool === 'verticalSpace') {
+            this.canvas.style.cursor = 'ns-resize';
         } else {
             this.canvas.style.cursor = dotCursor;
         }
@@ -616,10 +643,16 @@ class WhiteboardApp {
         document.querySelectorAll('.tool-btn[data-tool]:not(#shapePickerBtn)').forEach(btn => {
             btn.onclick = () => {
                 const tool = btn.dataset.tool;
-                if (this.state.currentTool === tool) {
-                    this.propertiesSidebar.toggle();
-                } else {
-                    this.setTool(tool);
+                const toolsWithoutSidebar = ['hand', 'verticalSpace'];
+
+                // If select tool is explicitly clicked while PDF text selection is active, deactivate it
+                if (tool === 'select' && this.state.pdfTextSelectionActive) {
+                    this.deactivatePdfTextSelection();
+                }
+
+                this.setTool(tool);
+                if (toolsWithoutSidebar.includes(tool)) {
+                    this.propertiesSidebar.hide();
                 }
             };
         });
@@ -635,13 +668,30 @@ class WhiteboardApp {
                 if (this.pdfManager && this.pdfManager.textSelector) {
                     const isActive = this.pdfManager.textSelector.toggle();
                     btnTextSelect.classList.toggle('active', isActive);
+                    this.state.pdfTextSelectionActive = isActive;
 
                     if (isActive) {
                         this.setTool('select');
+                        this.propertiesSidebar.show();
+                        this.propertiesSidebar.updateUIForTool('select');
+                    } else {
+                        this.setTool('select');
+                        this.propertiesSidebar.hide();
                     }
                 }
             };
         }
+
+        // PDF Highlight color buttons
+        document.querySelectorAll('#pdfHighlightColors .quick-color-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const color = btn.dataset.highlightColor;
+                this.state.pdfHighlightColor = color;
+                // Update active state
+                document.querySelectorAll('#pdfHighlightColors .quick-color-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
 
         const safeBind = (id, fn) => {
             const el = document.getElementById(id);
@@ -656,6 +706,23 @@ class WhiteboardApp {
                 this.propertiesSidebar.hide();
             }
         });
+
+        const btnHome = document.getElementById('btnHome');
+        if (btnHome) {
+            btnHome.onclick = () => {
+                if (window.dashboard) {
+                    window.dashboard.showDashboard();
+                }
+            };
+        }
+
+        const btnVerticalSpaceTool = document.getElementById('btnVerticalSpaceTool');
+        if (btnVerticalSpaceTool) {
+            btnVerticalSpaceTool.onclick = () => {
+                this.setTool('verticalSpace');
+            };
+        }
+
         safeBind('clearBtn', () => {
             this.saveHistory();
             // persistent: true olan nesneleri tut, diğerlerini sil
@@ -1270,6 +1337,11 @@ class WhiteboardApp {
         const tool = this.tools[this.state.currentTool];
         if (!tool) return;
 
+        if (this.state.currentTool === 'verticalSpace') {
+            this.saveHistory();
+            this.needsRedrawOffscreen = true;
+        }
+
         const completedObject = tool.handlePointerUp(e, worldPos, this.canvas, this.ctx, this.state);
 
         if (completedObject && typeof completedObject === 'object') {
@@ -1756,6 +1828,8 @@ class WhiteboardApp {
             if (currentTool.drawPreview(this.ctx)) {
                 needsNextFrame = true;
             }
+        } else if (this.state.currentTool === 'verticalSpace' && currentTool.isDrawing) {
+            currentTool.draw(this.ctx, this.state);
         }
         this.ctx.restore();
 
@@ -1824,7 +1898,8 @@ class WhiteboardApp {
             select: 'Seç',
             highlighter: 'Vurgulayıcı',
             sticker: 'Sticker',
-            text: 'Metin'
+            text: 'Metin',
+            verticalSpace: 'Dikey Boşluk'
         };
 
         document.getElementById('toolInfo').textContent =

@@ -501,12 +501,30 @@ class PropertiesSidebar {
                 const mode = btn.dataset.selectMode;
                 if (this.app.tools.select) {
                     this.app.tools.select.selectionMode = mode;
-                    // Reset selection logic if needed, but keeping selection is fine.
                 }
                 document.querySelectorAll('.tool-btn[data-select-mode]').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
             });
         });
+
+        // Vertical Space Tool Button in Sidebar
+        const btnVerticalSpaceTool = document.getElementById('btnVerticalSpaceTool');
+        if (btnVerticalSpaceTool) {
+            btnVerticalSpaceTool.addEventListener('click', () => {
+                this.app.setTool('verticalSpace');
+                document.querySelectorAll('.tool-btn[data-select-mode]').forEach(b => b.classList.remove('active'));
+            });
+        }
+
+        // PDF Text Highlight Button
+        const btnHighlightPdfText = document.getElementById('btnHighlightPdfText');
+        if (btnHighlightPdfText) {
+            btnHighlightPdfText.addEventListener('click', () => {
+                if (this.app.pdfManager && this.app.pdfManager.textSelector && this.app.state.pdfTextSelectionActive) {
+                    this.app.pdfManager.textSelector.highlightSelectedText();
+                }
+            });
+        }
 
         // Tape Tool Mode Settings
         document.querySelectorAll('.tool-btn[data-tape-mode]').forEach(btn => {
@@ -970,7 +988,21 @@ class PropertiesSidebar {
 
     updateUIForTool(tool) {
         if (!this.container) return;
+
+        const toolsWithoutSidebar = ['hand', 'verticalSpace'];
+        if (toolsWithoutSidebar.includes(tool)) {
+            this.container.style.display = 'none';
+            return;
+        }
+
         this.container.style.display = 'flex';
+
+        // Show PDF Text Highlight Settings if PDF text selection is active
+        const pdfTextHighlightSettings = document.getElementById('pdfTextHighlightSettings');
+        if (pdfTextHighlightSettings) {
+            const isPdfTextSelectionActive = this.app.state.pdfTextSelectionActive;
+            pdfTextHighlightSettings.style.display = isPdfTextSelectionActive ? 'flex' : 'none';
+        }
 
         // Update Mobile Titles
         const mobileTitle = document.getElementById('mobileBrushTitle');
@@ -1030,11 +1062,21 @@ class PropertiesSidebar {
         // 2. Sync UI Components from Current State (Runs for ALL tools)
 
         // Sync Select Mode Buttons
-        if (this.app.tools.select) {
+        if (tool === 'select' && this.app.tools.select) {
             const currentMode = this.app.tools.select.selectionMode || 'normal';
             document.querySelectorAll('.tool-btn[data-select-mode]').forEach(b => {
                 b.classList.toggle('active', b.dataset.selectMode === currentMode);
             });
+        } else if (tool === 'verticalSpace') {
+            document.querySelectorAll('.tool-btn[data-select-mode]').forEach(b => {
+                b.classList.remove('active');
+            });
+        }
+
+        // Sync Vertical Space Tool Button
+        const btnVerticalSpaceTool = document.getElementById('btnVerticalSpaceTool');
+        if (btnVerticalSpaceTool) {
+            btnVerticalSpaceTool.classList.toggle('active', tool === 'verticalSpace');
         }
 
         // Sync Sliders
@@ -1145,10 +1187,15 @@ class PropertiesSidebar {
         this.renderQuickColors();
         this.renderQuickStrokeWidths();
 
+        // PDF Text Selection mode: hide all other settings (declare early for use below)
+        const isPdfTextMode = this.app.state.pdfTextSelectionActive;
+
         // Toggle visibility of Quick Colors
         const quickColorsGroup = document.getElementById('quickColors');
         if (quickColorsGroup) {
             let showQuickColors = ['pen', 'highlighter', 'rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'line', 'arrow', 'select', 'tape', 'table'].includes(tool);
+            // Hide colors when PDF text selection is active
+            if (isPdfTextMode) showQuickColors = false;
             if (tool === 'select' && !hasSelection) showQuickColors = false;
             quickColorsGroup.style.display = showQuickColors ? 'flex' : 'none';
         }
@@ -1159,22 +1206,30 @@ class PropertiesSidebar {
         const quickStrokeGroup = document.getElementById('quickStrokeWidths');
         if (quickStrokeGroup) {
             let showQuickStrokes = ['pen', 'highlighter', 'rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud', 'line', 'arrow', 'select', 'table'].includes(tool);
+            // Hide stroke widths when PDF text selection is active
+            if (isPdfTextMode) showQuickStrokes = false;
             if (tool === 'select' && !hasSelection) showQuickStrokes = false;
             quickStrokeGroup.style.display = showQuickStrokes ? 'flex' : 'none';
         }
 
         if (selectSettingsGroup) {
-            selectSettingsGroup.style.display = (tool === 'select') ? 'flex' : 'none';
+            // Hide select settings when PDF text selection is active
+            selectSettingsGroup.style.display = (tool === 'select' || tool === 'verticalSpace') && !isPdfTextMode ? 'flex' : 'none';
         }
 
-        // Logic for Select Tool: Hide brush settings if no selection
+        // Logic for Select Tool: Hide brush settings if no selection or in PDF text mode
         let actualShowBrushSettings = showBrushSettings;
-        if (tool === 'select' && this.app.tools.select.selectedObjects.length === 0) {
+        if ((tool === 'select' && this.app.tools.select.selectedObjects.length === 0) || isPdfTextMode) {
             actualShowBrushSettings = false;
         }
 
         if (brushSettingsGroup) {
             brushSettingsGroup.style.display = 'none';
+        }
+
+        // Hide quick colors when PDF text selection is active
+        if (quickColorsGroup && isPdfTextMode) {
+            quickColorsGroup.style.display = 'none';
         }
 
         // Toggle Line Styles visibility inside the popup
@@ -1318,7 +1373,7 @@ class PropertiesSidebar {
             let isFilled = false;
             const shapes = ['rectangle', 'rect', 'ellipse', 'triangle', 'trapezoid', 'star', 'diamond', 'parallelogram', 'oval', 'heart', 'cloud'];
 
-            if (tool === 'select') {
+            if (tool === 'select' && !isPdfTextMode) {
                 const selectTool = this.app.tools.select;
                 if (selectTool.selectedObjects.length === 1) {
                     const objIndex = selectTool.selectedObjects[0];
@@ -1336,7 +1391,7 @@ class PropertiesSidebar {
                         }
                     }
                 }
-            } else if (['pen', ...shapes].includes(tool)) {
+            } else if (['pen', ...shapes].includes(tool) && !isPdfTextMode) {
                 // Show for pen tools and shapes to allow live toggle
                 showFill = true;
                 isFilled = this.app.state.fillEnabled;
@@ -1691,6 +1746,12 @@ class PropertiesSidebar {
             } else {
                 this.container.style.display = 'none';
             }
+        }
+    }
+
+    show() {
+        if (this.container) {
+            this.container.style.display = 'flex';
         }
     }
 }

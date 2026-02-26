@@ -51,7 +51,7 @@
     </style></defs><g
      transform="translate(-3.4997226,-5.4992876)"
      id="g1116"
-     style="stroke:#262626;stroke-opacity:1"><path
+     style="stroke:#262626;stroke-width:1;stroke-dasharray:none;stroke-opacity:1"><path
        id="path23196"
-       style="color:#000000;fill:#262626;stroke:#262626;stroke-linecap:round;stroke-linejoin:round;stroke-opacity:1;-inkscape-stroke:none"
+       style="color:#000000;fill:#262626;stroke:#262626;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
        d="m 9.9997019,5.9992169 -6,6.0000001 6,6 v -5 H 19.999702 a 1,1 0 0 0 1,-1 1,1 0 0 0 -1,-1 H 9.9997019 Z" /></g></svg>

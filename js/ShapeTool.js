@@ -114,6 +114,11 @@ class ShapeTool {
         // Apply global properties
         ctx.globalAlpha = obj.opacity !== undefined ? obj.opacity : 1.0;
 
+        // Apply blend mode for PDF highlights
+        if (obj.blendMode) {
+            ctx.globalCompositeOperation = obj.blendMode;
+        }
+
         // Rainbow support
         let color = obj.color || '#000000';
         let fillColor = obj.fillColor || 'transparent';

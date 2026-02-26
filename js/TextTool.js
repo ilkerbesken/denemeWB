@@ -375,10 +375,7 @@ class TextTool {
 
                 <!-- Clear Formatting -->
                 <button class="text-toolbar-btn" id="clearStylesBtn" title="Stilleri Temizle">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 20H7L3 16C2 15 2 13 3 12L13 2L22 11L20 20Z"></path>
-                        <line x1="6" y1="11" x2="13" y2="18"></line>
-                    </svg>
+                    <img src="assets/icons/clean.svg" alt="clean" class="icon">
                 </button>
             </div>
         `;

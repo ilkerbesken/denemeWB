@@ -212,4 +212,204 @@ class PDFTextSelector {
         }
         this.pdfPage = null;
     }
+
+    /**
+     * Highlight selected PDF text with highlighter tool
+     */
+    highlightSelectedText() {
+        const selection = window.getSelection();
+        if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+            console.log('No text selected');
+            return;
+        }
+
+        const selectedText = selection.toString().trim();
+        if (!selectedText) {
+            console.log('No text');
+            return;
+        }
+
+        console.log('Highlighting:', selectedText);
+
+        // Get the bounding rectangle of the entire selection
+        const range = selection.getRangeAt(0);
+        const rects = range.getClientRects();
+
+        if (!rects || rects.length === 0) {
+            console.log('No bounding rect');
+            return;
+        }
+
+        console.log('Rects count:', rects.length);
+
+        // Get zoom and pan
+        const zoom = this.app.zoomManager ? this.app.zoomManager.zoom : 1;
+        const pan = this.app.zoomManager ? this.app.zoomManager.pan : { x: 0, y: 0 };
+
+        // Get canvas position
+        const canvasRect = this.app.canvas.getBoundingClientRect();
+
+        // Step 1: Convert all rects to page-relative coordinates
+        const convertedRects = [];
+        for (let i = 0; i < rects.length; i++) {
+            const boundingRect = rects[i];
+            
+            if (!boundingRect || boundingRect.width === 0 || boundingRect.height === 0) {
+                continue;
+            }
+
+            const viewportX = boundingRect.left;
+            const viewportY = boundingRect.top;
+
+            const canvasRelX = (viewportX - canvasRect.left - pan.x) / zoom;
+            const canvasRelY = (viewportY - canvasRect.top - pan.y) / zoom;
+
+            let pageIndex = 0;
+            if (this.app.pageManager) {
+                const totalWorldY = (viewportY - canvasRect.top - pan.y) / zoom;
+                pageIndex = this.app.pageManager.getPageIndexAt(totalWorldY);
+            }
+
+            const pageY = this.app.pageManager ? this.app.pageManager.getPageY(pageIndex) : 0;
+            const finalCanvasRelY = canvasRelY - pageY;
+
+            const width = boundingRect.width / zoom;
+            const height = boundingRect.height / zoom;
+
+            if (width > 5 && height > 5) {
+                convertedRects.push({
+                    x: canvasRelX,
+                    y: finalCanvasRelY,
+                    width: width,
+                    height: height,
+                    pageIndex: pageIndex
+                });
+            }
+        }
+
+        // Step 2: Group by page and line, then merge overlapping rects
+        const lineThreshold = 5; // pixels tolerance for same line
+        const mergedHighlights = [];
+
+        // Group by page
+        const byPage = {};
+        for (const rect of convertedRects) {
+            if (!byPage[rect.pageIndex]) byPage[rect.pageIndex] = [];
+            byPage[rect.pageIndex].push(rect);
+        }
+
+        // For each page, group by line and merge
+        for (const pageIndexStr in byPage) {
+            const pageRects = byPage[pageIndexStr];
+            const pageIndex = parseInt(pageIndexStr);
+
+            // Sort by y position
+            pageRects.sort((a, b) => a.y - b.y);
+
+            // Group into lines
+            const lines = [];
+            let currentLine = [pageRects[0]];
+
+            for (let i = 1; i < pageRects.length; i++) {
+                const rect = pageRects[i];
+                const prevRect = currentLine[currentLine.length - 1];
+                
+                if (Math.abs(rect.y - prevRect.y) <= lineThreshold) {
+                    // Same line
+                    currentLine.push(rect);
+                } else {
+                    // New line
+                    lines.push(currentLine);
+                    currentLine = [rect];
+                }
+            }
+            lines.push(currentLine);
+
+            // Merge overlapping rects in each line
+            for (const line of lines) {
+                // Sort by x
+                line.sort((a, b) => a.x - b.x);
+
+                let mergedX = line[0].x;
+                let mergedY = line[0].y;
+                let mergedWidth = line[0].width;
+                let mergedHeight = line[0].height;
+
+                for (let i = 1; i < line.length; i++) {
+                    const rect = line[i];
+                    const rightmost = mergedX + mergedWidth;
+                    
+                    if (rect.x <= rightmost + 2) {
+                        // Overlapping or adjacent - merge
+                        const newRight = Math.max(rightmost, rect.x + rect.width);
+                        mergedWidth = newRight - mergedX;
+                        mergedY = Math.min(mergedY, rect.y);
+                        mergedHeight = Math.max(mergedHeight, rect.y + rect.height - mergedY);
+                    } else {
+                        // Not overlapping - save current and start new
+                        mergedHighlights.push({
+                            x: mergedX,
+                            y: mergedY,
+                            width: mergedWidth,
+                            height: mergedHeight,
+                            pageIndex: pageIndex
+                        });
+                        mergedX = rect.x;
+                        mergedY = rect.y;
+                        mergedWidth = rect.width;
+                        mergedHeight = rect.height;
+                    }
+                }
+                // Push last merged rect
+                mergedHighlights.push({
+                    x: mergedX,
+                    y: mergedY,
+                    width: mergedWidth,
+                    height: mergedHeight,
+                    pageIndex: pageIndex
+                });
+            }
+        }
+
+        console.log('Merged highlights:', mergedHighlights.length);
+
+        // Step 3: Save history and add highlights
+        this.app.saveHistory();
+
+        for (const highlight of mergedHighlights) {
+            const highlightColor = this.app.state.pdfHighlightColor || '#ffff00';
+            const highlightObj = {
+                type: 'rectangle',
+                x: highlight.x,
+                y: highlight.y,
+                width: highlight.width,
+                height: highlight.height,
+                color: 'transparent',
+                fillColor: highlightColor,
+                filled: true,
+                opacity: 1,
+                strokeWidth: 0,
+                isHighlight: true,
+                blendMode: 'multiply'
+            };
+
+            this.app.state.objects.push(highlightObj);
+        }
+
+        console.log('Total objects:', this.app.state.objects.length);
+
+        // Trigger redraw
+        this.app.needsRedrawOffscreen = true;
+        this.app.needsRender = true;
+
+        if (this.app.redrawOffscreen) {
+            this.app.redrawOffscreen();
+        }
+        if (this.app.render) {
+            this.app.render();
+        }
+
+        // Clear selection
+        selection.removeAllRanges();
+    }
 }

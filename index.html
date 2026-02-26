@@ -44,7 +44,7 @@
                 </div>
                 <div class="mobile-action-buttons">
                     <button id="btnSelectAllMobile" class="mobile-action-btn" title="Tümünü Seç">
-                        <img src="assets/icons/select.svg" alt="select-all">
+                        <img src="assets/icons/select-all.svg" alt="select-all">
                     </button>
                     <button id="btnUploadPDFMobile" class="mobile-action-btn" title="PDF Yükle">
                         <img src="assets/icons/pdf.svg" alt="pdf">
@@ -132,7 +132,7 @@
 
                     <div class="secondary-actions">
                         <button id="btnSelectAll" class="btn-icon" title="Tümünü Seç (Ctrl+A)">
-                            <img src="assets/icons/select.svg" alt="select-all">
+                            <img src="assets/icons/select-all.svg" alt="select-all">
                         </button>
                         <button id="btnUploadPDF" class="btn-icon" title="PDF İçe Aktar">
                             <img src="assets/icons/pdf-anno.svg" alt="pdf">
@@ -153,7 +153,7 @@
             <div id="bulkActionsToolbar" class="bulk-actions-toolbar" style="display: none;">
                 <span class="selected-count">0 not seçildi</span>
                 <button id="btnBulkChangeCover" title="Kapak Değiştir">
-                    <img src="assets/icons/highlighter.svg">
+                    <img src="assets/icons/cover.svg">
                     <span>Kapak</span>
                 </button>
                 <button id="btnBulkMove" title="Klasöre Taşı">
@@ -326,6 +326,26 @@
                 <button class="tool-btn" data-select-mode="area" title="Bölge Seç">
                     <img src="assets/icons/select-area.svg" alt="select-area" class="icon">
                 </button>
+                <button class="tool-btn" id="btnVerticalSpaceTool" title="Dikey Boşluk">
+                    <img src="assets/icons/vertical-space.svg" alt="vertical-space" class="icon">
+                </button>
+            </div>
+
+            <!-- PDF Text Highlight Settings -->
+            <div class="tool-group" id="pdfTextHighlightSettings" style="display: none; align-items: center; gap: 8px;">
+                <button class="tool-btn" id="btnHighlightPdfText" title="Seçili Metni Vurgula">
+                    <img src="assets/icons/highlighter.svg" alt="highlight" class="icon">
+                </button>
+                <div class="quick-colors" id="pdfHighlightColors" style="display: flex; gap: 4px;">
+                    <button class="quick-color-btn" data-highlight-color="#ffff00" style="background: #ffff00; width: 20px; height: 20px;" title="Sarı"></button>
+                    <button class="quick-color-btn" data-highlight-color="#00ff00" style="background: #00ff00; width: 20px; height: 20px;" title="Yeşil"></button>
+                    <button class="quick-color-btn" data-highlight-color="#00ffff" style="background: #00ffff; width: 20px; height: 20px;" title="Turkuaz"></button>
+                    <button class="quick-color-btn" data-highlight-color="#ff00ff" style="background: #ff00ff; width: 20px; height: 20px;" title="Pembe"></button>
+                    <button class="quick-color-btn" data-highlight-color="#ff6600" style="background: #ff6600; width: 20px; height: 20px;" title="Turuncu"></button>
+                    <button class="quick-color-btn" data-highlight-color="#ff0000" style="background: #ff0000; width: 20px; height: 20px;" title="Kırmızı"></button>
+                    <button class="quick-color-btn" data-highlight-color="#0000ff" style="background: #0000ff; width: 20px; height: 20px;" title="Mavi"></button>
+                    <button class="quick-color-btn" data-highlight-color="#9900ff" style="background: #9900ff; width: 20px; height: 20px;" title="Mor"></button>
+                </div>
             </div>
 
             <!-- Quick Stroke Widths Group -->
@@ -1294,6 +1314,7 @@
     <script src="./js/TableTool.js?v=0.7.3"></script>
     <script src="./js/TextTool.js?v=0.7.3"></script>
     <script src="./js/TimerTool.js?v=0.7.3"></script>
+    <script src="./js/VerticalSpaceTool.js?v=0.7.3"></script>
     <!-- Şablon Tanımları -->
     <script src="./templates/kanban.js?v=0.7.3"></script>
     <script src="./templates/dotted-notes.js?v=0.7.3"></script>
