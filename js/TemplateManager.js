@@ -149,6 +149,9 @@ class TemplateManager {
      * Favori şablonları yükler
      */
     loadFavorites() {
+        if (this.app.dashboard) {
+            return this.app.dashboard.loadData('whiteboard_favorite_templates', []);
+        }
         const saved = localStorage.getItem('whiteboard_favorite_templates');
         return saved ? JSON.parse(saved) : [];
     }
@@ -157,7 +160,11 @@ class TemplateManager {
      * Favori şablonları kaydeder
      */
     saveFavorites() {
-        localStorage.setItem('whiteboard_favorite_templates', JSON.stringify(this.favoriteTemplates));
+        if (this.app.dashboard) {
+            this.app.dashboard.saveData('whiteboard_favorite_templates', this.favoriteTemplates);
+        } else {
+            localStorage.setItem('whiteboard_favorite_templates', JSON.stringify(this.favoriteTemplates));
+        }
     }
 
     /**
@@ -214,6 +221,9 @@ class TemplateManager {
      */
     loadUserTemplates() {
         try {
+            if (this.app.dashboard) {
+                return this.app.dashboard.loadData('whiteboard_user_templates', []);
+            }
             const saved = localStorage.getItem('whiteboard_user_templates');
             return saved ? JSON.parse(saved) : [];
         } catch (e) {
@@ -227,7 +237,11 @@ class TemplateManager {
      */
     saveUserTemplates() {
         try {
-            localStorage.setItem('whiteboard_user_templates', JSON.stringify(this.userTemplates));
+            if (this.app.dashboard) {
+                this.app.dashboard.saveData('whiteboard_user_templates', this.userTemplates);
+            } else {
+                localStorage.setItem('whiteboard_user_templates', JSON.stringify(this.userTemplates));
+            }
             this.templates = [...this.defaultTemplates, ...this.userTemplates];
         } catch (e) {
             console.error('Error saving user templates:', e);

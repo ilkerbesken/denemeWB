@@ -537,7 +537,8 @@ input[type="range"] {
 }
 
 .modal-backdrop.show {
-    display: flex;
+    display: flex !important;
+    z-index: 9999 !important;
     animation: fadeIn 0.2s ease-out;
 }
 

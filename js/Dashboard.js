@@ -1,6 +1,7 @@
 class Dashboard {
     constructor(app) {
         this.app = app;
+        app.dashboard = this;
         this.container = document.getElementById('dashboard');
         this.appContainer = document.getElementById('app');
         this.boardGrid = document.getElementById('boardGrid');
@@ -46,9 +47,34 @@ class Dashboard {
             { id: 'c7', bg: '#b45cff', texture: 'dots' },
             { id: 'c8', bg: '#313131ff', texture: 'linear' }
         ];
-        this.customCovers = this.loadData('wb_custom_covers', []);
+        this.customCovers = []; // Will load in initAsync
+
+        this.initAsync();
+    }
+
+    async initAsync() {
+        // Initialize FileSystemManager first
+        await window.fileSystemManager.init();
+
+        // Now load data using the new async manager
+        this.boards = await this.loadDataAsync('wb_boards', []);
+        this.folders = await this.loadDataAsync('wb_folders', []);
+        this.viewSettings = await this.loadDataAsync('wb_view_settings', { gridSize: 'xsmall' });
+        this.expandedFolders = await this.loadDataAsync('wb_expanded_folders', []);
+        this.customCovers = await this.loadDataAsync('wb_custom_covers', []);
 
         this.init();
+        this.setupStorageSettings();
+    }
+
+    // Sync wrappers for legacy components
+    loadData(key, defaultValue) {
+        const local = localStorage.getItem(key);
+        return local ? JSON.parse(local) : defaultValue;
+    }
+
+    saveData(key, value) {
+        this.saveDataAsync(key, value);
     }
 
     init() {
@@ -172,25 +198,24 @@ class Dashboard {
         }
     }
 
+    async loadDataAsync(key, defaultValue) {
+        return await window.fileSystemManager.getItem(key, defaultValue);
+    }
+
+    async saveDataAsync(key, value) {
+        await window.fileSystemManager.saveItem(key, value);
+    }
+
+    // Keep legacy for now but mark as deprecated
     loadData(key, defaultValue) {
-        try {
-            const saved = localStorage.getItem(key);
-            return saved ? JSON.parse(saved) : defaultValue;
-        } catch (e) {
-            console.error('Error loading data for ' + key, e);
-            return defaultValue;
-        }
+        console.warn('Sync loadData is deprecated. Use loadDataAsync');
+        const saved = localStorage.getItem(key);
+        return saved ? JSON.parse(saved) : defaultValue;
     }
 
     saveData(key, value) {
-        try {
-            localStorage.setItem(key, JSON.stringify(value));
-        } catch (e) {
-            console.error('Error saving data to localStorage', e);
-            if (e.name === 'QuotaExceededError') {
-                alert('Tarayıcı depolama alanı doldu! Lütfen bazı dosyalarınızı silin veya daha küçük boyutlu kapak resimleri kullanın.');
-            }
-        }
+        console.warn('Sync saveData is deprecated. Use saveDataAsync');
+        window.fileSystemManager.saveItem(key, value); // Background fire
     }
 
     isMobile() {
@@ -632,7 +657,8 @@ class Dashboard {
                     </button>
                 </div>
             `;
-            this.boardGrid.querySelector('#btnCreateFirstNote').onclick = () => this.createNewBoard();
+            const btn = this.boardGrid.querySelector('#btnCreateFirstNote');
+            if (btn) btn.onclick = () => this.createNewBoard();
             return;
         }
 
@@ -805,6 +831,73 @@ class Dashboard {
         }, 150);
     }
 
+    setupStorageSettings() {
+        const btnStorage = document.getElementById('btnStorageSettings');
+        const modal = document.getElementById('storageSettingsModal');
+        const btnClose = document.getElementById('btnCloseStorageSettingsModal');
+        const btnCancel = document.getElementById('btnCancelStorageSettings');
+        const btnPick = document.getElementById('btnChangeStorageLocation');
+        const btnReset = document.getElementById('btnResetStorageLocation');
+        const statusText = document.getElementById('currentStorageLocation');
+
+        if (!btnStorage || !modal) return;
+
+        const updateStatusUI = () => {
+            const mode = window.fileSystemManager.mode;
+            const hasDir = !!window.fileSystemManager.dirHandle;
+
+            if (mode === 'native' && hasDir) {
+                statusText.innerHTML = `Mevcut Konum: <strong style="color: #2b8a3e">Yerel Klasör (${window.fileSystemManager.dirHandle.name})</strong>`;
+            } else if (mode === 'native') {
+                statusText.innerHTML = `Mevcut Konum: <strong>Tarayıcı Depolaması</strong>`;
+            } else {
+                statusText.innerHTML = `Mevcut Konum: <strong>Tarayıcı Veritabanı (IndexedDB)</strong>`;
+            }
+
+            // Highligh support note for non-chromium
+            const supportNote = document.getElementById('folderPickerSupportNote');
+            if (supportNote) supportNote.style.display = (mode === 'indexeddb') ? 'block' : 'none';
+        };
+
+        btnStorage.onclick = () => {
+            console.log('Depolama ayarları butonu tıklandı');
+            const innerModal = modal.querySelector('.settings-modal');
+            modal.style.display = 'flex';
+            modal.classList.add('show');
+            if (innerModal) innerModal.classList.add('show');
+            updateStatusUI();
+        };
+
+        const closeModal = () => {
+            const innerModal = modal.querySelector('.settings-modal');
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+            if (innerModal) innerModal.classList.remove('show');
+        };
+        if (btnClose) btnClose.onclick = closeModal;
+        if (btnCancel) btnCancel.onclick = closeModal;
+        window.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+        btnPick.onclick = async () => {
+            const success = await window.fileSystemManager.pickStorageFolder();
+            if (success) {
+                updateStatusUI();
+                // Reload data from new folder
+                this.initAsync();
+            }
+        };
+
+        btnReset.onclick = async () => {
+            if (confirm('Depolama konumunu tarayıcıya geri döndürmek istediğinize emin misiniz?')) {
+                const tx = window.fileSystemManager.db.transaction('settings', 'readwrite');
+                tx.objectStore('settings').delete('folder_handle');
+                window.fileSystemManager.dirHandle = null;
+                updateStatusUI();
+                this.initAsync();
+            }
+        };
+    }
+
     renameFolder(id, newName) {
         const folder = this.folders.find(f => f.id === id);
         if (folder && newName.trim()) {
@@ -909,7 +1002,8 @@ class Dashboard {
         });
     }
 
-    createNewBoard() {
+    async createNewBoard() {
+        console.log('createNewBoard başlatıldı');
         const id = 'b_' + Date.now();
 
         // Find a unique name like "Not", "Not 1", "Not 2", etc.
@@ -939,9 +1033,9 @@ class Dashboard {
         };
 
         this.boards.push(newBoard);
-        this.saveData('wb_boards', this.boards);
+        await this.saveDataAsync('wb_boards', this.boards);
 
-        // Refresh dashboard instead of loading board immediately
+        // Refresh dashboard
         this.renderBoards();
         this.renderSidebar();
     }
@@ -1018,12 +1112,10 @@ class Dashboard {
                 this.app.zoomManager.fitToWidth(10);
                 this.hideLoading();
             }, 100);
-        } else {
             this.hideLoading();
         }
     }
 
-    // Helper method to load board content (used by both Dashboard and TabManager)
     async loadBoardContent(id) {
         // Clear previous PDF if any
         if (this.app.pdfManager) {
@@ -1041,9 +1133,9 @@ class Dashboard {
             console.error('Error loading PDF from DB:', error);
         }
 
-        const savedData = localStorage.getItem(`wb_content_${id}`);
+        const savedData = await this.loadDataAsync(`wb_content_${id}`, null);
         if (savedData) {
-            const parsed = JSON.parse(savedData);
+            const parsed = savedData;
             // Clear current state before loading new one
             this.app.state.objects = [];
 
@@ -1081,40 +1173,47 @@ class Dashboard {
         this.app.render();
     }
 
-    saveCurrentBoard() {
+    async saveCurrentBoard() {
         if (!this.currentBoardId) return;
 
-        // 1. Sync current page state before saving everything
-        if (this.app.pageManager) {
-            this.app.pageManager.saveCurrentPageState();
-        }
+        // Debounce actual saving to prevent file system thrashing
+        if (this._saveTimeout) clearTimeout(this._saveTimeout);
 
-        // Generate preview (thumbnail) with error handling for CORS/tainted canvas
-        let preview = null;
-        try {
-            preview = this.app.canvas.toDataURL('image/webp', 0.5);
-        } catch (error) {
-            console.warn('Could not generate preview due to canvas tainting:', error);
-            // Continue without preview - this is not critical
-        }
+        return new Promise((resolve) => {
+            this._saveTimeout = setTimeout(async () => {
+                // 1. Sync current page state before saving everything
+                if (this.app.pageManager) {
+                    this.app.pageManager.saveCurrentPageState();
+                }
 
-        // Update board meta
-        const boardIndex = this.boards.findIndex(b => b.id === this.currentBoardId);
-        if (boardIndex !== -1) {
-            this.boards[boardIndex].lastModified = Date.now();
-            if (preview) {
-                this.boards[boardIndex].preview = preview;
-            }
-            this.boards[boardIndex].objectCount = this.app.state.objects.length;
-            this.saveData('wb_boards', this.boards);
-        }
+                // Generate preview (thumbnail)
+                let preview = null;
+                try {
+                    preview = this.app.canvas.toDataURL('image/webp', 0.5);
+                } catch (error) {
+                    console.warn('Could not generate preview due to canvas tainting:', error);
+                }
 
-        // Save content with deep clone
-        const content = {
-            objects: Utils.deepClone(this.app.state.objects),
-            pages: this.app.pageManager ? Utils.deepClone(this.app.pageManager.pages) : null
-        };
-        localStorage.setItem(`wb_content_${this.currentBoardId}`, JSON.stringify(content));
+                // Update board meta
+                const boardIndex = this.boards.findIndex(b => b.id === this.currentBoardId);
+                if (boardIndex !== -1) {
+                    this.boards[boardIndex].lastModified = Date.now();
+                    if (preview) {
+                        this.boards[boardIndex].preview = preview;
+                    }
+                    this.boards[boardIndex].objectCount = this.app.state.objects.length;
+                    await this.saveDataAsync('wb_boards', this.boards);
+                }
+
+                // Save content
+                const content = {
+                    objects: Utils.deepClone(this.app.state.objects),
+                    pages: this.app.pageManager ? Utils.deepClone(this.app.pageManager.pages) : null
+                };
+                await this.saveDataAsync(`wb_content_${this.currentBoardId}`, content);
+                resolve();
+            }, 500); // 500ms debounce
+        });
     }
 
     showDashboard() {
