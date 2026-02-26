@@ -113,13 +113,25 @@ class WhiteboardApp {
         this.pressStartPos = null;
         this.moveThreshold = 10; // px-hareket toleransı
 
+        // 120Hz render loop — cap at ~8.33ms per frame
+        this._TARGET_FRAME_MS = 1000 / 120; // ~8.33ms
+        this._lastFrameTime = 0;
+
         this.renderLoop = this.renderLoop.bind(this);
         requestAnimationFrame(this.renderLoop);
 
         this.init();
     }
 
-    renderLoop() {
+    renderLoop(timestamp) {
+        requestAnimationFrame(this.renderLoop);
+
+        // 120Hz throttle: skip if not enough time has passed
+        const elapsed = timestamp - this._lastFrameTime;
+        if (elapsed < this._TARGET_FRAME_MS - 0.5) return;
+        this._lastFrameTime = timestamp - (elapsed % this._TARGET_FRAME_MS);
+
+        // Flush any queued move events (non-drawing tools use the queue path)
         if (this.moveQueue && this.moveQueue.length > 0) {
             this.flushMoveQueue();
         }
@@ -133,7 +145,6 @@ class WhiteboardApp {
             this.render();
             this.needsRender = false;
         }
-        requestAnimationFrame(this.renderLoop);
     }
 
     detectDeviceType() {
@@ -1224,9 +1235,42 @@ class WhiteboardApp {
             }
         }
 
+        // DRAWING TOOLS: Process immediately and render right away — no rAF queue wait.
+        // This eliminates the ~8–16ms input lag from queuing on slow/60Hz systems (e.g. macOS).
+        const isActiveDrawing = this.isDrawingTool(this.state.currentTool) &&
+            this.tools[this.state.currentTool] &&
+            (this.tools[this.state.currentTool].isDrawing ||
+                this.state.currentTool === 'eraser' ||
+                this.state.currentTool === 'hand');
+
+        if (isActiveDrawing) {
+            // Also drain coalesced events for high-frequency input (120Hz stylus)
+            if (e.getCoalescedEvents) {
+                const coalesced = e.getCoalescedEvents();
+                if (coalesced && coalesced.length > 0) {
+                    coalesced.forEach(ce => this.processPointerMove(this.simplifyEvent(ce)));
+                } else {
+                    this.processPointerMove(this.simplifyEvent(e));
+                }
+            } else {
+                this.processPointerMove(this.simplifyEvent(e));
+            }
+
+            // Render immediately — don't wait for next rAF frame
+            if (this.needsRedrawOffscreen) {
+                this.redrawOffscreen();
+                this.needsRedrawOffscreen = false;
+            }
+            if (this.needsRender) {
+                this.render();
+                this.needsRender = false;
+            }
+            return;
+        }
+
+        // NON-DRAWING TOOLS (select, pan, etc.): use normal rAF queue
         if (!this.moveQueue) this.moveQueue = [];
 
-        // Support high-frequency points (iPad Pro 120Hz)
         if (e.getCoalescedEvents) {
             const coalesced = e.getCoalescedEvents();
             if (coalesced && coalesced.length > 0) {
