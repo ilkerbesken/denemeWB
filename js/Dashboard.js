@@ -78,6 +78,26 @@ class Dashboard {
     }
 
     init() {
+        // Storage Permission Alert handling
+        const banner = document.getElementById('storageAlertBanner');
+        const btnGrant = document.getElementById('btnGrantStoragePermission');
+        if (banner && btnGrant) {
+            const hasStored = !!window.fileSystemManager.storedHandle;
+            const hasActive = !!window.fileSystemManager.dirHandle;
+
+            if (hasStored && !hasActive) {
+                banner.style.display = 'flex';
+                btnGrant.onclick = async () => {
+                    const success = await window.fileSystemManager.requestStoredPermission();
+                    if (success) {
+                        banner.style.display = 'none';
+                        await this.initAsync();
+                    }
+                };
+            } else {
+                banner.style.display = 'none';
+            }
+        }
 
         try {
             this.renderSidebar();
@@ -845,13 +865,23 @@ class Dashboard {
         const updateStatusUI = () => {
             const mode = window.fileSystemManager.mode;
             const hasDir = !!window.fileSystemManager.dirHandle;
+            const hasStored = !!window.fileSystemManager.storedHandle;
 
             if (mode === 'native' && hasDir) {
                 statusText.innerHTML = `Mevcut Konum: <strong style="color: #2b8a3e">Yerel Klasör (${window.fileSystemManager.dirHandle.name})</strong>`;
+                btnPick.textContent = 'Konumu Değiştir';
+                btnPick.className = 'btn btn-primary';
+            } else if (mode === 'native' && hasStored) {
+                statusText.innerHTML = `Mevcut Konum: <strong style="color: #f08c00">İzin Bekleniyor (${window.fileSystemManager.storedHandle.name})</strong>`;
+                btnPick.textContent = 'Erişime İzin Ver';
+                btnPick.className = 'btn btn-warning'; // Yellowish to indicate action needed
             } else if (mode === 'native') {
                 statusText.innerHTML = `Mevcut Konum: <strong>Tarayıcı Depolaması</strong>`;
+                btnPick.textContent = 'Yerel Klasör Seç veya Oluştur';
+                btnPick.className = 'btn btn-primary';
             } else {
                 statusText.innerHTML = `Mevcut Konum: <strong>Tarayıcı Veritabanı (IndexedDB)</strong>`;
+                btnPick.style.display = 'none';
             }
 
             // Highligh support note for non-chromium
@@ -1135,18 +1165,40 @@ class Dashboard {
 
         const savedData = await this.loadDataAsync(`wb_content_${id}`, null);
         if (savedData) {
-            const parsed = savedData;
-            // Clear current state before loading new one
-            this.app.state.objects = [];
+            let pages = savedData.pages;
+            const objects = savedData.objects;
 
-            // Handle multiple pages if any
-            if (parsed.pages && this.app.pageManager) {
-                this.app.pageManager.pages = parsed.pages;
-                this.app.pageManager.renderPageList();
-                // Pass false for shouldSave because we are loading new data
-                this.app.pageManager.switchPage(0, true, false);
+            // INFLATE: Convert [x,y,p,...] back to [{x,y,p},...]
+            const inflateObjects = (objs) => {
+                if (!objs) return [];
+                return objs.map(obj => {
+                    if (obj._flat && Array.isArray(obj.points)) {
+                        const inflated = [];
+                        for (let i = 0; i < obj.points.length; i += 3) {
+                            inflated.push({
+                                x: obj.points[i],
+                                y: obj.points[i + 1],
+                                pressure: obj.points[i + 2]
+                            });
+                        }
+                        obj.points = inflated;
+                        delete obj._flat;
+                    }
+                    return obj;
+                });
+            };
+
+            if (pages) {
+                pages.forEach(p => p.objects = inflateObjects(p.objects));
+                if (this.app.pageManager) {
+                    this.app.pageManager.pages = pages;
+                    this.app.pageManager.renderPageList();
+                    this.app.pageManager.switchPage(0, true, false);
+                    // Re-generate thumbnails since we don't save them anymore
+                    setTimeout(() => this.app.pageManager.updateCurrentPageThumbnail(), 500);
+                }
             } else {
-                this.app.state.objects = parsed.objects || [];
+                this.app.state.objects = inflateObjects(objects);
             }
         } else {
             // New board or no saved content
@@ -1206,10 +1258,40 @@ class Dashboard {
                 }
 
                 // Save content
+                if (this.app.pageManager) this.app.pageManager.saveCurrentPageState();
+
+                const optimizedPages = this.app.pageManager ? this.app.pageManager.pages.map(page => {
+                    const optimizedPage = Utils.deepClone(page);
+                    delete optimizedPage.thumbnail; // Clear huge base64 to save MBs
+
+                    optimizedPage.objects = optimizedPage.objects.map(obj => {
+                        // Round basic props
+                        if (obj.x !== undefined) obj.x = Math.round(obj.x * 10) / 10;
+                        if (obj.y !== undefined) obj.y = Math.round(obj.y * 10) / 10;
+
+                        // FLATTEN: [{x,y,p},...] -> [x,y,p, x,y,p,...]
+                        if (obj.points && Array.isArray(obj.points) && !obj._flat) {
+                            const simplified = Utils.simplifyPoints(obj.points, 0.5);
+                            const flat = [];
+                            for (const p of simplified) {
+                                flat.push(Math.round(p.x * 10) / 10);
+                                flat.push(Math.round(p.y * 10) / 10);
+                                flat.push(p.pressure ? (Math.round(p.pressure * 10) / 10) : 0.5);
+                            }
+                            obj.points = flat;
+                            obj._flat = true; // Mark as optimized
+                        }
+                        return obj;
+                    });
+                    return optimizedPage;
+                }) : null;
+
                 const content = {
-                    objects: Utils.deepClone(this.app.state.objects),
-                    pages: this.app.pageManager ? Utils.deepClone(this.app.pageManager.pages) : null
+                    version: "2.0",
+                    pages: optimizedPages,
+                    objects: optimizedPages ? null : Utils.deepClone(this.app.state.objects)
                 };
+
                 await this.saveDataAsync(`wb_content_${this.currentBoardId}`, content);
                 resolve();
             }, 500); // 500ms debounce

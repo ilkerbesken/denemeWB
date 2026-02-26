@@ -25,6 +25,7 @@ class FileSystemManager {
         if (this.mode === 'native') {
             const savedHandle = await this._getStoredHandle();
             if (savedHandle) {
+                this.storedHandle = savedHandle; // Keep it even if permission is not granted yet
                 // Check if we still have permission
                 if (await this._verifyPermission(savedHandle)) {
                     this.dirHandle = savedHandle;
@@ -66,12 +67,40 @@ class FileSystemManager {
     }
 
     /**
+     * Re-requests permission for a stored handle.
+     * Must be called from a user gesture.
+     */
+    async requestStoredPermission() {
+        if (!this.storedHandle) return false;
+
+        try {
+            const options = { mode: 'readwrite' };
+            const status = await this.storedHandle.requestPermission(options);
+            if (status === 'granted') {
+                this.dirHandle = this.storedHandle;
+                if (this.onStorageChange) this.onStorageChange();
+                return true;
+            }
+            return false;
+        } catch (e) {
+            console.error('Permission request failed', e);
+            return false;
+        }
+    }
+
+    /**
      * Triggers the folder picker dialog
      */
     async pickStorageFolder() {
         if (this.mode === 'indexeddb') {
             alert('Tarayıcınız yerel klasör erişimini desteklemiyor. Verileriniz güvenli bir şekilde tarayıcı veritabanında (IndexedDB) tutulmaya devam edecek.');
             return false;
+        }
+
+        // If we already have a stored handle but no permission, try to request it first
+        if (this.storedHandle && !this.dirHandle) {
+            const success = await this.requestStoredPermission();
+            if (success) return true;
         }
 
         try {
@@ -84,6 +113,7 @@ class FileSystemManager {
             tx.objectStore('settings').put(handle, 'folder_handle');
 
             this.dirHandle = handle;
+            this.storedHandle = handle;
 
             // Sync current items if user switched to a folder
             await this.syncFromLocalStorageToFolder();
@@ -128,7 +158,7 @@ class FileSystemManager {
                 const fileName = `${key}.json`;
                 const fileHandle = await this.dirHandle.getFileHandle(fileName, { create: true });
                 const writable = await fileHandle.createWritable();
-                await writable.write(JSON.stringify(value, null, 2));
+                await writable.write(JSON.stringify(value));
                 await writable.close();
                 return;
             } catch (e) {

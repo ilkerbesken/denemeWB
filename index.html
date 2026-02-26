@@ -157,6 +157,18 @@
                 <input type="file" id="pdfInput" accept="application/pdf" style="display: none;">
             </header>
 
+            <!-- Storage Permission Alert Banner -->
+            <div id="storageAlertBanner"
+                style="display: none; background: #fff9db; border-bottom: 1px solid #ffe066; padding: 10px 20px; align-items: center; justify-content: space-between; font-size: 14px; color: #856404; z-index: 100;">
+                <div style="display: flex; align-items: center;">
+                    <span style="margin-right: 12px; font-size: 18px;">📂</span>
+                    <span><strong>Kayıt Klasörüne Erişilemiyor:</strong> Dosyalarınızı senkronize etmek için klasör
+                        erişim izni vermeniz gerekiyor.</span>
+                </div>
+                <button id="btnGrantStoragePermission" class="btn btn-warning"
+                    style="height: 32px; padding: 0 15px; font-size: 13px;">Erişime İzin Ver</button>
+            </div>
+
             <!-- Bulk Actions Toolbar -->
             <div id="bulkActionsToolbar" class="bulk-actions-toolbar" style="display: none;">
                 <span class="selected-count">0 not seçildi</span>
