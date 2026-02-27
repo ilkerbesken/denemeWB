@@ -1,5 +1,5 @@
 /**
- * TemplateManager - Whiteboard şablonlarını yöneten sınıf
+ * TemplateManager - Tomar şablonlarını yöneten sınıf
  * Ayrı JS dosyalarındaki şablon tanımlarını kullanır
  */
 
@@ -150,9 +150,9 @@ class TemplateManager {
      */
     loadFavorites() {
         if (this.app.dashboard) {
-            return this.app.dashboard.loadData('whiteboard_favorite_templates', []);
+            return this.app.dashboard.loadData('tomar_favorite_templates', []);
         }
-        const saved = localStorage.getItem('whiteboard_favorite_templates');
+        const saved = localStorage.getItem('tomar_favorite_templates');
         return saved ? JSON.parse(saved) : [];
     }
 
@@ -161,9 +161,9 @@ class TemplateManager {
      */
     saveFavorites() {
         if (this.app.dashboard) {
-            this.app.dashboard.saveData('whiteboard_favorite_templates', this.favoriteTemplates);
+            this.app.dashboard.saveData('tomar_favorite_templates', this.favoriteTemplates);
         } else {
-            localStorage.setItem('whiteboard_favorite_templates', JSON.stringify(this.favoriteTemplates));
+            localStorage.setItem('tomar_favorite_templates', JSON.stringify(this.favoriteTemplates));
         }
     }
 
@@ -222,9 +222,9 @@ class TemplateManager {
     loadUserTemplates() {
         try {
             if (this.app.dashboard) {
-                return this.app.dashboard.loadData('whiteboard_user_templates', []);
+                return this.app.dashboard.loadData('tomar_user_templates', []);
             }
-            const saved = localStorage.getItem('whiteboard_user_templates');
+            const saved = localStorage.getItem('tomar_user_templates');
             return saved ? JSON.parse(saved) : [];
         } catch (e) {
             console.error('Error loading user templates:', e);
@@ -238,9 +238,9 @@ class TemplateManager {
     saveUserTemplates() {
         try {
             if (this.app.dashboard) {
-                this.app.dashboard.saveData('whiteboard_user_templates', this.userTemplates);
+                this.app.dashboard.saveData('tomar_user_templates', this.userTemplates);
             } else {
-                localStorage.setItem('whiteboard_user_templates', JSON.stringify(this.userTemplates));
+                localStorage.setItem('tomar_user_templates', JSON.stringify(this.userTemplates));
             }
             this.templates = [...this.defaultTemplates, ...this.userTemplates];
         } catch (e) {

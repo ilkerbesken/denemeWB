@@ -1,7 +1,7 @@
 /**
  * PDFManager - Handles PDF background rendering for annotation
  * Senior Developer Approach: Renders PDF pages to offscreen buffers 
- * and integrates with the main Whiteboard render loop.
+ * and integrates with the main Tomar render loop.
  */
 class PDFManager {
     constructor(app) {
@@ -136,7 +136,7 @@ class PDFManager {
     }
 
     /**
-     * Clear PDF and return to normal whiteboard mode
+     * Clear PDF and return to normal tomar mode
      */
     clearPDF() {
         this.pdfDoc = null;

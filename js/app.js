@@ -1,4 +1,4 @@
-class WhiteboardApp {
+class TomarApp {
     deactivatePdfTextSelection() {
         this.state.pdfTextSelectionActive = false;
         if (this.pdfManager && this.pdfManager.textSelector) {
@@ -786,6 +786,30 @@ class WhiteboardApp {
                 this.openSaveTemplateModal();
                 dropdown.classList.remove('show');
             });
+
+            // .tom Format: Export
+            document.getElementById('btnExportTom')?.addEventListener('click', async () => {
+                dropdown.classList.remove('show');
+                if (window.dashboard) {
+                    await window.dashboard.exportToTom();
+                }
+            });
+
+            // .tom Format: Import
+            const tomImportInput = document.getElementById('tomImportInput');
+            document.getElementById('btnImportTom')?.addEventListener('click', () => {
+                dropdown.classList.remove('show');
+                if (tomImportInput) tomImportInput.click();
+            });
+            if (tomImportInput) {
+                tomImportInput.addEventListener('change', async (e) => {
+                    const file = e.target.files[0];
+                    if (file && window.dashboard) {
+                        await window.dashboard.importFromTom(file);
+                    }
+                    e.target.value = ''; // Reset so same file can be re-selected
+                });
+            }
         }
 
         // Setup Save Template Modal
@@ -1973,5 +1997,5 @@ class WhiteboardApp {
 }
 
 // Uygulamayı başlat
-window.app = new WhiteboardApp();
+window.app = new TomarApp();
 window.dashboard = new Dashboard(window.app);

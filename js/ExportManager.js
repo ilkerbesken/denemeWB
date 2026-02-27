@@ -1,5 +1,5 @@
 /**
- * ExportManager - Handles Exporting Whiteboard to PNG, SVG, and PDF
+ * ExportManager - Handles Exporting Tomar to PNG, SVG, and PDF
  */
 class ExportManager {
     constructor(app) {
@@ -31,7 +31,7 @@ class ExportManager {
 
         // 2. Download
         const link = document.createElement('a');
-        link.download = `whiteboard_page_${this.app.pageManager.currentPageIndex + 1}.png`;
+        link.download = `tomar_sayfa_${this.app.pageManager.currentPageIndex + 1}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
     }
@@ -84,7 +84,7 @@ class ExportManager {
 
         const blob = new Blob([svgContent], { type: 'image/svg+xml' });
         const link = document.createElement('a');
-        link.download = `whiteboard_page_${this.app.pageManager.currentPageIndex + 1}.svg`;
+        link.download = `tomar_sayfa_${this.app.pageManager.currentPageIndex + 1}.svg`;
         link.href = URL.createObjectURL(blob);
         link.click();
     }
@@ -164,7 +164,7 @@ class ExportManager {
             doc.addImage(imgData, 'JPEG', 0, 0, w, h);
         }
 
-        doc.save('whiteboard_export.pdf');
+        doc.save('tomar_export.pdf');
     }
 
     /**
@@ -261,7 +261,7 @@ class ExportManager {
 
         const blob = new Blob([svgContent], { type: 'image/svg+xml' });
         const link = document.createElement('a');
-        link.download = `whiteboard_page_${this.app.pageManager.currentPageIndex + 1}.svg`;
+        link.download = `tomar_sayfa_${this.app.pageManager.currentPageIndex + 1}.svg`;
         link.href = URL.createObjectURL(blob);
         link.click();
     }

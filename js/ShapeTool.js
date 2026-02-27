@@ -418,7 +418,7 @@ class ShapeTool {
         }
 
         // For heart and cloud, we'll use a slightly simplified polygon or just the BBox for now, 
-        // but for exact "isPointInside" with curves, BBox is often enough for whiteboards.
+        // but for exact "isPointInside" with curves, BBox is often enough for tomars.
         // I'll provide vertices for polygons.
 
         // Polygon based shapes

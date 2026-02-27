@@ -244,7 +244,7 @@ const Utils = {
     },
     // IndexedDB for large file storage (PDFs)
     db: {
-        name: 'WhiteboardPDFDB',
+        name: 'TomarPDFDB',
         store: 'pdfs',
         version: 1,
         async open() {

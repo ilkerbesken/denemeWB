@@ -1,6 +1,11 @@
 /**
  * FileSystemManager - Handles persistent storage using local folders (File System Access API)
  * or falls back to IndexedDB for universal support (Firefox, Safari, Mobile).
+ *
+ * .tom Format:
+ *   Content files (wb_content_*) are stored as gzip-compressed JSON with a .tom extension.
+ *   This provides ~60-80% size reduction compared to plain JSON, losslessly.
+ *   Meta files (wb_boards, wb_folders, etc.) remain as plain .json for simplicity.
  */
 class FileSystemManager {
     constructor() {
@@ -9,6 +14,26 @@ class FileSystemManager {
         this.db = null;
         this._initialized = false;
         this.onStorageChange = null;
+
+        // Keys that should be stored as compressed .tom files
+        this._contentKeyPrefix = 'wb_content_';
+    }
+
+    /** Returns true if this key should be stored as a .tom (compressed) file */
+    _isTomKey(key) {
+        return key.startsWith(this._contentKeyPrefix);
+    }
+
+    /** Compress a JSON-serializable value to a Uint8Array (gzip) */
+    _compress(value) {
+        const jsonStr = JSON.stringify(value);
+        return pako.gzip(jsonStr);
+    }
+
+    /** Decompress a Uint8Array (gzip) to a parsed JS value */
+    _decompress(buffer) {
+        const jsonStr = pako.inflate(new Uint8Array(buffer), { to: 'string' });
+        return JSON.parse(jsonStr);
     }
 
     async init() {
@@ -129,14 +154,14 @@ class FileSystemManager {
     async syncFromLocalStorageToFolder() {
         if (!this.dirHandle) return;
 
-        // Keys to sync
+        // Keys to sync (meta files as JSON)
         const keys = ['wb_boards', 'wb_folders', 'wb_view_settings', 'wb_expanded_folders'];
         for (const key of keys) {
             const val = localStorage.getItem(key);
             if (val) await this.saveItem(key, JSON.parse(val));
         }
 
-        // Boards content
+        // Boards content (saved as .tom)
         const boards = JSON.parse(localStorage.getItem('wb_boards') || '[]');
         for (const b of boards) {
             const contentKey = `wb_content_${b.id}`;
@@ -155,11 +180,22 @@ class FileSystemManager {
 
         if (this.mode === 'native' && this.dirHandle) {
             try {
-                const fileName = `${key}.json`;
-                const fileHandle = await this.dirHandle.getFileHandle(fileName, { create: true });
-                const writable = await fileHandle.createWritable();
-                await writable.write(JSON.stringify(value));
-                await writable.close();
+                if (this._isTomKey(key)) {
+                    // Save as compressed .tom file
+                    const fileName = `${key}.tom`;
+                    const fileHandle = await this.dirHandle.getFileHandle(fileName, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    const compressed = this._compress(value);
+                    await writable.write(compressed);
+                    await writable.close();
+                } else {
+                    // Save as plain JSON file
+                    const fileName = `${key}.json`;
+                    const fileHandle = await this.dirHandle.getFileHandle(fileName, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(JSON.stringify(value));
+                    await writable.close();
+                }
                 return;
             } catch (e) {
                 console.error('Native save failed', e);
@@ -182,15 +218,39 @@ class FileSystemManager {
         // 2. Refresh from Native Folder/IndexedDB in background or if local is empty
         if (this.mode === 'native' && this.dirHandle) {
             try {
-                const fileHandle = await this.dirHandle.getFileHandle(`${key}.json`);
-                const file = await fileHandle.getFile();
-                const text = await file.text();
-                const nativeVal = JSON.parse(text);
-                // Sync back to local if they differ
-                if (text !== local) {
-                    localStorage.setItem(key, text);
+                if (this._isTomKey(key)) {
+                    // Try .tom first (new format)
+                    try {
+                        const fileHandle = await this.dirHandle.getFileHandle(`${key}.tom`);
+                        const file = await fileHandle.getFile();
+                        const buffer = await file.arrayBuffer();
+                        const nativeVal = this._decompress(buffer);
+                        // Sync back to localStorage
+                        localStorage.setItem(key, JSON.stringify(nativeVal));
+                        return nativeVal;
+                    } catch (tomErr) {
+                        if (tomErr.name !== 'NotFoundError') throw tomErr;
+                        // Fall back to legacy .json if .tom not found
+                        const fileHandle = await this.dirHandle.getFileHandle(`${key}.json`);
+                        const file = await fileHandle.getFile();
+                        const text = await file.text();
+                        const nativeVal = JSON.parse(text);
+                        localStorage.setItem(key, text);
+                        // Migrate: re-save as .tom
+                        this.saveItem(key, nativeVal).catch(() => { });
+                        return nativeVal;
+                    }
+                } else {
+                    // Plain JSON
+                    const fileHandle = await this.dirHandle.getFileHandle(`${key}.json`);
+                    const file = await fileHandle.getFile();
+                    const text = await file.text();
+                    const nativeVal = JSON.parse(text);
+                    if (text !== local) {
+                        localStorage.setItem(key, text);
+                    }
+                    return nativeVal;
                 }
-                return nativeVal;
             } catch (e) {
                 if (e.name !== 'NotFoundError') console.error('Native read error', e);
             }
@@ -215,14 +275,38 @@ class FileSystemManager {
 
     async removeItem(key) {
         if (this.mode === 'native' && this.dirHandle) {
-            try {
-                await this.dirHandle.removeEntry(`${key}.json`);
-            } catch (e) { }
+            // Try to remove both .tom and .json variants
+            try { await this.dirHandle.removeEntry(`${key}.tom`); } catch (e) { }
+            try { await this.dirHandle.removeEntry(`${key}.json`); } catch (e) { }
         }
 
         const tx = this.db.transaction('fallback_data', 'readwrite');
         tx.objectStore('fallback_data').delete(key);
         localStorage.removeItem(key);
+    }
+
+    // ─── .tom File I/O (for manual export/import) ────────────────────────────
+
+    /**
+     * Compresses `data` to a .tom Blob that can be downloaded.
+     * @param {object} data - JS object to compress
+     * @returns {Blob}
+     */
+    createTomBlob(data) {
+        const compressed = this._compress(data);
+        return new Blob([compressed], { type: 'application/octet-stream' });
+    }
+
+    /**
+     * Reads a .tom file (from a File/ArrayBuffer) and returns the parsed JS object.
+     * @param {File|ArrayBuffer} fileOrBuffer
+     * @returns {Promise<object>}
+     */
+    async readTomFile(fileOrBuffer) {
+        const buffer = fileOrBuffer instanceof File
+            ? await fileOrBuffer.arrayBuffer()
+            : fileOrBuffer;
+        return this._decompress(buffer);
     }
 }
 

@@ -1,5 +1,5 @@
 /**
- * TabManager - Manages multiple whiteboard tabs (boards) in a dropdown
+ * TabManager - Manages multiple tomar tabs (boards) in a dropdown
  */
 class TabManager {
     constructor(app) {

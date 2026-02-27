@@ -1,6 +1,6 @@
-# 🎨 Whiteboard JS - Modern Dijital Beyaz Tahta
+# 🎨 Tomar - Modern Not Alma Uygulaması
 
-Whiteboard JS, modern web teknolojileri ile geliştirilmiş, kullanıcı dostu ve yüksek performanslı bir dijital beyaz tahta uygulamasıdır. Hem bireysel not alma hem de yaratıcı süreçler için geniş bir araç yelpazesi sunar.
+Tomar, modern web teknolojileri ile geliştirilmiş, kullanıcı dostu ve yüksek performanslı bir dijital beyaz tahta uygulamasıdır. Hem bireysel not alma hem de yaratıcı süreçler için geniş bir araç yelpazesi sunar.
 
 ---
 
@@ -52,7 +52,6 @@ Uygulama, sürdürülebilirlik için **modüler bir yapı** üzerine inşa edilm
 ## 🛠️ Teknoloji Yığını
 - **Çekirdek:** HTML5, Modern CSS (Vanilla), JavaScript (ES6+).
 - **PDF İşleme:** [PDF.js](https://mozilla.github.io/pdf.js/) ve [jsPDF](https://rawgit.com/MrRio/jsPDF/master/docs/index.html).
-- **İkonlar:** [Lucide Icons](https://lucide.dev/).
 - **Altyapı:** PWA (Progressive Web App) desteği ile çevrimdışı kullanım ve masaüstüne kurulum.
 
 ---

@@ -1,4 +1,4 @@
-# Teknik Dokümantasyon - Whiteboard JS
+# Teknik Dokümantasyon - Tomar
 
 Bu belge, uygulamada kullanılan teknik yaklaşımları ve her aracın nasıl çalıştığını açıklar.
 

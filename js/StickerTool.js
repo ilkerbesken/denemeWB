@@ -20,7 +20,7 @@ class StickerTool {
      */
     loadStickers() {
         try {
-            const saved = localStorage.getItem('whiteboard_stickers');
+            const saved = localStorage.getItem('tomar_stickers');
             const userStickers = saved ? JSON.parse(saved) : [];
 
             // Define default stickers
@@ -61,7 +61,7 @@ class StickerTool {
         try {
             // Only save user stickers (filter out defaults)
             const userStickers = this.stickers.filter(s => !this.isDefaultSticker(s));
-            localStorage.setItem('whiteboard_stickers', JSON.stringify(userStickers));
+            localStorage.setItem('tomar_stickers', JSON.stringify(userStickers));
         } catch (e) {
             console.error('Error saving stickers:', e);
         }
@@ -530,7 +530,7 @@ class StickerTool {
     }
 
     /**
-     * Handle pointer events to satisfy WhiteboardApp interface
+     * Handle pointer events to satisfy TomarApp interface
      */
     handlePointerDown(e, pos, canvas, ctx, state) {
         if (!this.isPlacing) return false;

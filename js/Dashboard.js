@@ -794,7 +794,7 @@ class Dashboard {
             trash: 'Çöp Kutusu'
         };
         const title = titles[view] || (folder ? folder.name : 'Klasör');
-        this.breadcrumb.textContent = `Whiteboard / ${title}`;
+        this.breadcrumb.textContent = `Tomar / ${title}`;
 
         // Show/Hide Empty Trash button
         if (this.btnEmptyTrash) {
@@ -935,7 +935,7 @@ class Dashboard {
             this.saveData('wb_folders', this.folders);
             this.renderSidebar();
             if (this.currentView === id) {
-                this.breadcrumb.textContent = `Whiteboard / ${folder.name}`;
+                this.breadcrumb.textContent = `Tomar / ${folder.name}`;
             }
         } else {
             this.renderSidebar(); // Revert UI
@@ -1298,6 +1298,105 @@ class Dashboard {
         });
     }
 
+    /**
+     * Export the current board as a compressed .tom file (gzip JSON).
+     * The file is offered as a download to the user.
+     */
+    async exportToTom() {
+        if (!this.currentBoardId) {
+            alert('Önce bir not açın.');
+            return;
+        }
+
+        // Make sure we save first
+        await this.saveCurrentBoard();
+
+        const board = this.boards.find(b => b.id === this.currentBoardId);
+        const boardName = board ? board.name.replace(/[^a-zA-Z0-9ğüşıöçĞÜŞİÖÇ _-]/g, '') : 'not';
+
+        // Build the .tom payload
+        const content = await this.loadDataAsync(`wb_content_${this.currentBoardId}`, null);
+        const payload = {
+            _format: 'tom',
+            _version: '1.0',
+            boardName: board ? board.name : 'Not',
+            exportedAt: new Date().toISOString(),
+            content: content
+        };
+
+        const blob = window.fileSystemManager.createTomBlob(payload);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${boardName}.tom`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        console.log(`Exported "${boardName}.tom" (${(blob.size / 1024).toFixed(1)} KB)`);
+    }
+
+    /**
+     * Import a .tom file and load it into the current board (or a new one).
+     * @param {File} file
+     */
+    async importFromTom(file) {
+        try {
+            const payload = await window.fileSystemManager.readTomFile(file);
+
+            if (!payload || !payload.content) {
+                alert('Geçersiz .tom dosyası.');
+                return;
+            }
+
+            const content = payload.content;
+            const boardName = payload.boardName || file.name.replace('.tom', '');
+
+            // If a board is currently open, load into it; otherwise create new
+            let targetId = this.currentBoardId;
+
+            if (!targetId) {
+                // Create a new board
+                const id = `board_${Date.now()}`;
+                const newBoard = {
+                    id,
+                    name: boardName,
+                    lastModified: Date.now(),
+                    created: Date.now(),
+                    favorite: false,
+                    deleted: false,
+                    folderId: null,
+                    coverBg: '#4a90e2',
+                    coverTexture: 'linear'
+                };
+                this.boards.push(newBoard);
+                await this.saveDataAsync('wb_boards', this.boards);
+                targetId = id;
+                await this.loadBoard(id);
+            }
+
+            // Save the imported content
+            await this.saveDataAsync(`wb_content_${targetId}`, content);
+            localStorage.setItem(`wb_content_${targetId}`, JSON.stringify(content));
+            await this.loadBoardContent(targetId);
+
+            // Update board name to match imported name
+            const boardIndex = this.boards.findIndex(b => b.id === targetId);
+            if (boardIndex !== -1) {
+                this.boards[boardIndex].name = boardName;
+                this.boards[boardIndex].lastModified = Date.now();
+                await this.saveDataAsync('wb_boards', this.boards);
+            }
+
+            this.app.redrawOffscreen();
+            this.app.render();
+
+            console.log(`Imported "${file.name}" into board "${boardName}"`);
+        } catch (err) {
+            console.error('Import failed:', err);
+            alert('Dosya açılırken bir hata oluştu: ' + err.message);
+        }
+    }
+
     showDashboard() {
         this.saveCurrentBoard();
 
@@ -1318,7 +1417,7 @@ class Dashboard {
             if (board.deleted) {
                 // Hard delete
                 this.boards = this.boards.filter(b => b.id !== id);
-                localStorage.removeItem(`wb_content_${id}`);
+                window.fileSystemManager.removeItem(`wb_content_${id}`);
             } else {
                 // Soft delete
                 board.deleted = true;
@@ -1342,7 +1441,7 @@ class Dashboard {
         if (confirm(`Çöp kutusundaki ${trashCount} öğeyi kalıcı olarak silmek istediğinize emin misiniz?`)) {
             // Permanently delete boards and their content
             this.boards.filter(b => b.deleted).forEach(b => {
-                localStorage.removeItem(`wb_content_${b.id}`);
+                window.fileSystemManager.removeItem(`wb_content_${b.id}`);
                 // Also remove from Utils.db if it's a PDF
                 if (b.isPDF) {
                     Utils.db.delete(b.id).catch(err => console.error('Error deleting PDF from DB:', err));

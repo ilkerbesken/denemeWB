@@ -18,7 +18,7 @@ class ColorPalette {
         ];
 
         // Kayıtlı renkleri yükle veya varsayılanları kullan
-        const savedColors = localStorage.getItem('whiteboard_colors');
+        const savedColors = localStorage.getItem('tomar_colors');
         this.colors = savedColors ? JSON.parse(savedColors) : [...this.defaultColors];
 
         this.container = null;
@@ -99,7 +99,7 @@ class ColorPalette {
     }
 
     saveColors() {
-        localStorage.setItem('whiteboard_colors', JSON.stringify(this.colors));
+        localStorage.setItem('tomar_colors', JSON.stringify(this.colors));
     }
 
     resetToDefaults() {

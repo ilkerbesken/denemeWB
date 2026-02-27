@@ -1,10 +1,11 @@
-const CACHE_NAME = 'whiteboard-v1';
+const CACHE_NAME = 'tomar-v2';
 const ASSETS_TO_CACHE = [
     './',
     './index.html',
     './style.css',
     './css/template-gallery.css',
-    './assets/favicon/favicon.svg'
+    './assets/favicon/favicon.svg',
+    'https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js'
 ];
 
 // Install Event

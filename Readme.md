@@ -1,6 +1,6 @@
 ## 📁 Dosya Yapısı Kontrolü:
 ```
-whiteboard/
+tomar/
 ├── index.html
 ├── style.css
 └── js/

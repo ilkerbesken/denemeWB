@@ -804,12 +804,12 @@ class PropertiesSidebar {
             type: p.type,
             dataUrl: p.canvas.toDataURL()
         }));
-        localStorage.setItem('whiteboard_custom_tapes', JSON.stringify(patternsToSave));
+        localStorage.setItem('tomar_custom_tapes', JSON.stringify(patternsToSave));
     }
 
     loadCustomTapePatterns() {
         try {
-            const saved = localStorage.getItem('whiteboard_custom_tapes');
+            const saved = localStorage.getItem('tomar_custom_tapes');
             if (saved) {
                 const patterns = JSON.parse(saved);
                 this.customTapePatterns = patterns.map(p => {
@@ -1427,7 +1427,7 @@ class PropertiesSidebar {
     // --- Quick Colors Logic ---
 
     loadQuickColors() {
-        const saved = localStorage.getItem('whiteboard_quick_colors');
+        const saved = localStorage.getItem('tomar_quick_colors');
         if (saved) {
             this.quickColors = JSON.parse(saved);
         } else {
@@ -1437,7 +1437,7 @@ class PropertiesSidebar {
     }
 
     saveQuickColors() {
-        localStorage.setItem('whiteboard_quick_colors', JSON.stringify(this.quickColors));
+        localStorage.setItem('tomar_quick_colors', JSON.stringify(this.quickColors));
     }
 
     renderQuickColors() {
@@ -1644,7 +1644,7 @@ class PropertiesSidebar {
     // --- Quick Stroke Widths Logic ---
 
     loadQuickStrokeWidths() {
-        const saved = localStorage.getItem('whiteboard_quick_strokes');
+        const saved = localStorage.getItem('tomar_quick_strokes');
         if (saved) {
             this.quickStrokeWidths = JSON.parse(saved);
         } else {
@@ -1658,7 +1658,7 @@ class PropertiesSidebar {
     }
 
     saveQuickStrokeWidths() {
-        localStorage.setItem('whiteboard_quick_strokes', JSON.stringify(this.quickStrokeWidths));
+        localStorage.setItem('tomar_quick_strokes', JSON.stringify(this.quickStrokeWidths));
     }
 
     renderQuickStrokeWidths() {
